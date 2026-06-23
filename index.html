@@ -2,16 +2,21 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#000000" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0c" />
+  <meta name="description" content="active — fitness game with a 3D character, global leaderboard, and rewards." />
   <title>active</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="assets/icon-192.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <!-- تعريفات الحلقات (تدرّج + توهّج) -->
+  <!-- تعريفات الحلقات -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
     <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#00f5a0"/><stop offset="1" stop-color="#00d4ff"/>
@@ -25,30 +30,34 @@
   <!-- ===== التهيئة ===== -->
   <div id="onboarding" class="onboarding">
     <div class="onboarding-card">
+      <div class="lang-switch" id="langSwitch">
+        <button data-lang="ar">العربية</button>
+        <button data-lang="en">English</button>
+      </div>
       <div class="brand">
         <div class="brand-mark" data-icon="figure" data-icon-size="34"></div>
         <h1 class="brand-title">active</h1>
-        <p class="brand-sub">تمرّن، اجمع نقاط، وتصدّر العالم</p>
+        <p class="brand-sub" data-i18n="tagline"></p>
       </div>
 
-      <label class="field-label">الاسم</label>
-      <input id="nameInput" class="text-input" type="text" maxlength="16" placeholder="اكتب اسمك" />
+      <label class="field-label" data-i18n="name_label"></label>
+      <input id="nameInput" class="text-input" type="text" maxlength="16" data-i18n-ph="name_ph" />
 
-      <label class="field-label">اختر شخصيتك</label>
+      <label class="field-label" data-i18n="choose_char"></label>
       <div class="gender-pick">
         <button class="gender-btn" data-gender="male">
           <span class="gender-ico" data-icon="personMale" data-icon-size="40"></span>
-          <span class="gender-name">رجل</span>
-          <small>كندورة وغترة</small>
+          <span class="gender-name" data-i18n="male"></span>
+          <small data-i18n="male_sub"></small>
         </button>
         <button class="gender-btn" data-gender="female">
           <span class="gender-ico" data-icon="personFemale" data-icon-size="40"></span>
-          <span class="gender-name">أنثى</span>
-          <small>عباية وشيلة</small>
+          <span class="gender-name" data-i18n="female"></span>
+          <small data-i18n="female_sub"></small>
         </button>
       </div>
 
-      <button id="startBtn" class="btn-primary big" disabled>ابدأ</button>
+      <button id="startBtn" class="btn-primary big" disabled data-i18n="start"></button>
     </div>
   </div>
 
@@ -60,9 +69,12 @@
         <span id="topPoints">0</span>
       </div>
       <div class="top-title">active</div>
-      <div class="top-stat">
-        <span class="ico coin" data-icon="coin" data-icon-size="17"></span>
-        <span id="topCoins">0</span>
+      <div class="top-right">
+        <div class="top-stat">
+          <span class="ico coin" data-icon="coin" data-icon-size="17"></span>
+          <span id="topCoins">0</span>
+        </div>
+        <button id="langBtn" class="lang-btn">EN</button>
       </div>
     </header>
 
@@ -71,7 +83,7 @@
       <section class="screen active" data-screen="home">
         <div class="hero">
           <div class="rank-chip">
-            <span>الترتيب العالمي</span>
+            <span data-i18n="rank_label"></span>
             <strong id="homeRank">#—</strong>
           </div>
           <div id="avatarStage" class="avatar-stage"></div>
@@ -81,9 +93,9 @@
         <div class="metric-card">
           <div id="levelRing" class="ring-wrap"></div>
           <div class="metric-info">
-            <span class="metric-label">المستوى</span>
+            <span class="metric-label" data-i18n="level"></span>
             <strong class="metric-value" id="levelNum">1</strong>
-            <span class="metric-sub" id="levelHint">باقي 250 نقطة للمستوى التالي</span>
+            <span class="metric-sub" id="levelHint"></span>
           </div>
         </div>
 
@@ -91,37 +103,37 @@
           <div class="quick-card">
             <span class="qc-ico c-pink" data-icon="flame" data-icon-size="22"></span>
             <strong id="streakDays">0</strong>
-            <small>أيام متتالية</small>
+            <small data-i18n="streak"></small>
           </div>
           <div class="quick-card">
             <span class="qc-ico c-green" data-icon="dumbbell" data-icon-size="22"></span>
             <strong id="totalWorkouts">0</strong>
-            <small>تمرين مكتمل</small>
+            <small data-i18n="workouts_done"></small>
           </div>
           <div class="quick-card">
             <span class="qc-ico c-blue" data-icon="tshirt" data-icon-size="22"></span>
             <strong id="ownedCount">0</strong>
-            <small>قطعة مملوكة</small>
+            <small data-i18n="owned"></small>
           </div>
         </div>
 
-        <button class="btn-primary big" data-goto="workout">ابدأ تمرين</button>
+        <button class="btn-primary big" data-goto="workout" data-i18n="start_workout"></button>
       </section>
 
       <!-- التمارين -->
       <section class="screen" data-screen="workout">
-        <h2 class="screen-title">التمارين</h2>
-        <p class="screen-sub">كل تمرين يمنحك نقاطاً ترفع تصنيفك وعملات للشراء.</p>
+        <h2 class="screen-title" data-i18n="workouts_title"></h2>
+        <p class="screen-sub" data-i18n="workouts_sub"></p>
         <div id="workoutList" class="workout-list"></div>
       </section>
 
       <!-- المتجر -->
       <section class="screen" data-screen="shop">
-        <h2 class="screen-title">المتجر</h2>
-        <p class="screen-sub">اشترِ ملابس وإكسسوارات لشخصيتك. لا تملك عملات كافية؟ شاهد فيديو واكسب.</p>
+        <h2 class="screen-title" data-i18n="shop_title"></h2>
+        <p class="screen-sub" data-i18n="shop_sub"></p>
         <button id="watchAdBtn" class="btn-watch">
           <span data-icon="play" data-icon-size="20"></span>
-          شاهد فيديو واكسب 50
+          <span data-i18n="watch_video"></span>
           <span class="ico coin" data-icon="coin" data-icon-size="18"></span>
         </button>
         <div class="shop-tabs" id="shopTabs"></div>
@@ -130,24 +142,24 @@
 
       <!-- المتصدرون -->
       <section class="screen" data-screen="leaderboard">
-        <h2 class="screen-title">المتصدرون</h2>
-        <p class="screen-sub">تنافس مع لاعبين من حول العالم. اجمع نقاطاً لترتفع.</p>
+        <h2 class="screen-title" data-i18n="lb_title"></h2>
+        <p class="screen-sub" data-i18n="lb_sub"></p>
         <div id="leaderboardList" class="lb-list"></div>
       </section>
     </main>
 
     <nav class="bottom-nav">
       <button class="nav-btn active" data-goto="home">
-        <span class="nav-ico" data-icon="house"></span><small>الرئيسية</small>
+        <span class="nav-ico" data-icon="house"></span><small data-i18n="nav_home"></small>
       </button>
       <button class="nav-btn" data-goto="workout">
-        <span class="nav-ico" data-icon="dumbbell"></span><small>تمارين</small>
+        <span class="nav-ico" data-icon="dumbbell"></span><small data-i18n="nav_workouts"></small>
       </button>
       <button class="nav-btn" data-goto="shop">
-        <span class="nav-ico" data-icon="bag"></span><small>المتجر</small>
+        <span class="nav-ico" data-icon="bag"></span><small data-i18n="nav_shop"></small>
       </button>
       <button class="nav-btn" data-goto="leaderboard">
-        <span class="nav-ico" data-icon="trophy"></span><small>التصنيف</small>
+        <span class="nav-ico" data-icon="trophy"></span><small data-i18n="nav_rank"></small>
       </button>
     </nav>
   </div>
@@ -156,7 +168,7 @@
   <div id="workoutModal" class="modal hidden">
     <div class="modal-card workout-modal">
       <div class="wm-icon" id="wmIcon"></div>
-      <h3 id="wmName">تمرين</h3>
+      <h3 id="wmName">—</h3>
       <p id="wmGoal" class="wm-goal"></p>
       <div id="wmRing" class="wm-ring"></div>
       <p id="wmHint" class="wm-hint"></p>
@@ -165,7 +177,7 @@
         <span><span class="ico star" data-icon="star" data-icon-size="16"></span> <b id="wmPts">0</b></span>
         <span><span class="ico coin" data-icon="coin" data-icon-size="16"></span> <b id="wmCoins">0</b></span>
       </div>
-      <button id="wmCancel" class="btn-ghost">إلغاء</button>
+      <button id="wmCancel" class="btn-ghost" data-i18n="cancel"></button>
     </div>
   </div>
 
@@ -173,8 +185,8 @@
     <div class="modal-card ad-modal">
       <div class="ad-screen">
         <div class="ad-spinner"></div>
-        <div class="ad-badge">إعلان</div>
-        <p>جارٍ تشغيل الفيديو…</p>
+        <div class="ad-badge" data-i18n="ad_label"></div>
+        <p data-i18n="ad_playing"></p>
         <div class="ad-count" id="adCount">5</div>
       </div>
     </div>
@@ -185,10 +197,16 @@
   <script type="importmap">
   { "imports": { "three": "./js/vendor/three.module.js" } }
   </script>
+  <script src="js/i18n.js"></script>
   <script src="js/icons.js"></script>
   <script src="js/data.js"></script>
   <script src="js/avatar.js"></script>
   <script src="js/app.js"></script>
   <script type="module" src="js/avatar3d.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  </script>
 </body>
 </html>

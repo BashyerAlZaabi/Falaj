@@ -55,6 +55,9 @@
   // ===== التهيئة =====
   function init() {
     fillIcons();
+    I18N.applyStatic();
+    bindLang();
+    updateLangUI();
     state = load();
     if (state) {
       handleDailyStreak();
@@ -62,6 +65,23 @@
     } else {
       setupOnboarding();
     }
+  }
+
+  // ===== اللغة =====
+  function updateLangUI() {
+    const lb = $('#langBtn'); if (lb) lb.textContent = I18N.otherLabel();
+    $$('#langSwitch button').forEach(b => b.classList.toggle('active', b.dataset.lang === I18N.lang));
+  }
+  function bindLang() {
+    $$('#langSwitch button').forEach(b => b.addEventListener('click', () => setLanguage(b.dataset.lang)));
+    const lb = $('#langBtn'); if (lb) lb.addEventListener('click', () => setLanguage(I18N.other()));
+  }
+  function setLanguage(l) {
+    if (l === I18N.lang) return;
+    I18N.setLang(l);
+    I18N.applyStatic();
+    updateLangUI();
+    if (state && !$('#app').classList.contains('hidden')) { bindShop(); renderAll(); }
   }
 
   function handleDailyStreak() {
@@ -99,7 +119,7 @@
 
     startBtn.addEventListener('click', () => {
       state = defaultState();
-      state.name = nameInput.value.trim().slice(0, 16) || 'لاعب';
+      state.name = nameInput.value.trim().slice(0, 16) || I18N.t('default_player');
       state.gender = chosenGender;
       save();
       enterApp();
@@ -111,6 +131,8 @@
     $('#onboarding').classList.add('hidden');
     $('#app').classList.remove('hidden');
     fillIcons($('#app'));
+    I18N.applyStatic($('#app'));
+    updateLangUI();
     bindNav();
     bindShop();
     renderAll();
@@ -157,7 +179,7 @@
     const into = state.points % POINTS_PER_LEVEL;
     const pct = Math.round((into / POINTS_PER_LEVEL) * 100);
     $('#levelNum').textContent = level;
-    $('#levelHint').textContent = `باقي ${POINTS_PER_LEVEL - into} نقطة للمستوى ${level + 1}`;
+    $('#levelHint').textContent = I18N.t('level_hint', { n: POINTS_PER_LEVEL - into, m: level + 1 });
     $('#levelRing').innerHTML = ringSVG(pct, { size: 96, stroke: 11 });
 
     // الترتيب
@@ -183,9 +205,9 @@
       card.innerHTML = `
         <div class="wc-icon">${ICON(w.icon, { size: 26 })}</div>
         <div class="wc-body">
-          <h3>${w.name}</h3>
+          <h3>${I18N.loc(w, 'name')}</h3>
           <div class="wc-meta">
-            <span>${w.desc}</span>
+            <span>${I18N.loc(w, 'desc')}</span>
             <span class="mini"><span class="ico star">${ICON('star', { size: 14 })}</span> <b>${w.points}</b></span>
             <span class="mini"><span class="ico coin">${ICON('coin', { size: 14 })}</span> <b>${w.coins}</b></span>
           </div>
@@ -212,7 +234,7 @@
     const modal = $('#workoutModal');
     modal.classList.remove('hidden');
     $('#wmIcon').innerHTML = ICON(w.icon, { size: 40 });
-    $('#wmName').textContent = w.name;
+    $('#wmName').textContent = I18N.loc(w, 'name');
     $('#wmPts').textContent = w.points;
     $('#wmCoins').textContent = w.coins;
 
@@ -221,20 +243,20 @@
            handler: null, watchdog: null, motionSeen: false };
 
     if (w.mode === 'hold') {
-      $('#wmGoal').textContent = `اثبت ${w.seconds} ثانية`;
+      $('#wmGoal').textContent = I18N.t('goal_hold', { n: w.seconds });
       renderWkRing(0, w.seconds);
-      $('#wmHint').textContent = 'ضع جهازك على جسمك واضغط ابدأ';
+      $('#wmHint').textContent = I18N.t('hint_pre_hold');
     } else {
-      $('#wmGoal').textContent = `الهدف: ${w.reps} عدّة`;
+      $('#wmGoal').textContent = I18N.t('goal_reps', { n: w.reps });
       renderWkRing(0, '0');
-      $('#wmHint').textContent = 'امسك جهازك وحرّكه مع كل عدّة';
+      $('#wmHint').textContent = I18N.t('hint_pre_reps');
     }
 
     const action = $('#wmAction');
     action.innerHTML = '';
     const startBtn = document.createElement('button');
     startBtn.className = 'btn-primary';
-    startBtn.textContent = 'ابدأ';
+    startBtn.textContent = I18N.t('start');
     startBtn.onclick = () => beginWorkout();
     action.appendChild(startBtn);
 
@@ -259,7 +281,7 @@
       window.addEventListener('devicemotion', wk.handler);
     }
 
-    $('#wmHint').textContent = wk.w.mode === 'hold' ? 'اثبت بثبات… لا تتحرّك' : 'حرّك جهازك مع كل عدّة';
+    $('#wmHint').textContent = wk.w.mode === 'hold' ? I18N.t('hint_hold') : I18N.t('hint_reps');
 
     // إن لم تصل أي قراءة حركة خلال 1.6ث → بديل يدوي
     wk.watchdog = setTimeout(() => { if (!wk.motionSeen) enableManual(); }, 1600);
@@ -301,7 +323,7 @@
       if (!wk.moving) wk.held += dt;
       const pct = Math.min(1, wk.held / wk.w.seconds);
       renderWkRing(pct, Math.max(0, Math.ceil(wk.w.seconds - wk.held)));
-      $('#wmHint').textContent = wk.moving ? 'ثبّت! لا تتحرّك' : 'ممتاز… استمر بالثبات';
+      $('#wmHint').textContent = wk.moving ? I18N.t('hint_hold_move') : I18N.t('hint_hold_ok');
       if (wk.held >= wk.w.seconds) { completeWorkout(); return; }
       wk.raf = requestAnimationFrame(step);
     };
@@ -316,10 +338,10 @@
     action.innerHTML = '';
 
     if (wk.w.mode === 'hold') {
-      $('#wmHint').textContent = 'اضغط مع الاستمرار وثبّت';
+      $('#wmHint').textContent = I18N.t('hint_manual_hold');
       const b = document.createElement('button');
       b.className = 'btn-primary wm-press';
-      b.textContent = 'اضغط مع الاستمرار';
+      b.textContent = I18N.t('press_hold');
       action.appendChild(b);
       let holding = false;
       wk.lastT = performance.now();
@@ -339,10 +361,10 @@
       b.addEventListener('pointerleave', up);
       wk.raf = requestAnimationFrame(loop);
     } else {
-      $('#wmHint').textContent = 'لا يوجد مستشعر — اضغط لكل عدّة';
+      $('#wmHint').textContent = I18N.t('hint_manual_reps');
       const b = document.createElement('button');
       b.className = 'btn-primary wm-tap';
-      b.textContent = 'عدّة ‎+1';
+      b.textContent = I18N.t('tap_rep');
       action.appendChild(b);
       b.addEventListener('click', () => {
         const now = performance.now();
@@ -371,7 +393,7 @@
     cleanupWk();
     const w = wk.w;
     renderWkRing(1, wk.w.mode === 'hold' ? '0' : wk.count);
-    $('#wmHint').textContent = 'تم التحقّق — أحسنت!';
+    $('#wmHint').textContent = I18N.t('verified');
     $('#wmAction').innerHTML = '';
     haptic([30, 40, 60]);
     confettiBurst();
@@ -427,7 +449,7 @@
     SHOP_CATS.forEach(cat => {
       const b = document.createElement('button');
       b.className = 'shop-tab' + (cat.id === state.shopFilter ? ' active' : '');
-      b.textContent = cat.name;
+      b.textContent = I18N.loc(cat, 'name');
       b.addEventListener('click', () => {
         state.shopFilter = cat.id;
         save();
@@ -454,9 +476,9 @@
       el.className = 'shop-item';
 
       let btnLabel, btnClass = 'si-btn', disabled = '';
-      if (equipped) { btnLabel = 'مُرتدى'; btnClass += ' equipped'; disabled = 'disabled'; }
-      else if (owned) { btnLabel = 'ارتدِ'; btnClass += ' owned'; }
-      else { btnLabel = `شراء · ${item.price}`; btnClass += ' buy'; if (state.coins < item.price) disabled = 'disabled'; }
+      if (equipped) { btnLabel = I18N.t('equipped'); btnClass += ' equipped'; disabled = 'disabled'; }
+      else if (owned) { btnLabel = I18N.t('equip'); btnClass += ' owned'; }
+      else { btnLabel = `${I18N.t('buy')} · ${item.price}`; btnClass += ' buy'; if (state.coins < item.price) disabled = 'disabled'; }
 
       // لون التمثيل: فاتح؟ استخدم أيقونة داكنة، والعكس
       const light = isLightColor(item.color);
@@ -465,8 +487,8 @@
       el.innerHTML = `
         ${equipped ? `<span class="si-check">${ICON('check', { size: 14 })}</span>` : ''}
         <div class="si-tile" style="background:${item.color}">${ICON(item.icon, { size: 30, color: iconColor })}</div>
-        <div class="si-name">${item.name}</div>
-        <div class="si-price">${item.price === 0 ? 'مجاني' : `<span class="ico coin">${ICON('coin', { size: 14 })}</span> ${item.price}`}</div>
+        <div class="si-name">${I18N.loc(item, 'name')}</div>
+        <div class="si-price">${item.price === 0 ? I18N.t('free') : `<span class="ico coin">${ICON('coin', { size: 14 })}</span> ${item.price}`}</div>
         <button class="${btnClass}" ${disabled}>${btnLabel}</button>`;
 
       const btn = el.querySelector('button');
@@ -482,7 +504,7 @@
 
   function buy(item) {
     if (state.coins < item.price) {
-      toast('لا تملك عملات كافية — شاهد فيديو');
+      toast(I18N.t('toast_no_coins'));
       return;
     }
     state.coins -= item.price;
@@ -492,7 +514,7 @@
     renderTopbar();
     renderShop();
     renderHome();
-    toast(`تم شراء ${item.name} وارتداؤها`);
+    toast(I18N.t('toast_bought', { name: I18N.loc(item, 'name') }));
   }
 
   function equip(item) {
@@ -500,7 +522,7 @@
     save();
     renderShop();
     renderHome();
-    toast(`${ICON('check', { size: 16 })} ارتديت ${item.name}`);
+    toast(`${ICON('check', { size: 16 })} ${I18N.t('toast_equipped', { name: I18N.loc(item, 'name') })}`);
   }
 
   // ===== فيديو المكافأة =====
@@ -520,15 +542,15 @@
         save();
         renderTopbar();
         renderShop();
-        toast(`<span class="ico coin">${ICON('coin', { size: 16 })}</span> +${REWARD_VIDEO_COINS} مكافأة المشاهدة`);
+        toast(`<span class="ico coin">${ICON('coin', { size: 16 })}</span> ${I18N.t('toast_reward', { n: REWARD_VIDEO_COINS })}`);
       }
     }, 1000);
   }
 
   // ===== التصنيف العالمي =====
   function buildLeaderboard() {
-    const me = { name: state.name, country: 'الإمارات', points: state.points, me: true };
-    const bots = BOTS.map(b => ({ name: b.name, country: b.country, points: b.base, me: false }));
+    const me = { name: state.name, country: 'الإمارات', country_en: 'UAE', points: state.points, me: true };
+    const bots = BOTS.map(b => ({ name: b.name, name_en: b.name_en, country: b.country, country_en: b.country_en, points: b.base, me: false }));
     const all = bots.concat(me);
     all.sort((a, b) => b.points - a.points);
     return all;
@@ -547,12 +569,13 @@
       const rank = i + 1;
       const row = document.createElement('div');
       row.className = 'lb-row' + (p.me ? ' me' : '') + (rank <= 3 ? ' top' + rank : '');
+      const nm = I18N.loc(p, 'name');
       row.innerHTML = `
         <div class="lb-rank">${rank}</div>
-        <div class="lb-ava" style="background:${avatarColor(p.name)}">${initials(p.name)}</div>
+        <div class="lb-ava" style="background:${avatarColor(p.name)}">${initials(nm)}</div>
         <div class="lb-info">
-          <div class="lb-name">${p.me ? p.name + ' (أنت)' : p.name}</div>
-          <div class="lb-country">${p.country}</div>
+          <div class="lb-name">${p.me ? nm + ' ' + I18N.t('you') : nm}</div>
+          <div class="lb-country">${I18N.loc(p, 'country')}</div>
         </div>
         <div class="lb-pts">${fmt(p.points)} <span class="ico star">${ICON('star', { size: 14 })}</span></div>`;
       list.appendChild(row);

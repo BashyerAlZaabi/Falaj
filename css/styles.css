@@ -109,6 +109,12 @@ svg { display: block; }
 .top-stat { display: flex; align-items: center; gap: 6px; background: var(--surface-2); padding: 7px 13px;
   border-radius: 100px; font-weight: 800; font-size: 15px; font-variant-numeric: tabular-nums; }
 .top-stat .ico { display: inline-flex; }
+.top-right { display: flex; align-items: center; gap: 8px; }
+.lang-btn { background: var(--surface-2); color: var(--label-2); border-radius: 100px; padding: 7px 11px; font-weight: 800; font-size: 13px; min-width: 36px; }
+.lang-btn:active { transform: scale(.95); }
+.lang-switch { display: flex; gap: 4px; justify-content: center; width: max-content; margin: 0 auto 22px; background: var(--surface-2); padding: 4px; border-radius: 100px; }
+.lang-switch button { background: none; color: var(--label-2); border-radius: 100px; padding: 8px 18px; font-weight: 700; font-size: 14px; transition: .15s; }
+.lang-switch button.active { background: var(--grad-primary); color: #04211a; }
 
 /* ===== Screens ===== */
 .screen { display: none; padding: 16px; animation: fade .3s ease; }
