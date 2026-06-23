@@ -3,67 +3,64 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#0b3d2e" />
-  <title>فلج رياضة — Falaj Fitness</title>
+  <meta name="theme-color" content="#000000" />
+  <title>فلج — Falaj</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <!-- ===== شاشة التهيئة الأولى ===== -->
+  <!-- ===== التهيئة ===== -->
   <div id="onboarding" class="onboarding">
     <div class="onboarding-card">
       <div class="brand">
-        <span class="brand-logo">🌴</span>
-        <h1>فلج رياضة</h1>
+        <div class="brand-mark" data-icon="figure" data-icon-size="34"></div>
+        <h1>فلج</h1>
         <p class="brand-sub">تمرّن، اجمع نقاط، وتصدّر العالم</p>
       </div>
 
-      <label class="field-label">شو اسمك؟</label>
-      <input id="nameInput" class="text-input" type="text" maxlength="16" placeholder="اكتب اسمك هنا" />
+      <label class="field-label">الاسم</label>
+      <input id="nameInput" class="text-input" type="text" maxlength="16" placeholder="اكتب اسمك" />
 
       <label class="field-label">اختر شخصيتك</label>
       <div class="gender-pick">
         <button class="gender-btn" data-gender="male">
-          <div class="gender-emoji">🧔🏻‍♂️</div>
-          <span>شخصية رجل</span>
+          <span class="gender-ico" data-icon="personMale" data-icon-size="40"></span>
+          <span class="gender-name">رجل</span>
           <small>كندورة وغترة</small>
         </button>
         <button class="gender-btn" data-gender="female">
-          <div class="gender-emoji">🧕🏻</div>
-          <span>شخصية أنثى</span>
+          <span class="gender-ico" data-icon="personFemale" data-icon-size="40"></span>
+          <span class="gender-name">أنثى</span>
           <small>عباية وشيلة</small>
         </button>
       </div>
 
-      <button id="startBtn" class="btn-primary big" disabled>يلّا نبدأ 🚀</button>
+      <button id="startBtn" class="btn-primary big" disabled>ابدأ</button>
     </div>
   </div>
 
   <!-- ===== التطبيق ===== -->
   <div id="app" class="app hidden">
-    <!-- الشريط العلوي -->
     <header class="topbar">
-      <div class="top-stat" title="النقاط">
-        <span class="stat-ico">⭐</span>
+      <div class="top-stat">
+        <span class="ico star" data-icon="star" data-icon-size="17"></span>
         <span id="topPoints">0</span>
       </div>
-      <div class="top-title">فلج رياضة</div>
-      <div class="top-stat coins" title="العملات">
-        <span class="stat-ico">🪙</span>
+      <div class="top-title">فلج</div>
+      <div class="top-stat">
+        <span class="ico coin" data-icon="coin" data-icon-size="17"></span>
         <span id="topCoins">0</span>
       </div>
     </header>
 
-    <!-- المحتوى -->
     <main id="screens">
-
       <!-- الرئيسية -->
       <section class="screen active" data-screen="home">
         <div class="hero">
           <div class="rank-chip">
-            <span>ترتيبك العالمي</span>
+            <span>الترتيب العالمي</span>
             <strong id="homeRank">#—</strong>
           </div>
           <div id="avatarStage" class="avatar-stage"></div>
@@ -74,102 +71,108 @@
               <span id="levelPct">0%</span>
             </div>
             <div class="level-bar"><div id="levelFill" class="level-fill"></div></div>
-            <div class="level-hint" id="levelHint">باقي 100 نقطة للمستوى التالي</div>
+            <div class="level-hint" id="levelHint">باقي 250 نقطة للمستوى التالي</div>
           </div>
         </div>
 
         <div class="quick-grid">
           <div class="quick-card">
-            <span class="qc-ico">🔥</span>
+            <span class="qc-ico c-orange" data-icon="flame" data-icon-size="22"></span>
             <strong id="streakDays">0</strong>
             <small>أيام متتالية</small>
           </div>
           <div class="quick-card">
-            <span class="qc-ico">🏋️</span>
+            <span class="qc-ico c-green" data-icon="dumbbell" data-icon-size="22"></span>
             <strong id="totalWorkouts">0</strong>
             <small>تمرين مكتمل</small>
           </div>
           <div class="quick-card">
-            <span class="qc-ico">👕</span>
+            <span class="qc-ico c-blue" data-icon="tshirt" data-icon-size="22"></span>
             <strong id="ownedCount">0</strong>
             <small>قطعة مملوكة</small>
           </div>
         </div>
 
-        <button class="btn-primary big" data-goto="workout">ابدأ تمرين 💪</button>
+        <button class="btn-primary big" data-goto="workout">ابدأ تمرين</button>
       </section>
 
       <!-- التمارين -->
       <section class="screen" data-screen="workout">
         <h2 class="screen-title">التمارين</h2>
-        <p class="screen-sub">كل تمرين يعطيك نقاط ترفع تصنيفك وعملات تشتري فيها.</p>
+        <p class="screen-sub">كل تمرين يمنحك نقاطاً ترفع تصنيفك وعملات للشراء.</p>
         <div id="workoutList" class="workout-list"></div>
       </section>
 
       <!-- المتجر -->
       <section class="screen" data-screen="shop">
         <h2 class="screen-title">المتجر</h2>
-        <p class="screen-sub">اشترِ ملابس وإكسسوارات لشخصيتك. ما عندك عملات؟ شاهد فيديو واكسب! 🎬</p>
-        <div class="shop-actions">
-          <button id="watchAdBtn" class="btn-watch">🎬 شاهد فيديو واكسب 50 🪙</button>
-        </div>
+        <p class="screen-sub">اشترِ ملابس وإكسسوارات لشخصيتك. لا تملك عملات كافية؟ شاهد فيديو واكسب.</p>
+        <button id="watchAdBtn" class="btn-watch">
+          <span data-icon="play" data-icon-size="20"></span>
+          شاهد فيديو واكسب 50
+          <span class="ico coin" data-icon="coin" data-icon-size="18"></span>
+        </button>
         <div class="shop-tabs" id="shopTabs"></div>
         <div id="shopGrid" class="shop-grid"></div>
       </section>
 
-      <!-- المتصدرين -->
+      <!-- المتصدرون -->
       <section class="screen" data-screen="leaderboard">
-        <h2 class="screen-title">المتصدرون عالمياً</h2>
-        <p class="screen-sub">تنافس مع لاعبين من كل العالم. اجمع نقاط لترتفع! 🌍</p>
+        <h2 class="screen-title">المتصدرون</h2>
+        <p class="screen-sub">تنافس مع لاعبين من حول العالم. اجمع نقاطاً لترتفع.</p>
         <div id="leaderboardList" class="lb-list"></div>
       </section>
-
     </main>
 
-    <!-- شريط التنقل السفلي -->
     <nav class="bottom-nav">
-      <button class="nav-btn active" data-goto="home"><span>🏠</span><small>الرئيسية</small></button>
-      <button class="nav-btn" data-goto="workout"><span>💪</span><small>تمارين</small></button>
-      <button class="nav-btn" data-goto="shop"><span>🛍️</span><small>المتجر</small></button>
-      <button class="nav-btn" data-goto="leaderboard"><span>🏆</span><small>التصنيف</small></button>
+      <button class="nav-btn active" data-goto="home">
+        <span class="nav-ico" data-icon="house"></span><small>الرئيسية</small>
+      </button>
+      <button class="nav-btn" data-goto="workout">
+        <span class="nav-ico" data-icon="dumbbell"></span><small>تمارين</small>
+      </button>
+      <button class="nav-btn" data-goto="shop">
+        <span class="nav-ico" data-icon="bag"></span><small>المتجر</small>
+      </button>
+      <button class="nav-btn" data-goto="leaderboard">
+        <span class="nav-ico" data-icon="trophy"></span><small>التصنيف</small>
+      </button>
     </nav>
   </div>
 
-  <!-- ===== نوافذ منبثقة ===== -->
-  <!-- تمرين قيد التنفيذ -->
+  <!-- ===== نوافذ ===== -->
   <div id="workoutModal" class="modal hidden">
     <div class="modal-card workout-modal">
-      <div class="wm-emoji" id="wmEmoji">🏃</div>
+      <div class="wm-icon" id="wmIcon"></div>
       <h3 id="wmName">تمرين</h3>
       <div id="wmTimer" class="wm-timer">00:00</div>
       <div class="wm-progress"><div id="wmProgressFill" class="wm-progress-fill"></div></div>
-      <p id="wmHint" class="wm-hint">جاري التمرين... ثبّت!</p>
+      <p id="wmHint" class="wm-hint">جارٍ التمرين… ثبّت!</p>
       <div class="wm-rewards">
-        <span>+<b id="wmPts">0</b> ⭐</span>
-        <span>+<b id="wmCoins">0</b> 🪙</span>
+        <span><span class="ico star" data-icon="star" data-icon-size="16"></span> <b id="wmPts">0</b></span>
+        <span><span class="ico coin" data-icon="coin" data-icon-size="16"></span> <b id="wmCoins">0</b></span>
       </div>
       <button id="wmCancel" class="btn-ghost">إلغاء</button>
     </div>
   </div>
 
-  <!-- إعلان الفيديو -->
   <div id="adModal" class="modal hidden">
     <div class="modal-card ad-modal">
       <div class="ad-screen">
         <div class="ad-spinner"></div>
         <div class="ad-badge">إعلان</div>
-        <p>جاري تشغيل الفيديو...</p>
+        <p>جارٍ تشغيل الفيديو…</p>
         <div class="ad-count" id="adCount">5</div>
       </div>
     </div>
   </div>
 
-  <!-- تأكيد عام / مكافأة -->
   <div id="toast" class="toast hidden"></div>
 
   <script type="importmap">
   { "imports": { "three": "./js/vendor/three.module.js" } }
   </script>
+  <script src="js/icons.js"></script>
   <script src="js/data.js"></script>
   <script src="js/avatar.js"></script>
   <script src="js/app.js"></script>

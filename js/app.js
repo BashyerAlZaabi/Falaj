@@ -54,6 +54,7 @@
 
   // ===== التهيئة =====
   function init() {
+    fillIcons();
     state = load();
     if (state) {
       handleDailyStreak();
@@ -109,6 +110,7 @@
   function enterApp() {
     $('#onboarding').classList.add('hidden');
     $('#app').classList.remove('hidden');
+    fillIcons($('#app'));
     bindNav();
     bindShop();
     renderAll();
@@ -180,17 +182,17 @@
       const card = document.createElement('div');
       card.className = 'workout-card';
       card.innerHTML = `
-        <div class="wc-emoji">${w.emoji}</div>
+        <div class="wc-icon">${ICON(w.icon, { size: 26 })}</div>
         <div class="wc-body">
           <h3>${w.name}</h3>
           <div class="wc-meta">
             <span>${w.desc}</span>
-            <span>+<b>${w.points}</b> ⭐</span>
-            <span>+<b>${w.coins}</b> 🪙</span>
+            <span class="mini"><span class="ico star">${ICON('star', { size: 14 })}</span> <b>${w.points}</b></span>
+            <span class="mini"><span class="ico coin">${ICON('coin', { size: 14 })}</span> <b>${w.coins}</b></span>
           </div>
         </div>
-        <button class="wc-go">ابدأ</button>`;
-      card.querySelector('.wc-go').addEventListener('click', () => startWorkout(w));
+        <span class="wc-chev">${ICON('chevron', { size: 20 })}</span>`;
+      card.addEventListener('click', () => startWorkout(w));
       list.appendChild(card);
     });
   }
@@ -200,11 +202,11 @@
   function startWorkout(w) {
     const modal = $('#workoutModal');
     modal.classList.remove('hidden');
-    $('#wmEmoji').textContent = w.emoji;
+    $('#wmIcon').innerHTML = ICON(w.icon, { size: 40 });
     $('#wmName').textContent = w.name;
     $('#wmPts').textContent = w.points;
     $('#wmCoins').textContent = w.coins;
-    $('#wmHint').textContent = 'جاري التمرين... ثبّت! 💪';
+    $('#wmHint').textContent = 'جارٍ التمرين… ثبّت!';
     $('#wmProgressFill').style.width = '0%';
 
     const total = w.seconds;
@@ -241,12 +243,12 @@
     state.coins += w.coins;
     state.totalWorkouts += 1;
     save();
-    $('#wmHint').textContent = 'أحسنت! اكتمل التمرين 🎉';
+    $('#wmHint').textContent = 'أحسنت! اكتمل التمرين';
     setTimeout(() => {
       $('#workoutModal').classList.add('hidden');
       renderTopbar();
       renderHome();
-      toast(`+${w.points} ⭐  +${w.coins} 🪙`);
+      toast(`<span class="ico star">${ICON('star', { size: 16 })}</span> +${w.points}　<span class="ico coin">${ICON('coin', { size: 16 })}</span> +${w.coins}`);
     }, 700);
   }
 
@@ -282,18 +284,22 @@
       const owned = state.owned.includes(item.id);
       const equipped = state.equipped[item.cat] === item.id;
       const el = document.createElement('div');
-      el.className = 'shop-item' + (equipped ? ' equipped' : '');
+      el.className = 'shop-item';
 
       let btnLabel, btnClass = 'si-btn', disabled = '';
-      if (equipped) { btnLabel = 'مرتدى ✓'; btnClass += ' equipped'; disabled = 'disabled'; }
+      if (equipped) { btnLabel = 'مُرتدى'; btnClass += ' equipped'; disabled = 'disabled'; }
       else if (owned) { btnLabel = 'ارتدِ'; btnClass += ' owned'; }
-      else { btnLabel = `شراء 🪙 ${item.price}`; if (state.coins < item.price) disabled = 'disabled'; }
+      else { btnLabel = `شراء · ${item.price}`; btnClass += ' buy'; if (state.coins < item.price) disabled = 'disabled'; }
+
+      // لون التمثيل: فاتح؟ استخدم أيقونة داكنة، والعكس
+      const light = isLightColor(item.color);
+      const iconColor = light ? '#1c1c1e' : '#ffffff';
 
       el.innerHTML = `
-        ${equipped ? '<span class="si-tag">مرتدى</span>' : ''}
-        <div class="si-preview">${item.icon}</div>
+        ${equipped ? `<span class="si-check">${ICON('check', { size: 14 })}</span>` : ''}
+        <div class="si-tile" style="background:${item.color}">${ICON(item.icon, { size: 30, color: iconColor })}</div>
         <div class="si-name">${item.name}</div>
-        <div class="si-price">${item.price === 0 ? 'مجاني' : '🪙 ' + item.price}</div>
+        <div class="si-price">${item.price === 0 ? 'مجاني' : `<span class="ico coin">${ICON('coin', { size: 14 })}</span> ${item.price}`}</div>
         <button class="${btnClass}" ${disabled}>${btnLabel}</button>`;
 
       const btn = el.querySelector('button');
@@ -309,7 +315,7 @@
 
   function buy(item) {
     if (state.coins < item.price) {
-      toast('ما عندك عملات كافية! شاهد فيديو 🎬');
+      toast('لا تملك عملات كافية — شاهد فيديو');
       return;
     }
     state.coins -= item.price;
@@ -319,7 +325,7 @@
     renderTopbar();
     renderShop();
     renderHome();
-    toast(`تم شراء ${item.name} وارتداؤها! 🎉`);
+    toast(`تم شراء ${item.name} وارتداؤها`);
   }
 
   function equip(item) {
@@ -327,7 +333,7 @@
     save();
     renderShop();
     renderHome();
-    toast(`ارتديت ${item.name} ✓`);
+    toast(`${ICON('check', { size: 16 })} ارتديت ${item.name}`);
   }
 
   // ===== فيديو المكافأة =====
@@ -347,19 +353,15 @@
         save();
         renderTopbar();
         renderShop();
-        toast(`+${REWARD_VIDEO_COINS} 🪙 مكافأة المشاهدة! 🎬`);
+        toast(`<span class="ico coin">${ICON('coin', { size: 16 })}</span> +${REWARD_VIDEO_COINS} مكافأة المشاهدة`);
       }
     }, 1000);
   }
 
   // ===== التصنيف العالمي =====
   function buildLeaderboard() {
-    const me = {
-      name: state.name, flag: '🇦🇪',
-      ava: state.gender === 'female' ? '🧕🏻' : '🧔🏻',
-      points: state.points, me: true,
-    };
-    const bots = BOTS.map(b => ({ name: b.name, flag: b.flag, ava: b.ava, points: b.base, me: false }));
+    const me = { name: state.name, country: 'الإمارات', points: state.points, me: true };
+    const bots = BOTS.map(b => ({ name: b.name, country: b.country, points: b.base, me: false }));
     const all = bots.concat(me);
     all.sort((a, b) => b.points - a.points);
     return all;
@@ -378,13 +380,14 @@
       const rank = i + 1;
       const row = document.createElement('div');
       row.className = 'lb-row' + (p.me ? ' me' : '') + (rank <= 3 ? ' top' + rank : '');
-      const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
       row.innerHTML = `
-        <div class="lb-rank">${medal}</div>
-        <div class="lb-ava">${p.ava}</div>
-        <div class="lb-name">${p.me ? p.name + ' (أنت)' : p.name}</div>
-        <div class="lb-flag">${p.flag}</div>
-        <div class="lb-pts">${fmt(p.points)} <small>⭐</small></div>`;
+        <div class="lb-rank">${rank}</div>
+        <div class="lb-ava" style="background:${avatarColor(p.name)}">${initials(p.name)}</div>
+        <div class="lb-info">
+          <div class="lb-name">${p.me ? p.name + ' (أنت)' : p.name}</div>
+          <div class="lb-country">${p.country}</div>
+        </div>
+        <div class="lb-pts">${fmt(p.points)} <span class="ico star">${ICON('star', { size: 14 })}</span></div>`;
       list.appendChild(row);
     });
   }
@@ -393,10 +396,36 @@
   let toastTimer = null;
   function toast(msg) {
     const t = $('#toast');
-    t.textContent = msg;
+    t.innerHTML = msg;
     t.classList.remove('hidden');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.add('hidden'), 2200);
+  }
+
+  // ===== أدوات الأيقونات/الألوان =====
+  function fillIcons(root) {
+    (root || document).querySelectorAll('[data-icon]').forEach(el => {
+      if (el.dataset.filled) return;
+      el.innerHTML = ICON(el.dataset.icon, { size: parseInt(el.dataset.iconSize || '24', 10) });
+      el.dataset.filled = '1';
+    });
+  }
+  function initials(name) {
+    const parts = String(name).trim().split(/\s+/);
+    const a = parts[0] ? parts[0][0] : '';
+    const b = parts[1] ? parts[1][0] : '';
+    return (a + b) || a || '؟';
+  }
+  const AVA_COLORS = ['#0a84ff', '#30d158', '#ff9f0a', '#ff375f', '#bf5af0', '#40c8e0', '#ff453a', '#5e5ce6'];
+  function avatarColor(name) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    return AVA_COLORS[h % AVA_COLORS.length];
+  }
+  function isLightColor(hex) {
+    const c = hex.replace('#', '');
+    const r = parseInt(c.substr(0, 2), 16), g = parseInt(c.substr(2, 2), 16), b = parseInt(c.substr(4, 2), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) > 150;
   }
 
   // ===== تشغيل =====
