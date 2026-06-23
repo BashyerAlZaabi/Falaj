@@ -45,6 +45,19 @@ function shemaghTexture() {
   return tex;
 }
 
+/* ===== هالة نيون أرضية (canvas texture) ===== */
+function glowTexture(color) {
+  const s = 256, c = document.createElement('canvas');
+  c.width = c.height = s;
+  const x = c.getContext('2d');
+  const g = x.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+  g.addColorStop(0, color);
+  g.addColorStop(0.35, color.replace('1)', '0.5)'));
+  g.addColorStop(1, color.replace('1)', '0)'));
+  x.fillStyle = g; x.fillRect(0, 0, s, s);
+  return new THREE.CanvasTexture(c);
+}
+
 /* ===== بناء الشخصية ===== */
 function buildCharacter(gender, eq) {
   const G = new THREE.Group();
@@ -149,64 +162,83 @@ function buildCharacter(gender, eq) {
   /* ----- الرقبة ----- */
   add(new THREE.CylinderGeometry(0.19, 0.22, 0.34, 18), mat.skin, 0, 2.5, 0);
 
+  /* ----- مجموعة الرأس (chibi قابلة للتكبير) ----- */
+  const headG = new THREE.Group();
+  const addH = (geo, m, x, y, z) => { const mesh = new THREE.Mesh(geo, m); mesh.position.set(x, y, z); mesh.castShadow = true; mesh.receiveShadow = true; headG.add(mesh); return mesh; };
+
   /* ----- الرأس ----- */
-  const head = add(new THREE.SphereGeometry(0.52, 40, 36), mat.skin, 0, 2.92, 0);
+  const head = addH(new THREE.SphereGeometry(0.52, 40, 36), mat.skin, 0, 2.92, 0);
   head.scale.set(1, 1.06, 0.97);
   // أذنان
-  add(new THREE.SphereGeometry(0.1, 14, 14), mat.skin, -0.5, 2.9, 0.02);
-  add(new THREE.SphereGeometry(0.1, 14, 14), mat.skin, 0.5, 2.9, 0.02);
+  addH(new THREE.SphereGeometry(0.1, 14, 14), mat.skin, -0.5, 2.9, 0.02);
+  addH(new THREE.SphereGeometry(0.1, 14, 14), mat.skin, 0.5, 2.9, 0.02);
 
   /* ----- ملامح الوجه ----- */
   // حواجب
   const browGeo = new THREE.BoxGeometry(0.18, 0.035, 0.05);
-  add(browGeo, mat.hair, -0.18, 3.08, 0.46).rotation.z = -0.12;
-  add(browGeo, mat.hair, 0.18, 3.08, 0.46).rotation.z = 0.12;
+  addH(browGeo, mat.hair, -0.18, 3.08, 0.46).rotation.z = -0.12;
+  addH(browGeo, mat.hair, 0.18, 3.08, 0.46).rotation.z = 0.12;
   // عيون (بياض + قزحية + بؤبؤ + بريق) — تُخفى مع النظارات الكاملة
   const wearShades = eq.eyes === 'eyes_shades' || eq.eyes === 'eyes_sport';
   const matIris = new THREE.MeshStandardMaterial({ color: 0x5a3a1f, roughness: 0.35 });
   const matGlint = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, emissive: 0x444444 });
   if (!wearShades) {
     [-0.18, 0.18].forEach(ex => {
-      const sclera = add(new THREE.SphereGeometry(0.082, 18, 18), mat.white, ex, 2.987, 0.45);
+      const sclera = addH(new THREE.SphereGeometry(0.082, 18, 18), mat.white, ex, 2.987, 0.45);
       sclera.scale.set(1.18, 1, 0.5); sclera.castShadow = false;
-      const iris = add(new THREE.SphereGeometry(0.05, 16, 16), matIris, ex, 2.985, 0.5);
+      const iris = addH(new THREE.SphereGeometry(0.05, 16, 16), matIris, ex, 2.985, 0.5);
       iris.scale.set(1, 1, 0.55); iris.castShadow = false;
-      add(new THREE.SphereGeometry(0.026, 14, 14), mat.eye, ex, 2.985, 0.515).castShadow = false;
-      add(new THREE.SphereGeometry(0.013, 8, 8), matGlint, ex + 0.022, 3.01, 0.52).castShadow = false;
+      addH(new THREE.SphereGeometry(0.026, 14, 14), mat.eye, ex, 2.985, 0.515).castShadow = false;
+      addH(new THREE.SphereGeometry(0.013, 8, 8), matGlint, ex + 0.022, 3.01, 0.52).castShadow = false;
       // جفن علوي (يعطي شكل اللوز)
-      const lid = add(new THREE.SphereGeometry(0.095, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.5), mat.skin, ex, 3.025, 0.45);
+      const lid = addH(new THREE.SphereGeometry(0.095, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.5), mat.skin, ex, 3.025, 0.45);
       lid.scale.set(1.0, 0.45, 0.5); lid.rotation.x = -0.2; lid.castShadow = false;
       // رموش للأنثى
       if (isF) {
-        const lash = add(new THREE.TorusGeometry(0.072, 0.008, 6, 16, Math.PI), mat.eye, ex, 2.995, 0.49);
+        const lash = addH(new THREE.TorusGeometry(0.072, 0.008, 6, 16, Math.PI), mat.eye, ex, 2.995, 0.49);
         lash.rotation.set(-0.5, 0, Math.PI); lash.scale.set(1.15, 1, 0.6); lash.castShadow = false;
       }
     });
   }
   // أنف (جسر + أرنبة)
-  add(new THREE.SphereGeometry(0.052, 14, 14), mat.skin, 0, 2.86, 0.53).scale.set(1, 1.05, 1);
-  add(new THREE.CapsuleGeometry(0.028, 0.06, 4, 10), mat.skin, 0, 2.92, 0.5).rotation.x = 0.3;
+  addH(new THREE.SphereGeometry(0.052, 14, 14), mat.skin, 0, 2.86, 0.53).scale.set(1, 1.05, 1);
+  addH(new THREE.CapsuleGeometry(0.028, 0.06, 4, 10), mat.skin, 0, 2.92, 0.5).rotation.x = 0.3;
   // فم (ابتسامة بشفتين)
-  const mouth = add(new THREE.TorusGeometry(0.115, 0.026, 10, 24, Math.PI), mat.lip, 0, 2.78, 0.46);
+  const mouth = addH(new THREE.TorusGeometry(0.115, 0.026, 10, 24, Math.PI), mat.lip, 0, 2.78, 0.46);
   mouth.rotation.set(0, 0, Math.PI); mouth.castShadow = false;
   if (isF) {
     // شفة سفلية ممتلئة قليلاً
-    add(new THREE.SphereGeometry(0.05, 14, 12), mat.lip, 0, 2.74, 0.47).scale.set(1.5, 0.6, 0.5).castShadow = false;
+    addH(new THREE.SphereGeometry(0.05, 14, 12), mat.lip, 0, 2.74, 0.47).scale.set(1.5, 0.6, 0.5);
   }
   // لحية خفيفة للرجل
   if (!isF) {
-    const beard = add(new THREE.SphereGeometry(0.5, 28, 24, 0, Math.PI * 2, Math.PI * 0.62, Math.PI * 0.38),
+    const beard = addH(new THREE.SphereGeometry(0.5, 28, 24, 0, Math.PI * 2, Math.PI * 0.62, Math.PI * 0.38),
       new THREE.MeshStandardMaterial({ color: 0x6b4a2f, roughness: 0.85, transparent: true, opacity: 0.35 }),
       0, 2.92, 0.02);
     beard.scale.set(1.02, 1.06, 1);
   }
 
   /* ----- غطاء الرأس ----- */
-  addHeadwear(G, add, mat, gender, eq, head);
+  addHeadwear(headG, addH, mat, gender, eq, head);
 
-  /* ----- إكسسوارات ----- */
+  /* ----- سماعات (على الرأس) ----- */
+  if (eq.accessory === 'acc_headphone') {
+    const matHp = new THREE.MeshStandardMaterial({ color: 0xec4359, roughness: 0.5 });
+    addH(new THREE.TorusGeometry(0.55, 0.04, 10, 32, Math.PI), matHp, 0, 3.0, 0);
+    [-0.55, 0.55].forEach(hx => {
+      addH(new THREE.CylinderGeometry(0.12, 0.12, 0.1, 20), matHp, hx, 2.9, 0.02).rotation.z = Math.PI / 2;
+    });
+  }
+
+  // تكبير الرأس وتثبيته عند الرقبة (نسبة chibi لطيفة)
+  const HS = 1.14, pivot = 2.46;
+  headG.scale.setScalar(HS);
+  headG.position.y = pivot * (1 - HS);
+  G.add(headG);
+
+  /* ----- إكسسوارات الجسم ----- */
   if (eq.accessory === 'acc_watch') {
-    const w = add(new THREE.BoxGeometry(0.16, 0.07, 0.22), mat.dark, 0.8, 0.96, 0.08);
+    add(new THREE.BoxGeometry(0.16, 0.07, 0.22), mat.dark, 0.8, 0.96, 0.08);
     add(new THREE.BoxGeometry(0.1, 0.04, 0.13), new THREE.MeshStandardMaterial({ color: 0x46d6c0, roughness: 0.3, emissive: 0x0a3b34 }), 0.86, 0.97, 0.09);
   }
   if (eq.accessory === 'acc_medal') {
@@ -215,15 +247,6 @@ function buildCharacter(gender, eq) {
     add(new THREE.BoxGeometry(0.045, 0.46, 0.03), matRibbon, 0.13, 2.12, surfR(2.12) + 0.04).rotation.set(-0.2, 0, -0.42);
     add(new THREE.CylinderGeometry(0.14, 0.14, 0.05, 28), mat.gold, 0, 1.86, surfR(1.86) + 0.08).rotation.x = Math.PI / 2;
     add(new THREE.TorusGeometry(0.09, 0.018, 8, 24), new THREE.MeshStandardMaterial({ color: 0xcaa106, roughness: 0.4, metalness: 0.5 }), 0, 1.86, surfR(1.86) + 0.11).rotation.x = Math.PI / 2;
-  }
-  if (eq.accessory === 'acc_headphone') {
-    const matHp = new THREE.MeshStandardMaterial({ color: 0xec4359, roughness: 0.5 });
-    add(new THREE.TorusGeometry(0.55, 0.04, 10, 32, Math.PI), matHp, 0, 3.0, 0)
-      .rotation.set(0, 0, 0);
-    [-0.55, 0.55].forEach(hx => {
-      const cup = add(new THREE.CylinderGeometry(0.12, 0.12, 0.1, 20), matHp, hx, 2.9, 0.02);
-      cup.rotation.z = Math.PI / 2;
-    });
   }
 
   // ضبط شدّة الانعكاس البيئي لكل خامة (يبقي الألوان مشبعة، والمعادن لامعة)
@@ -354,11 +377,25 @@ function mount(container, gender, eq) {
   // أرضية للظل
   const ground = new THREE.Mesh(
     new THREE.CircleGeometry(2.4, 48),
-    new THREE.ShadowMaterial({ opacity: 0.28 }));
+    new THREE.ShadowMaterial({ opacity: 0.32 }));
   ground.rotation.x = -Math.PI / 2;
   ground.position.y = 0.02;
   ground.receiveShadow = true;
   scene.add(ground);
+
+  // هالة نيون أرضية (نمط WHOOP)
+  const glow = new THREE.Mesh(
+    new THREE.PlaneGeometry(3.4, 3.4),
+    new THREE.MeshBasicMaterial({ map: glowTexture('rgba(0,245,160,1)'), transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending, depthWrite: false }));
+  glow.rotation.x = -Math.PI / 2;
+  glow.position.y = 0.04;
+  scene.add(glow);
+  // حلقة نيون رفيعة عند القاعدة
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0x00f5a0, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false });
+  const neonRing = new THREE.Mesh(new THREE.TorusGeometry(1.15, 0.022, 8, 64), ringMat);
+  neonRing.rotation.x = -Math.PI / 2;
+  neonRing.position.y = 0.05;
+  scene.add(neonRing);
 
   // تحكّم الدوران
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -384,15 +421,23 @@ function mount(container, gender, eq) {
   }
   window.addEventListener('resize', onResize);
 
+  const clock = new THREE.Clock();
   let raf;
   function loop() {
     raf = requestAnimationFrame(loop);
+    const t = clock.getElapsedTime();
+    // تمايل لطيف (idle bob)
+    if (V && V.charGroup) {
+      V.charGroup.position.y = Math.sin(t * 1.8) * 0.035;
+      V.charGroup.rotation.z = Math.sin(t * 1.2) * 0.012;
+    }
+    neonRing.material.opacity = 0.6 + Math.sin(t * 2.2) * 0.25;
     controls.update();
     renderer.render(scene, camera);
   }
-  loop();
 
   V = { scene, camera, renderer, controls, charGroup, container, onResize, raf };
+  loop();
 }
 
 function update(gender, eq) {

@@ -11,6 +11,17 @@
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
+  <!-- تعريفات الحلقات (تدرّج + توهّج) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#00f5a0"/><stop offset="1" stop-color="#00d4ff"/>
+    </linearGradient>
+    <filter id="ringGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.2" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs></svg>
+
   <!-- ===== التهيئة ===== -->
   <div id="onboarding" class="onboarding">
     <div class="onboarding-card">
@@ -65,19 +76,20 @@
           </div>
           <div id="avatarStage" class="avatar-stage"></div>
           <div class="hero-name" id="homeName">—</div>
-          <div class="level-wrap">
-            <div class="level-row">
-              <span id="levelLabel">المستوى 1</span>
-              <span id="levelPct">0%</span>
-            </div>
-            <div class="level-bar"><div id="levelFill" class="level-fill"></div></div>
-            <div class="level-hint" id="levelHint">باقي 250 نقطة للمستوى التالي</div>
+        </div>
+
+        <div class="metric-card">
+          <div id="levelRing" class="ring-wrap"></div>
+          <div class="metric-info">
+            <span class="metric-label">المستوى</span>
+            <strong class="metric-value" id="levelNum">1</strong>
+            <span class="metric-sub" id="levelHint">باقي 250 نقطة للمستوى التالي</span>
           </div>
         </div>
 
         <div class="quick-grid">
           <div class="quick-card">
-            <span class="qc-ico c-orange" data-icon="flame" data-icon-size="22"></span>
+            <span class="qc-ico c-pink" data-icon="flame" data-icon-size="22"></span>
             <strong id="streakDays">0</strong>
             <small>أيام متتالية</small>
           </div>

@@ -152,14 +152,13 @@
       const it = SHOP.find(s => s.id === id); return it && !it.default;
     }).length;
 
-    // المستوى
+    // المستوى — حلقة دائرية
     const level = Math.floor(state.points / POINTS_PER_LEVEL) + 1;
     const into = state.points % POINTS_PER_LEVEL;
     const pct = Math.round((into / POINTS_PER_LEVEL) * 100);
-    $('#levelLabel').textContent = 'المستوى ' + level;
-    $('#levelPct').textContent = pct + '%';
-    $('#levelFill').style.width = pct + '%';
+    $('#levelNum').textContent = level;
     $('#levelHint').textContent = `باقي ${POINTS_PER_LEVEL - into} نقطة للمستوى ${level + 1}`;
+    $('#levelRing').innerHTML = ringSVG(pct, { size: 96, stroke: 11 });
 
     // الترتيب
     $('#homeRank').textContent = '#' + computeRank();
@@ -409,6 +408,21 @@
       el.innerHTML = ICON(el.dataset.icon, { size: parseInt(el.dataset.iconSize || '24', 10) });
       el.dataset.filled = '1';
     });
+  }
+  function ringSVG(pct, opts) {
+    opts = opts || {};
+    const size = opts.size || 96, sw = opts.stroke || 10;
+    const r = (size - sw) / 2, cx = size / 2;
+    const c = 2 * Math.PI * r;
+    const off = c * (1 - Math.max(0, Math.min(1, pct / 100)));
+    const center = opts.center !== undefined ? opts.center : Math.round(pct) + '%';
+    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+      <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="#2b2b34" stroke-width="${sw}"/>
+      <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="url(#ringGrad)" stroke-width="${sw}"
+        stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"
+        transform="rotate(-90 ${cx} ${cx})" filter="url(#ringGlow)"/>
+      ${center ? `<text x="${cx}" y="${cx}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="${(size * 0.26).toFixed(0)}" font-weight="800">${center}</text>` : ''}
+    </svg>`;
   }
   function initials(name) {
     const parts = String(name).trim().split(/\s+/);
