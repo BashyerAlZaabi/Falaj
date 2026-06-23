@@ -8,6 +8,13 @@
 
   // ===== الحالة =====
   let state = null;
+  let avatar3dReady = false;
+  let avatarMounted = false;
+
+  window.addEventListener('falaj-avatar-ready', () => {
+    avatar3dReady = true;
+    if (state && !$('#app').classList.contains('hidden')) renderHome();
+  });
 
   const defaultState = () => ({
     name: 'لاعب',
@@ -155,8 +162,14 @@
     // الترتيب
     $('#homeRank').textContent = '#' + computeRank();
 
-    // الشخصية
-    $('#avatarStage').innerHTML = buildAvatar(state.gender, state.equipped);
+    // الشخصية (3D إن توفّر، وإلا SVG)
+    const stage = $('#avatarStage');
+    if (avatar3dReady && window.FalajAvatar) {
+      if (!avatarMounted) { window.FalajAvatar.mount(stage, state.gender, state.equipped); avatarMounted = true; }
+      else window.FalajAvatar.update(state.gender, state.equipped);
+    } else {
+      stage.innerHTML = buildAvatar(state.gender, state.equipped);
+    }
   }
 
   // ===== التمارين =====
