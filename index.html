@@ -2,150 +2,262 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <meta name="theme-color" content="#000000" />
-  <title>active</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0b" />
+  <meta name="description" content="فلج رياضة — تمرّن، اجمع نقاط، خصّص شخصيتك الإماراتية، وتصدّر العالم." />
+  <title>active · فلج رياضة</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
-  <!-- ===== التهيئة ===== -->
+  <!-- ===================== شاشة التهيئة ===================== -->
   <div id="onboarding" class="onboarding">
     <div class="onboarding-card">
       <div class="brand">
-        <div class="brand-mark" data-icon="figure" data-icon-size="34"></div>
+        <div class="brand-mark" data-icon="logo" data-icon-size="40"></div>
         <h1 class="brand-title">active</h1>
         <p class="brand-sub">تمرّن، اجمع نقاط، وتصدّر العالم</p>
       </div>
 
-      <label class="field-label">الاسم</label>
-      <input id="nameInput" class="text-input" type="text" maxlength="16" placeholder="اكتب اسمك" />
+      <label class="field-label" for="nameInput">الاسم</label>
+      <input id="nameInput" class="text-input" type="text" maxlength="16"
+             placeholder="اكتب اسمك" autocomplete="off" />
 
-      <label class="field-label">اختر شخصيتك</label>
-      <div class="gender-pick">
-        <button class="gender-btn" data-gender="male">
+      <span class="field-label" id="genderLabel">اختر شخصيتك</span>
+      <div class="gender-pick" role="radiogroup" aria-labelledby="genderLabel">
+        <button class="gender-btn" data-gender="male" role="radio" aria-checked="false">
           <span class="gender-ico" data-icon="personMale" data-icon-size="40"></span>
           <span class="gender-name">رجل</span>
           <small>كندورة وغترة</small>
         </button>
-        <button class="gender-btn" data-gender="female">
+        <button class="gender-btn" data-gender="female" role="radio" aria-checked="false">
           <span class="gender-ico" data-icon="personFemale" data-icon-size="40"></span>
           <span class="gender-name">أنثى</span>
           <small>عباية وشيلة</small>
         </button>
       </div>
 
-      <button id="startBtn" class="btn-primary big" disabled>ابدأ</button>
+      <button id="startBtn" class="btn-primary big" disabled>ابدأ رحلتك</button>
+      <p class="onboarding-foot">صُنع بحب لمجتمع الرياضة في الإمارات 🇦🇪</p>
     </div>
   </div>
 
-  <!-- ===== التطبيق ===== -->
+  <!-- ===================== التطبيق ===================== -->
   <div id="app" class="app hidden">
-    <header class="topbar">
-      <div class="top-stat">
-        <span class="ico star" data-icon="star" data-icon-size="17"></span>
-        <span id="topPoints">0</span>
+
+    <!-- شريط جانبي (يظهر على الشاشات الكبيرة) -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark sm" data-icon="logo" data-icon-size="26"></div>
+        <span class="sidebar-word">active</span>
       </div>
-      <div class="top-title">active</div>
-      <div class="top-stat">
-        <span class="ico coin" data-icon="coin" data-icon-size="17"></span>
-        <span id="topCoins">0</span>
-      </div>
-    </header>
-
-    <main id="screens">
-      <!-- الرئيسية -->
-      <section class="screen active" data-screen="home">
-        <div class="hero">
-          <div class="rank-chip">
-            <span>الترتيب العالمي</span>
-            <strong id="homeRank">#—</strong>
-          </div>
-          <div id="avatarStage" class="avatar-stage"></div>
-          <div class="hero-name" id="homeName">—</div>
-          <div class="level-wrap">
-            <div class="level-row">
-              <span id="levelLabel">المستوى 1</span>
-              <span id="levelPct">0%</span>
-            </div>
-            <div class="level-bar"><div id="levelFill" class="level-fill"></div></div>
-            <div class="level-hint" id="levelHint">باقي 250 نقطة للمستوى التالي</div>
-          </div>
-        </div>
-
-        <div class="quick-grid">
-          <div class="quick-card">
-            <span class="qc-ico c-orange" data-icon="flame" data-icon-size="22"></span>
-            <strong id="streakDays">0</strong>
-            <small>أيام متتالية</small>
-          </div>
-          <div class="quick-card">
-            <span class="qc-ico c-green" data-icon="dumbbell" data-icon-size="22"></span>
-            <strong id="totalWorkouts">0</strong>
-            <small>تمرين مكتمل</small>
-          </div>
-          <div class="quick-card">
-            <span class="qc-ico c-blue" data-icon="tshirt" data-icon-size="22"></span>
-            <strong id="ownedCount">0</strong>
-            <small>قطعة مملوكة</small>
-          </div>
-        </div>
-
-        <button class="btn-primary big" data-goto="workout">ابدأ تمرين</button>
-      </section>
-
-      <!-- التمارين -->
-      <section class="screen" data-screen="workout">
-        <h2 class="screen-title">التمارين</h2>
-        <p class="screen-sub">كل تمرين يمنحك نقاطاً ترفع تصنيفك وعملات للشراء.</p>
-        <div id="workoutList" class="workout-list"></div>
-      </section>
-
-      <!-- المتجر -->
-      <section class="screen" data-screen="shop">
-        <h2 class="screen-title">المتجر</h2>
-        <p class="screen-sub">اشترِ ملابس وإكسسوارات لشخصيتك. لا تملك عملات كافية؟ شاهد فيديو واكسب.</p>
-        <button id="watchAdBtn" class="btn-watch">
-          <span data-icon="play" data-icon-size="20"></span>
-          شاهد فيديو واكسب 50
-          <span class="ico coin" data-icon="coin" data-icon-size="18"></span>
+      <nav class="side-nav" role="tablist" aria-label="التنقل الرئيسي">
+        <button class="side-link active" data-goto="home" role="tab" aria-selected="true">
+          <span class="nav-ico" data-icon="house"></span><span>الرئيسية</span>
         </button>
-        <div class="shop-tabs" id="shopTabs"></div>
-        <div id="shopGrid" class="shop-grid"></div>
-      </section>
+        <button class="side-link" data-goto="workout" role="tab" aria-selected="false">
+          <span class="nav-ico" data-icon="dumbbell"></span><span>التمارين</span>
+        </button>
+        <button class="side-link" data-goto="shop" role="tab" aria-selected="false">
+          <span class="nav-ico" data-icon="bag"></span><span>المتجر</span>
+        </button>
+        <button class="side-link" data-goto="leaderboard" role="tab" aria-selected="false">
+          <span class="nav-ico" data-icon="trophy"></span><span>التصنيف</span>
+        </button>
+        <button class="side-link" data-goto="profile" role="tab" aria-selected="false">
+          <span class="nav-ico" data-icon="user"></span><span>حسابي</span>
+        </button>
+      </nav>
+    </aside>
 
-      <!-- المتصدرون -->
-      <section class="screen" data-screen="leaderboard">
-        <h2 class="screen-title">المتصدرون</h2>
-        <p class="screen-sub">تنافس مع لاعبين من حول العالم. اجمع نقاطاً لترتفع.</p>
-        <div id="leaderboardList" class="lb-list"></div>
-      </section>
-    </main>
+    <div class="app-main">
+      <!-- الشريط العلوي -->
+      <header class="topbar">
+        <div class="top-title-wrap">
+          <span class="brand-mark xs" data-icon="logo" data-icon-size="18"></span>
+          <span class="top-title">active</span>
+        </div>
+        <div class="top-stats">
+          <div class="top-stat" title="النقاط">
+            <span class="ico star" data-icon="star" data-icon-size="17"></span>
+            <span id="topPoints">0</span>
+          </div>
+          <div class="top-stat" title="العملات">
+            <span class="ico coin" data-icon="coin" data-icon-size="17"></span>
+            <span id="topCoins">0</span>
+          </div>
+        </div>
+      </header>
 
-    <nav class="bottom-nav">
-      <button class="nav-btn active" data-goto="home">
+      <main id="screens">
+        <!-- ===== الرئيسية ===== -->
+        <section class="screen active" data-screen="home" role="tabpanel" aria-label="الرئيسية">
+          <div class="greeting">
+            <div>
+              <p class="greet-hi" id="greetHi">أهلاً</p>
+              <h1 class="greet-name" id="homeName">—</h1>
+            </div>
+            <button class="icon-btn" data-goto="profile" aria-label="حسابي">
+              <span data-icon="user" data-icon-size="22"></span>
+            </button>
+          </div>
+
+          <div class="hero card">
+            <button class="rank-chip" data-goto="leaderboard" aria-label="الترتيب العالمي">
+              <span>الترتيب العالمي</span>
+              <strong id="homeRank">#—</strong>
+            </button>
+            <div id="avatarStage" class="avatar-stage" aria-label="شخصيتك"></div>
+            <div class="hero-name" id="heroName">—</div>
+            <div class="level-wrap">
+              <div class="level-row">
+                <span id="levelLabel">المستوى 1</span>
+                <span id="levelPct">0%</span>
+              </div>
+              <div class="level-bar"><div id="levelFill" class="level-fill"></div></div>
+              <div class="level-hint" id="levelHint">باقي 250 نقطة للمستوى التالي</div>
+            </div>
+          </div>
+
+          <div class="goal card">
+            <div id="goalRing" class="goal-ring" aria-hidden="true"></div>
+            <div class="goal-text">
+              <h3>هدف اليوم</h3>
+              <p id="goalLabel">أكمل 3 تمارين اليوم</p>
+              <span class="goal-count" id="goalCount">0 / 3</span>
+            </div>
+          </div>
+
+          <div class="quick-grid">
+            <div class="quick-card">
+              <span class="qc-ico c-orange" data-icon="flame" data-icon-size="22"></span>
+              <strong id="streakDays">0</strong>
+              <small>أيام متتالية</small>
+            </div>
+            <div class="quick-card">
+              <span class="qc-ico c-green" data-icon="dumbbell" data-icon-size="22"></span>
+              <strong id="totalWorkouts">0</strong>
+              <small>تمرين مكتمل</small>
+            </div>
+            <div class="quick-card">
+              <span class="qc-ico c-blue" data-icon="tshirt" data-icon-size="22"></span>
+              <strong id="ownedCount">0</strong>
+              <small>قطعة مملوكة</small>
+            </div>
+          </div>
+
+          <button class="btn-primary big" data-goto="workout">ابدأ تمرين</button>
+        </section>
+
+        <!-- ===== التمارين ===== -->
+        <section class="screen" data-screen="workout" role="tabpanel" aria-label="التمارين">
+          <h2 class="screen-title">التمارين</h2>
+          <p class="screen-sub">كل تمرين يمنحك نقاطاً ترفع تصنيفك وعملات للشراء.</p>
+          <div class="filter-tabs" id="workoutFilters" role="tablist" aria-label="فئات التمارين"></div>
+          <div id="workoutList" class="workout-list"></div>
+          <p id="workoutEmpty" class="empty-state hidden">لا توجد تمارين في هذه الفئة.</p>
+        </section>
+
+        <!-- ===== المتجر ===== -->
+        <section class="screen" data-screen="shop" role="tabpanel" aria-label="المتجر">
+          <h2 class="screen-title">المتجر</h2>
+          <p class="screen-sub">اشترِ ملابس وإكسسوارات لشخصيتك. لا تملك عملات كافية؟ شاهد فيديو واكسب.</p>
+          <button id="watchAdBtn" class="btn-watch">
+            <span data-icon="play" data-icon-size="20"></span>
+            شاهد فيديو واكسب 50
+            <span class="ico coin" data-icon="coin" data-icon-size="18"></span>
+          </button>
+          <div class="filter-tabs" id="shopTabs" role="tablist" aria-label="فئات المتجر"></div>
+          <div id="shopGrid" class="shop-grid"></div>
+        </section>
+
+        <!-- ===== المتصدرون ===== -->
+        <section class="screen" data-screen="leaderboard" role="tabpanel" aria-label="المتصدرون">
+          <h2 class="screen-title">المتصدرون</h2>
+          <p class="screen-sub">تنافس مع لاعبين من حول العالم. اجمع نقاطاً لترتفع.</p>
+          <div id="podium" class="podium"></div>
+          <div id="leaderboardList" class="lb-list"></div>
+        </section>
+
+        <!-- ===== حسابي ===== -->
+        <section class="screen" data-screen="profile" role="tabpanel" aria-label="حسابي">
+          <div class="profile-head card">
+            <div class="profile-ava" id="profileAva"></div>
+            <div class="profile-id">
+              <div class="profile-name-row">
+                <h2 id="profileName">—</h2>
+                <button class="icon-btn sm" id="editNameBtn" aria-label="تعديل الاسم">
+                  <span data-icon="pencil" data-icon-size="16"></span>
+                </button>
+              </div>
+              <span class="profile-level" id="profileLevel">المستوى 1</span>
+            </div>
+          </div>
+
+          <div class="stat-strip">
+            <div><strong id="psPoints">0</strong><small>نقطة</small></div>
+            <div><strong id="psCoins">0</strong><small>عملة</small></div>
+            <div><strong id="psWorkouts">0</strong><small>تمرين</small></div>
+            <div><strong id="psStreak">0</strong><small>سلسلة</small></div>
+          </div>
+
+          <div class="section-head">
+            <h3>الإنجازات</h3>
+            <span class="muted" id="achProgress">0 / 0</span>
+          </div>
+          <div id="achievementsGrid" class="ach-grid"></div>
+
+          <div class="section-head"><h3>الإعدادات</h3></div>
+          <div class="settings-list">
+            <button class="setting-row" id="soundToggle" aria-pressed="true">
+              <span class="setting-ico" data-icon="volumeOn" data-icon-size="20"></span>
+              <span class="setting-label">الأصوات والاهتزاز</span>
+              <span class="switch" data-on="true"><span class="switch-knob"></span></span>
+            </button>
+            <button class="setting-row" id="switchCharBtn">
+              <span class="setting-ico" data-icon="person" data-icon-size="20"></span>
+              <span class="setting-label">تبديل الشخصية</span>
+              <span class="setting-value" id="charValue">رجل</span>
+            </button>
+            <button class="setting-row danger" id="resetBtn">
+              <span class="setting-ico" data-icon="trash" data-icon-size="20"></span>
+              <span class="setting-label">إعادة ضبط التقدّم</span>
+              <span class="setting-chev" data-icon="chevron" data-icon-size="18"></span>
+            </button>
+          </div>
+          <p class="app-version">فلج رياضة · الإصدار 2.0</p>
+        </section>
+      </main>
+    </div>
+
+    <!-- شريط التنقل السفلي (الجوال) -->
+    <nav class="bottom-nav" role="tablist" aria-label="التنقل الرئيسي">
+      <button class="nav-btn active" data-goto="home" role="tab" aria-selected="true" aria-label="الرئيسية">
         <span class="nav-ico" data-icon="house"></span><small>الرئيسية</small>
       </button>
-      <button class="nav-btn" data-goto="workout">
+      <button class="nav-btn" data-goto="workout" role="tab" aria-selected="false" aria-label="التمارين">
         <span class="nav-ico" data-icon="dumbbell"></span><small>تمارين</small>
       </button>
-      <button class="nav-btn" data-goto="shop">
+      <button class="nav-btn" data-goto="shop" role="tab" aria-selected="false" aria-label="المتجر">
         <span class="nav-ico" data-icon="bag"></span><small>المتجر</small>
       </button>
-      <button class="nav-btn" data-goto="leaderboard">
+      <button class="nav-btn" data-goto="leaderboard" role="tab" aria-selected="false" aria-label="التصنيف">
         <span class="nav-ico" data-icon="trophy"></span><small>التصنيف</small>
+      </button>
+      <button class="nav-btn" data-goto="profile" role="tab" aria-selected="false" aria-label="حسابي">
+        <span class="nav-ico" data-icon="user"></span><small>حسابي</small>
       </button>
     </nav>
   </div>
 
-  <!-- ===== نوافذ ===== -->
-  <div id="workoutModal" class="modal hidden">
+  <!-- ===================== النوافذ ===================== -->
+  <div id="workoutModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="wmName">
     <div class="modal-card workout-modal">
       <div class="wm-icon" id="wmIcon"></div>
       <h3 id="wmName">تمرين</h3>
-      <div id="wmTimer" class="wm-timer">00:00</div>
+      <div id="wmTimer" class="wm-timer" aria-live="off">00:00</div>
       <div class="wm-progress"><div id="wmProgressFill" class="wm-progress-fill"></div></div>
       <p id="wmHint" class="wm-hint">جارٍ التمرين… ثبّت!</p>
       <div class="wm-rewards">
@@ -156,7 +268,7 @@
     </div>
   </div>
 
-  <div id="adModal" class="modal hidden">
+  <div id="adModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="فيديو مكافأة">
     <div class="modal-card ad-modal">
       <div class="ad-screen">
         <div class="ad-spinner"></div>
@@ -167,13 +279,41 @@
     </div>
   </div>
 
-  <div id="toast" class="toast hidden"></div>
+  <!-- نافذة تأكيد عامة -->
+  <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+    <div class="modal-card confirm-modal">
+      <div class="confirm-ico" id="confirmIco"></div>
+      <h3 id="confirmTitle">تأكيد</h3>
+      <p id="confirmText" class="confirm-text">هل أنت متأكد؟</p>
+      <div class="confirm-actions">
+        <button id="confirmCancel" class="btn-ghost">إلغاء</button>
+        <button id="confirmOk" class="btn-danger">تأكيد</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة تعديل الاسم -->
+  <div id="nameModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="nameModalTitle">
+    <div class="modal-card name-modal">
+      <h3 id="nameModalTitle">تعديل الاسم</h3>
+      <input id="editNameInput" class="text-input" type="text" maxlength="16" autocomplete="off" />
+      <div class="confirm-actions">
+        <button id="nameCancel" class="btn-ghost">إلغاء</button>
+        <button id="nameSave" class="btn-primary">حفظ</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+  <canvas id="confetti" class="confetti hidden" aria-hidden="true"></canvas>
 
   <script type="importmap">
   { "imports": { "three": "./js/vendor/three.module.js" } }
   </script>
   <script src="js/icons.js"></script>
   <script src="js/data.js"></script>
+  <script src="js/state.js"></script>
+  <script src="js/fx.js"></script>
   <script src="js/avatar.js"></script>
   <script src="js/app.js"></script>
   <script type="module" src="js/avatar3d.js"></script>

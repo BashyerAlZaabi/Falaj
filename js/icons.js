@@ -59,6 +59,50 @@ const ICONS = {
   plus: '<path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
 
   sparkle: '<path d="M12 2.5l1.6 4.4c.3.8.9 1.4 1.7 1.7L19.5 12l-4.4 1.6c-.8.3-1.4.9-1.7 1.7L12 19.5l-1.6-4.4c-.3-.8-.9-1.4-1.7-1.7L4.5 12l4.2-1.4c.8-.3 1.4-.9 1.7-1.7Z"/>',
+
+  // ── NEW ICONS ────────────────────────────────────────────────────────────
+
+  gear: '<path fill-rule="evenodd" d="M10.2 2.6c-.4.1-.6.5-.6.9v.9c0 .4-.3.8-.7.9-.3.1-.7.3-1 .5-.4.2-.8.1-1.1-.1l-.7-.6c-.3-.3-.8-.3-1 0L3.9 6.3c-.3.3-.3.7 0 1l.6.7c.3.3.3.7.1 1.1-.2.3-.4.7-.5 1-.1.4-.5.7-.9.7h-.9c-.4 0-.8.2-.9.6-.1.5-.2 1-.2 1.6s.1 1.1.2 1.6c.1.4.5.6.9.6h.9c.4 0 .8.3.9.7.1.3.3.7.5 1 .2.4.1.8-.1 1.1l-.6.7c-.3.3-.3.8 0 1l1.2 1.2c.3.3.7.3 1 0l.7-.6c.3-.3.7-.3 1.1-.1.3.2.7.4 1 .5.4.1.7.5.7.9v.9c0 .4.2.8.6.9.5.1 1 .2 1.6.2s1.1-.1 1.6-.2c.4-.1.6-.5.6-.9v-.9c0-.4.3-.8.7-.9.3-.1.7-.3 1-.5.4-.2.8-.1 1.1.1l.7.6c.3.3.8.3 1 0l1.2-1.2c.3-.3.3-.7 0-1l-.6-.7c-.3-.3-.3-.7-.1-1.1.2-.3.4-.7.5-1 .1-.4.5-.7.9-.7h.9c.4 0 .8-.2.9-.6.1-.5.2-1 .2-1.6s-.1-1.1-.2-1.6c-.1-.4-.5-.6-.9-.6h-.9c-.4 0-.8-.3-.9-.7-.1-.3-.3-.7-.5-1-.2-.4-.1-.8.1-1.1l.6-.7c.3-.3.3-.8 0-1l-1.2-1.2c-.3-.3-.7-.3-1 0l-.7.6c-.3.3-.7.3-1.1.1a7 7 0 0 0-1-.5c-.4-.1-.7-.5-.7-.9v-.9c0-.4-.2-.8-.6-.9A9 9 0 0 0 12 2.4c-.6 0-1.1.1-1.8.2ZM12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"/>',
+
+  user: '<path d="M12 3a4.2 4.2 0 1 1 0 8.4A4.2 4.2 0 0 1 12 3Z"/><path d="M3.5 21c0-4.7 3.8-8.5 8.5-8.5s8.5 3.8 8.5 8.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+
+  target: '<circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="2"/>',
+
+  award: '<path d="M12 2.5c-.5 0-.9.2-1.2.6L9.2 5H7c-.7 0-1.2.5-1.2 1.2v2.2L3.6 9.8c-.6.4-.8 1.1-.4 1.7l1.2 2-1.2 2c-.3.6-.1 1.3.4 1.7l2.2 1.4v2.2c0 .7.5 1.2 1.2 1.2h2.2l1.6 2c.3.4.8.6 1.2.6s.9-.2 1.2-.6l1.6-2H17c.7 0 1.2-.5 1.2-1.2v-2.2l2.2-1.4c.6-.4.7-1.1.4-1.7l-1.2-2 1.2-2c.3-.6.1-1.3-.4-1.7l-2.2-1.4V6.2C18.2 5.5 17.7 5 17 5h-2.2l-1.6-2c-.3-.4-.7-.6-1.2-.6Zm0 5.6 1.1 2.3 2.5.4-1.8 1.7.4 2.5L12 13.5l-2.2 1.2.4-2.5-1.8-1.7 2.5-.4Z"/>',
+
+  crown: '<path d="M3 17.5h18l-2-9-4.5 4.5L12 6l-2.5 7L5 8.5Z"/><path d="M3 17.5h18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><rect x="3" y="19" width="18" height="2.5" rx="1.2"/>',
+
+  clock: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><rect x="7" y="14" width="2.2" height="2.2" rx=".6"/><rect x="10.9" y="14" width="2.2" height="2.2" rx=".6"/><rect x="14.8" y="14" width="2.2" height="2.2" rx=".6"/>',
+
+  volumeOn: '<path d="M3 9.5h3.5l5-4.5v14l-5-4.5H3Z"/><path d="M17 8c1.3.9 2 2.3 2 4s-.7 3.1-2 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M19.5 5c2.2 1.6 3.5 4 3.5 7s-1.3 5.4-3.5 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+
+  volumeOff: '<path d="M3 9.5h3.5l5-4.5v14l-5-4.5H3Z"/><path d="M16 10l5 5M21 10l-5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+
+  lock: '<rect x="5" y="11" width="14" height="10" rx="2.5"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="16" r="1.5"/>',
+
+  trash: '<path d="M4 6h16M9 6V4.5c0-.8.7-1.5 1.5-1.5h3c.8 0 1.5.7 1.5 1.5V6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5.5 6l1 13c.1.9.8 1.5 1.7 1.5h7.6c.9 0 1.6-.6 1.7-1.5l1-13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M10 10.5v5M14 10.5v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+
+  share: '<path d="M9 12 4.5 9 9 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.5 9h9a6 6 0 0 1 6 6v1.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+
+  arrowLeft: '<path d="M19 12H5M10 7l-5 5 5 5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  heart: '<path d="M12 20.5S3 15 3 8.5A4.5 4.5 0 0 1 12 6a4.5 4.5 0 0 1 9 2.5C21 15 12 20.5 12 20.5Z"/>',
+
+  bell: '<path d="M6 10a6 6 0 0 1 12 0c0 3.5 1.5 5.5 2 6.5H4c.5-1 2-3 2-6.5Z"/><path d="M10 17.5a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 4V2.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+
+  pencil: '<path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/><path d="M14.5 5.5l3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+
+  globe: '<circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="12" cy="12" rx="4" ry="9.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 9h19M2.5 15h19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+
+  // flame (distinct cleaner version; original flame key kept above)
+  fire: '<path d="M12 21a7 7 0 0 1-5-11.9C8.3 7.7 9 6.5 9 5c0-.4.4-.7.7-.5 2 1.1 3.3 3 3.3 5.2 0 .5.3.8.7.5.9-.5 1.3-1.4 1.3-2.5 0-.4.5-.6.8-.4C17.5 9 19 11.3 19 14a7 7 0 0 1-7 7Zm0-4c1.4 0 2.5-.8 2.5-2.5 0-1-.5-1.8-1.2-2.3-.2-.2-.5 0-.5.3 0 .8-.5 1.5-1.3 1.8-.3.1-.5.4-.5.7 0 1.1-1 2-1 2s1 0 2 0Z"/>',
+
+  // ── BRAND LOGO ──────────────────────────────────────────────────────────
+  // A running figure whose forward leg traces into a swooping palm-frond arc,
+  // merging Emirati nature motif with athletic motion. Single-color currentColor.
+  logo: '<g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="3.5" r="2" fill="currentColor" stroke="none"/><path d="M15 5.5c-1 1.8-2.8 2.8-4.5 3.2" stroke-width="2"/><path d="M10.5 8.7 8 12.5l-3 1.5" stroke-width="2"/><path d="M10.5 8.7l3.5 3-1.5 4.5" stroke-width="2"/><path d="M12.5 16.2l-1 4" stroke-width="2"/><path d="M14 11.7l3 1.8 2.5-1" stroke-width="2"/><path d="M10.5 8.7c2-2.5 4.5-6 6.5-7.2" stroke-width="1.8"/><path d="M17 1.5c1.2 2 .8 5-.5 7" stroke-width="1.8"/></g>',
 };
 
 function ICON(name, opts) {

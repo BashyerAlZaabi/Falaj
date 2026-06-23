@@ -1,15 +1,33 @@
 /* ===== بيانات التطبيق الثابتة ===== */
 
-// التمارين المتاحة (icon = اسم أيقونة SVG)
+// فئات التمارين (للتصفية)
+const WORKOUT_CATS = [
+  { id: 'all',      name: 'الكل' },
+  { id: 'cardio',   name: 'كارديو' },
+  { id: 'strength', name: 'قوة' },
+  { id: 'agility',  name: 'رشاقة' },
+  { id: 'core',     name: 'ثبات' },
+  { id: 'legs',     name: 'أرجل' },
+  { id: 'full',     name: 'كامل الجسم' },
+];
+
+// مستويات الصعوبة
+const LEVELS = {
+  easy:   { name: 'سهل',   color: 'var(--green)' },
+  medium: { name: 'متوسط', color: 'var(--orange)' },
+  hard:   { name: 'صعب',   color: 'var(--red)' },
+};
+
+// التمارين المتاحة (icon = اسم أيقونة SVG، cat = الفئة، level = الصعوبة)
 const WORKOUTS = [
-  { id: 'run',     name: 'جري',      icon: 'figure',   seconds: 8,  points: 40, coins: 25, desc: 'كارديو' },
-  { id: 'pushup',  name: 'ضغط',      icon: 'dumbbell', seconds: 6,  points: 30, coins: 18, desc: 'قوة' },
-  { id: 'squat',   name: 'سكوات',    icon: 'figure',   seconds: 6,  points: 30, coins: 18, desc: 'أرجل' },
-  { id: 'plank',   name: 'بلانك',     icon: 'figure',   seconds: 7,  points: 35, coins: 20, desc: 'ثبات' },
-  { id: 'bike',    name: 'دراجة',     icon: 'bicycle',  seconds: 9,  points: 45, coins: 28, desc: 'كارديو' },
-  { id: 'jump',    name: 'نط الحبل',  icon: 'bolt',     seconds: 7,  points: 38, coins: 22, desc: 'رشاقة' },
-  { id: 'swim',    name: 'سباحة',     icon: 'waves',    seconds: 10, points: 55, coins: 32, desc: 'كامل الجسم' },
-  { id: 'weights', name: 'حديد',      icon: 'dumbbell', seconds: 8,  points: 50, coins: 30, desc: 'قوة' },
+  { id: 'run',     name: 'جري',       icon: 'figure',   seconds: 8,  points: 40, coins: 25, cat: 'cardio',   level: 'medium', desc: 'كارديو' },
+  { id: 'pushup',  name: 'ضغط',       icon: 'dumbbell', seconds: 6,  points: 30, coins: 18, cat: 'strength', level: 'easy',   desc: 'قوة' },
+  { id: 'squat',   name: 'سكوات',     icon: 'figure',   seconds: 6,  points: 30, coins: 18, cat: 'legs',     level: 'easy',   desc: 'أرجل' },
+  { id: 'plank',   name: 'بلانك',      icon: 'figure',   seconds: 7,  points: 35, coins: 20, cat: 'core',     level: 'medium', desc: 'ثبات' },
+  { id: 'bike',    name: 'دراجة',      icon: 'bicycle',  seconds: 9,  points: 45, coins: 28, cat: 'cardio',   level: 'medium', desc: 'كارديو' },
+  { id: 'jump',    name: 'نط الحبل',   icon: 'bolt',     seconds: 7,  points: 38, coins: 22, cat: 'agility',  level: 'medium', desc: 'رشاقة' },
+  { id: 'swim',    name: 'سباحة',      icon: 'waves',    seconds: 10, points: 55, coins: 32, cat: 'full',     level: 'hard',   desc: 'كامل الجسم' },
+  { id: 'weights', name: 'حديد',       icon: 'dumbbell', seconds: 8,  points: 50, coins: 30, cat: 'strength', level: 'hard',   desc: 'قوة' },
 ];
 
 // عناصر المتجر — كل عنصر يغيّر مظهر الشخصية
@@ -51,6 +69,25 @@ const SHOP_CATS = [
   { id: 'eyes',      name: 'النظارات' },
   { id: 'accessory', name: 'إكسسوارات' },
   { id: 'shoes',     name: 'الأحذية' },
+];
+
+// الإنجازات — تُفتح تلقائياً عند تحقّق الشرط على الحالة المشتقّة (d)
+const ACHIEVEMENTS = [
+  { id: 'first_workout', name: 'الانطلاقة',      desc: 'أكمل أول تمرين',          icon: 'flame',    test: d => d.totalWorkouts >= 1 },
+  { id: 'ten_workouts',  name: 'نشيط',           desc: 'أكمل 10 تمارين',          icon: 'dumbbell', test: d => d.totalWorkouts >= 10 },
+  { id: 'fifty_workouts',name: 'لا يتوقّف',       desc: 'أكمل 50 تمريناً',         icon: 'bolt',     test: d => d.totalWorkouts >= 50 },
+  { id: 'goal_day',      name: 'هدف اليوم',       desc: 'أكمل هدف اليوم',          icon: 'target',   test: d => d.goalDone },
+  { id: 'points_1k',     name: 'ألف نقطة',       desc: 'اجمع 1000 نقطة',          icon: 'star',     test: d => d.points >= 1000 },
+  { id: 'points_5k',     name: 'خمسة آلاف',      desc: 'اجمع 5000 نقطة',          icon: 'sparkle',  test: d => d.points >= 5000 },
+  { id: 'level_5',       name: 'صاعد',           desc: 'بلغ المستوى 5',           icon: 'award',    test: d => d.level >= 5 },
+  { id: 'level_10',      name: 'خبير',           desc: 'بلغ المستوى 10',          icon: 'award',    test: d => d.level >= 10 },
+  { id: 'streak_7',      name: 'أسبوع كامل',     desc: 'سلسلة 7 أيام متتالية',     icon: 'flame',    test: d => d.streak >= 7 },
+  { id: 'streak_30',     name: 'شهر من الالتزام', desc: 'سلسلة 30 يوماً',          icon: 'calendar', test: d => d.streak >= 30 },
+  { id: 'collector',     name: 'جامع الأناقة',    desc: 'امتلك 5 قطع',             icon: 'bag',      test: d => d.ownedCount >= 5 },
+  { id: 'fashionista',   name: 'خزانة كاملة',     desc: 'امتلك 10 قطع',            icon: 'tshirt',   test: d => d.ownedCount >= 10 },
+  { id: 'top10',         name: 'نخبة العالم',     desc: 'ادخل أفضل 10 عالمياً',     icon: 'globe',    test: d => d.rank <= 10 },
+  { id: 'top3',          name: 'منصة التتويج',    desc: 'ادخل أفضل 3 عالمياً',      icon: 'medal',    test: d => d.rank <= 3 },
+  { id: 'champion',      name: 'بطل العالم',      desc: 'احتل المركز الأول',        icon: 'crown',    test: d => d.rank === 1 },
 ];
 
 // لاعبون للتصنيف العالمي (الأحرف الأولى تُحسب من الاسم، اللون يُولّد تلقائياً)
