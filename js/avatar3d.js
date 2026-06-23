@@ -4,6 +4,7 @@
 */
 import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
+import { RoomEnvironment } from './vendor/RoomEnvironment.js';
 
 /* ===== الألوان ===== */
 const OUTFIT = {
@@ -24,23 +25,19 @@ function shemaghTexture() {
   const s = 256, c = document.createElement('canvas');
   c.width = c.height = s;
   const x = c.getContext('2d');
-  x.fillStyle = '#d12f2f'; x.fillRect(0, 0, s, s);
-  // شبكة معيّنة بيضاء
-  x.strokeStyle = 'rgba(255,255,255,0.55)'; x.lineWidth = 3;
+  x.fillStyle = '#c41f1f'; x.fillRect(0, 0, s, s);
   const step = s / 8;
+  // أقطار داكنة (نقشة العين) أولاً
+  x.strokeStyle = 'rgba(110,12,12,0.6)'; x.lineWidth = 2;
+  for (let i = -8; i <= 8; i++) {
+    x.beginPath(); x.moveTo(i * step, 0); x.lineTo(i * step + s, s); x.stroke();
+    x.beginPath(); x.moveTo(i * step, s); x.lineTo(i * step + s, 0); x.stroke();
+  }
+  // شبكة بيضاء خفيفة
+  x.strokeStyle = 'rgba(255,255,255,0.22)'; x.lineWidth = 2.5;
   for (let i = 0; i <= 8; i++) {
     x.beginPath(); x.moveTo(i * step, 0); x.lineTo(i * step, s); x.stroke();
     x.beginPath(); x.moveTo(0, i * step); x.lineTo(s, i * step); x.stroke();
-  }
-  // أقطار خفيفة
-  x.strokeStyle = 'rgba(150,20,20,0.5)'; x.lineWidth = 2;
-  for (let i = -8; i <= 8; i++) {
-    x.beginPath(); x.moveTo(i * step, 0); x.lineTo(i * step + s, s); x.stroke();
-  }
-  // عقد تقاطع
-  x.fillStyle = 'rgba(255,255,255,0.5)';
-  for (let i = 0; i <= 8; i++) for (let j = 0; j <= 8; j++) {
-    x.beginPath(); x.arc(i * step, j * step, 2.2, 0, Math.PI * 2); x.fill();
   }
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
@@ -164,20 +161,38 @@ function buildCharacter(gender, eq) {
   const browGeo = new THREE.BoxGeometry(0.18, 0.035, 0.05);
   add(browGeo, mat.hair, -0.18, 3.08, 0.46).rotation.z = -0.12;
   add(browGeo, mat.hair, 0.18, 3.08, 0.46).rotation.z = 0.12;
-  // عيون (بياض + بؤبؤ) — تُخفى مع النظارات الكاملة
+  // عيون (بياض + قزحية + بؤبؤ + بريق) — تُخفى مع النظارات الكاملة
   const wearShades = eq.eyes === 'eyes_shades' || eq.eyes === 'eyes_sport';
+  const matIris = new THREE.MeshStandardMaterial({ color: 0x5a3a1f, roughness: 0.35 });
+  const matGlint = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1, emissive: 0x444444 });
   if (!wearShades) {
     [-0.18, 0.18].forEach(ex => {
-      const w = add(new THREE.SphereGeometry(0.085, 16, 16), mat.white, ex, 2.99, 0.45);
-      w.scale.set(1.15, 1, 0.5);
-      add(new THREE.SphereGeometry(0.045, 14, 14), mat.eye, ex, 2.985, 0.5);
+      const sclera = add(new THREE.SphereGeometry(0.082, 18, 18), mat.white, ex, 2.987, 0.45);
+      sclera.scale.set(1.18, 1, 0.5); sclera.castShadow = false;
+      const iris = add(new THREE.SphereGeometry(0.05, 16, 16), matIris, ex, 2.985, 0.5);
+      iris.scale.set(1, 1, 0.55); iris.castShadow = false;
+      add(new THREE.SphereGeometry(0.026, 14, 14), mat.eye, ex, 2.985, 0.515).castShadow = false;
+      add(new THREE.SphereGeometry(0.013, 8, 8), matGlint, ex + 0.022, 3.01, 0.52).castShadow = false;
+      // جفن علوي (يعطي شكل اللوز)
+      const lid = add(new THREE.SphereGeometry(0.095, 18, 14, 0, Math.PI * 2, 0, Math.PI * 0.5), mat.skin, ex, 3.025, 0.45);
+      lid.scale.set(1.0, 0.45, 0.5); lid.rotation.x = -0.2; lid.castShadow = false;
+      // رموش للأنثى
+      if (isF) {
+        const lash = add(new THREE.TorusGeometry(0.072, 0.008, 6, 16, Math.PI), mat.eye, ex, 2.995, 0.49);
+        lash.rotation.set(-0.5, 0, Math.PI); lash.scale.set(1.15, 1, 0.6); lash.castShadow = false;
+      }
     });
   }
-  // أنف
-  add(new THREE.SphereGeometry(0.07, 14, 14), mat.skin, 0, 2.87, 0.52).scale.set(0.9, 1.1, 1);
-  // فم (ابتسامة)
-  const mouth = add(new THREE.TorusGeometry(0.12, 0.022, 8, 20, Math.PI), mat.lip, 0, 2.78, 0.46);
-  mouth.rotation.set(0, 0, Math.PI);
+  // أنف (جسر + أرنبة)
+  add(new THREE.SphereGeometry(0.052, 14, 14), mat.skin, 0, 2.86, 0.53).scale.set(1, 1.05, 1);
+  add(new THREE.CapsuleGeometry(0.028, 0.06, 4, 10), mat.skin, 0, 2.92, 0.5).rotation.x = 0.3;
+  // فم (ابتسامة بشفتين)
+  const mouth = add(new THREE.TorusGeometry(0.115, 0.026, 10, 24, Math.PI), mat.lip, 0, 2.78, 0.46);
+  mouth.rotation.set(0, 0, Math.PI); mouth.castShadow = false;
+  if (isF) {
+    // شفة سفلية ممتلئة قليلاً
+    add(new THREE.SphereGeometry(0.05, 14, 12), mat.lip, 0, 2.74, 0.47).scale.set(1.5, 0.6, 0.5).castShadow = false;
+  }
   // لحية خفيفة للرجل
   if (!isF) {
     const beard = add(new THREE.SphereGeometry(0.5, 28, 24, 0, Math.PI * 2, Math.PI * 0.62, Math.PI * 0.38),
@@ -210,6 +225,13 @@ function buildCharacter(gender, eq) {
       cup.rotation.z = Math.PI / 2;
     });
   }
+
+  // ضبط شدّة الانعكاس البيئي لكل خامة (يبقي الألوان مشبعة، والمعادن لامعة)
+  G.traverse(o => {
+    if (o.material && 'envMapIntensity' in o.material) {
+      o.material.envMapIntensity = (o.material.metalness || 0) > 0.4 ? 0.9 : 0.32;
+    }
+  });
 
   return G;
 }
@@ -258,7 +280,7 @@ function addHeadwear(G, add, mat, gender, eq, head) {
   }
 
   // قبّة تغطّي التاج والجبين
-  const capTheta = isF ? Math.PI * 0.52 : Math.PI * 0.5;
+  const capTheta = isF ? Math.PI * 0.47 : Math.PI * 0.5;
   const cap = add(new THREE.SphereGeometry(0.6, 40, 28, 0, Math.PI * 2, 0, capTheta), capMat, 0, headY + 0.02, 0);
   cap.scale.set(1.02, 1.04, 1.0);
 
@@ -300,27 +322,34 @@ function mount(container, gender, eq) {
   renderer.setSize(w, h);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.02;
   container.innerHTML = '';
   container.appendChild(renderer.domElement);
 
+  // إضاءة بيئية واقعية (يعطي انعكاسات ناعمة وعمق للخامات)
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
   // إضاءة
-  scene.add(new THREE.HemisphereLight(0xfff6e6, 0x2a3b34, 1.25));
+  scene.add(new THREE.HemisphereLight(0xfff6e6, 0x2a3b34, 0.8));
   // ضوء أمامي ناعم لإنارة الوجه
-  const front = new THREE.DirectionalLight(0xfff3e0, 0.85);
-  front.position.set(0, 2.6, 6);
+  const front = new THREE.DirectionalLight(0xfff3e0, 0.95);
+  front.position.set(0, 2.9, 6);
   scene.add(front);
-  const key = new THREE.DirectionalLight(0xffffff, 1.35);
-  key.position.set(3, 6, 5);
+  const key = new THREE.DirectionalLight(0xffffff, 1.7);
+  key.position.set(3.5, 6.5, 4.5);
   key.castShadow = true;
-  key.shadow.mapSize.set(1024, 1024);
+  key.shadow.mapSize.set(2048, 2048);
   key.shadow.camera.near = 1; key.shadow.camera.far = 20;
   key.shadow.camera.left = -3; key.shadow.camera.right = 3;
   key.shadow.camera.top = 5; key.shadow.camera.bottom = -1;
-  key.shadow.bias = -0.0008;
+  key.shadow.bias = -0.0006;
+  key.shadow.radius = 4;
   scene.add(key);
-  const fill = new THREE.DirectionalLight(0x9fd8c4, 0.5);
-  fill.position.set(-4, 2, 3);
-  scene.add(fill);
+  const rim = new THREE.DirectionalLight(0xbfe8d8, 0.6);
+  rim.position.set(-4, 3, -3);
+  scene.add(rim);
 
   // أرضية للظل
   const ground = new THREE.Mesh(
