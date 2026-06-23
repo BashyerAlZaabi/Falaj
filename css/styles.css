@@ -58,6 +58,8 @@ svg { display: block; }
   box-shadow: 0 12px 28px rgba(48,209,88,0.35);
 }
 .brand h1 { margin: 0 0 4px; font-size: 34px; font-weight: 800; letter-spacing: -0.5px; }
+.brand-title { direction: ltr; text-transform: lowercase; letter-spacing: -1px !important; }
+.top-title { direction: ltr; text-transform: lowercase; }
 .brand-sub { margin: 0; color: var(--label-2); font-size: 15px; }
 .field-label { display: block; margin: 22px 4px 10px; font-weight: 600; font-size: 15px; color: var(--label-2); }
 .text-input {
