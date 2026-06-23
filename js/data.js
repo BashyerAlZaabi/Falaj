@@ -1,15 +1,15 @@
 /* ===== بيانات التطبيق الثابتة ===== */
 
-// التمارين المتاحة (icon = اسم أيقونة SVG)
+// التمارين المتاحة (mode: reps = عدّ بالحركة، hold = ثبات)
 const WORKOUTS = [
-  { id: 'run',     name: 'جري',      icon: 'figure',   seconds: 8,  points: 40, coins: 25, desc: 'كارديو' },
-  { id: 'pushup',  name: 'ضغط',      icon: 'dumbbell', seconds: 6,  points: 30, coins: 18, desc: 'قوة' },
-  { id: 'squat',   name: 'سكوات',    icon: 'figure',   seconds: 6,  points: 30, coins: 18, desc: 'أرجل' },
-  { id: 'plank',   name: 'بلانك',     icon: 'figure',   seconds: 7,  points: 35, coins: 20, desc: 'ثبات' },
-  { id: 'bike',    name: 'دراجة',     icon: 'bicycle',  seconds: 9,  points: 45, coins: 28, desc: 'كارديو' },
-  { id: 'jump',    name: 'نط الحبل',  icon: 'bolt',     seconds: 7,  points: 38, coins: 22, desc: 'رشاقة' },
-  { id: 'swim',    name: 'سباحة',     icon: 'waves',    seconds: 10, points: 55, coins: 32, desc: 'كامل الجسم' },
-  { id: 'weights', name: 'حديد',      icon: 'dumbbell', seconds: 8,  points: 50, coins: 30, desc: 'قوة' },
+  { id: 'run',     name: 'جري',      icon: 'figure',   mode: 'reps', reps: 20, seconds: 30, points: 40, coins: 25, desc: 'كارديو' },
+  { id: 'pushup',  name: 'ضغط',      icon: 'dumbbell', mode: 'reps', reps: 10, seconds: 30, points: 30, coins: 18, desc: 'قوة' },
+  { id: 'squat',   name: 'سكوات',    icon: 'figure',   mode: 'reps', reps: 12, seconds: 30, points: 30, coins: 18, desc: 'أرجل' },
+  { id: 'plank',   name: 'بلانك',     icon: 'figure',   mode: 'hold', reps: 0,  seconds: 12, points: 35, coins: 20, desc: 'ثبات' },
+  { id: 'bike',    name: 'دراجة',     icon: 'bicycle',  mode: 'reps', reps: 20, seconds: 30, points: 45, coins: 28, desc: 'كارديو' },
+  { id: 'jump',    name: 'نط الحبل',  icon: 'bolt',     mode: 'reps', reps: 20, seconds: 30, points: 38, coins: 22, desc: 'رشاقة' },
+  { id: 'swim',    name: 'سباحة',     icon: 'waves',    mode: 'reps', reps: 16, seconds: 30, points: 55, coins: 32, desc: 'كامل الجسم' },
+  { id: 'weights', name: 'حديد',      icon: 'dumbbell', mode: 'reps', reps: 12, seconds: 30, points: 50, coins: 30, desc: 'قوة' },
 ];
 
 // عناصر المتجر — كل عنصر يغيّر مظهر الشخصية

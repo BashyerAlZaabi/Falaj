@@ -196,8 +196,18 @@
     });
   }
 
-  // ===== تنفيذ تمرين =====
-  let workoutTimer = null;
+  // ===== تنفيذ تمرين مع التحقّق من الحركة =====
+  const REP_THRESHOLD = 5.5;   // شدّة الحركة لاحتساب عدّة (m/s²)
+  const REP_DEBOUNCE = 320;    // أقل فاصل زمني بين عدّتين (ms)
+  const HOLD_MOVE = 2.4;       // حدّ الحركة الذي يُعتبر "غير ثابت" في البلانك
+  let wk = null;
+
+  function haptic(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms || 18); } catch (e) {} } }
+
+  function renderWkRing(pct, center) {
+    $('#wmRing').innerHTML = ringSVG(pct * 100, { size: 150, stroke: 14, center: String(center) });
+  }
+
   function startWorkout(w) {
     const modal = $('#workoutModal');
     modal.classList.remove('hidden');
@@ -205,50 +215,208 @@
     $('#wmName').textContent = w.name;
     $('#wmPts').textContent = w.points;
     $('#wmCoins').textContent = w.coins;
-    $('#wmHint').textContent = 'جارٍ التمرين… ثبّت!';
-    $('#wmProgressFill').style.width = '0%';
 
-    const total = w.seconds;
-    let elapsed = 0;
-    updateTimer(total);
+    wk = { w, running: false, count: 0, target: w.mode === 'hold' ? w.seconds : w.reps,
+           lastMag: null, lastPeak: 0, moving: false, held: 0, lastT: 0, raf: null,
+           handler: null, watchdog: null, motionSeen: false };
 
-    clearInterval(workoutTimer);
-    workoutTimer = setInterval(() => {
-      elapsed += 0.1;
-      const pct = Math.min(100, (elapsed / total) * 100);
-      $('#wmProgressFill').style.width = pct + '%';
-      updateTimer(Math.max(0, total - elapsed));
-      if (elapsed >= total) {
-        clearInterval(workoutTimer);
-        finishWorkout(w);
+    if (w.mode === 'hold') {
+      $('#wmGoal').textContent = `اثبت ${w.seconds} ثانية`;
+      renderWkRing(0, w.seconds);
+      $('#wmHint').textContent = 'ضع جهازك على جسمك واضغط ابدأ';
+    } else {
+      $('#wmGoal').textContent = `الهدف: ${w.reps} عدّة`;
+      renderWkRing(0, '0');
+      $('#wmHint').textContent = 'امسك جهازك وحرّكه مع كل عدّة';
+    }
+
+    const action = $('#wmAction');
+    action.innerHTML = '';
+    const startBtn = document.createElement('button');
+    startBtn.className = 'btn-primary';
+    startBtn.textContent = 'ابدأ';
+    startBtn.onclick = () => beginWorkout();
+    action.appendChild(startBtn);
+
+    $('#wmCancel').onclick = () => endWorkout();
+  }
+
+  async function beginWorkout() {
+    if (!wk || wk.running) return;
+    wk.running = true;
+    wk.lastT = performance.now();
+    $('#wmAction').innerHTML = '';
+
+    let granted = true;
+    try {
+      if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === 'function') {
+        granted = (await DeviceMotionEvent.requestPermission()) === 'granted';
       }
-    }, 100);
+    } catch (e) { granted = false; }
 
-    $('#wmCancel').onclick = () => {
-      clearInterval(workoutTimer);
-      modal.classList.add('hidden');
+    if (granted && window.DeviceMotionEvent) {
+      wk.handler = onMotion;
+      window.addEventListener('devicemotion', wk.handler);
+    }
+
+    $('#wmHint').textContent = wk.w.mode === 'hold' ? 'اثبت بثبات… لا تتحرّك' : 'حرّك جهازك مع كل عدّة';
+
+    // إن لم تصل أي قراءة حركة خلال 1.6ث → بديل يدوي
+    wk.watchdog = setTimeout(() => { if (!wk.motionSeen) enableManual(); }, 1600);
+
+    if (wk.w.mode === 'hold') startHoldLoop();
+  }
+
+  function onMotion(e) {
+    if (!wk || !wk.running) return;
+    const a = e.accelerationIncludingGravity || e.acceleration;
+    if (!a) return;
+    const mag = Math.sqrt((a.x || 0) ** 2 + (a.y || 0) ** 2 + (a.z || 0) ** 2);
+    if (mag > 0.5) wk.motionSeen = true;   // قراءة حقيقية (جاذبية فعلية)
+    if (wk.lastMag !== null) {
+      const d = Math.abs(mag - wk.lastMag);
+      if (wk.w.mode === 'hold') {
+        wk.moving = d > HOLD_MOVE;
+      } else {
+        const now = performance.now();
+        if (d > REP_THRESHOLD && now - wk.lastPeak > REP_DEBOUNCE) { wk.lastPeak = now; addRep(); }
+      }
+    }
+    wk.lastMag = mag;
+  }
+
+  function addRep() {
+    if (!wk || !wk.running) return;
+    wk.count += 1;
+    renderWkRing(Math.min(1, wk.count / wk.target), wk.count);
+    haptic(20);
+    if (wk.count >= wk.target) completeWorkout();
+  }
+
+  function startHoldLoop() {
+    const step = () => {
+      if (!wk || !wk.running) return;
+      const now = performance.now();
+      const dt = (now - wk.lastT) / 1000; wk.lastT = now;
+      if (!wk.moving) wk.held += dt;
+      const pct = Math.min(1, wk.held / wk.w.seconds);
+      renderWkRing(pct, Math.max(0, Math.ceil(wk.w.seconds - wk.held)));
+      $('#wmHint').textContent = wk.moving ? 'ثبّت! لا تتحرّك' : 'ممتاز… استمر بالثبات';
+      if (wk.held >= wk.w.seconds) { completeWorkout(); return; }
+      wk.raf = requestAnimationFrame(step);
     };
+    wk.raf = requestAnimationFrame(step);
   }
 
-  function updateTimer(sec) {
-    const s = Math.ceil(sec);
-    const mm = String(Math.floor(s / 60)).padStart(2, '0');
-    const ss = String(s % 60).padStart(2, '0');
-    $('#wmTimer').textContent = `${mm}:${ss}`;
+  // بديل يدوي عند غياب مستشعر الحركة
+  function enableManual() {
+    if (!wk || !wk.running) return;
+    if (wk.handler) { window.removeEventListener('devicemotion', wk.handler); wk.handler = null; }
+    const action = $('#wmAction');
+    action.innerHTML = '';
+
+    if (wk.w.mode === 'hold') {
+      $('#wmHint').textContent = 'اضغط مع الاستمرار وثبّت';
+      const b = document.createElement('button');
+      b.className = 'btn-primary wm-press';
+      b.textContent = 'اضغط مع الاستمرار';
+      action.appendChild(b);
+      let holding = false;
+      wk.lastT = performance.now();
+      const loop = () => {
+        if (!wk || !wk.running) return;
+        const now = performance.now();
+        const dt = (now - wk.lastT) / 1000; wk.lastT = now;
+        if (holding) wk.held += dt;
+        renderWkRing(Math.min(1, wk.held / wk.w.seconds), Math.max(0, Math.ceil(wk.w.seconds - wk.held)));
+        if (wk.held >= wk.w.seconds) { completeWorkout(); return; }
+        wk.raf = requestAnimationFrame(loop);
+      };
+      const dn = (e) => { e.preventDefault(); holding = true; b.classList.add('active'); };
+      const up = () => { holding = false; b.classList.remove('active'); };
+      b.addEventListener('pointerdown', dn);
+      b.addEventListener('pointerup', up);
+      b.addEventListener('pointerleave', up);
+      wk.raf = requestAnimationFrame(loop);
+    } else {
+      $('#wmHint').textContent = 'لا يوجد مستشعر — اضغط لكل عدّة';
+      const b = document.createElement('button');
+      b.className = 'btn-primary wm-tap';
+      b.textContent = 'عدّة ‎+1';
+      action.appendChild(b);
+      b.addEventListener('click', () => {
+        const now = performance.now();
+        if (now - wk.lastPeak < 250) return;   // منع الضغط السريع جداً
+        wk.lastPeak = now; addRep();
+      });
+    }
   }
 
-  function finishWorkout(w) {
+  function cleanupWk() {
+    if (!wk) return;
+    if (wk.handler) { window.removeEventListener('devicemotion', wk.handler); wk.handler = null; }
+    if (wk.watchdog) { clearTimeout(wk.watchdog); wk.watchdog = null; }
+    if (wk.raf) { cancelAnimationFrame(wk.raf); wk.raf = null; }
+  }
+
+  function endWorkout() {
+    cleanupWk();
+    if (wk) wk.running = false;
+    $('#workoutModal').classList.add('hidden');
+  }
+
+  function completeWorkout() {
+    if (!wk || !wk.running) return;
+    wk.running = false;
+    cleanupWk();
+    const w = wk.w;
+    renderWkRing(1, wk.w.mode === 'hold' ? '0' : wk.count);
+    $('#wmHint').textContent = 'تم التحقّق — أحسنت!';
+    $('#wmAction').innerHTML = '';
+    haptic([30, 40, 60]);
+    confettiBurst();
+
     state.points += w.points;
     state.coins += w.coins;
     state.totalWorkouts += 1;
     save();
-    $('#wmHint').textContent = 'أحسنت! اكتمل التمرين';
+
     setTimeout(() => {
       $('#workoutModal').classList.add('hidden');
       renderTopbar();
       renderHome();
       toast(`<span class="ico star">${ICON('star', { size: 16 })}</span> +${w.points}　<span class="ico coin">${ICON('coin', { size: 16 })}</span> +${w.coins}`);
-    }, 700);
+    }, 1100);
+  }
+
+  // ===== احتفال confetti نيون =====
+  function confettiBurst() {
+    const cv = document.createElement('canvas');
+    cv.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:80';
+    cv.width = window.innerWidth; cv.height = window.innerHeight;
+    document.body.appendChild(cv);
+    const ctx = cv.getContext('2d');
+    const colors = ['#00f5a0', '#00d4ff', '#ff2d8e', '#a855ff', '#ffd23f'];
+    const parts = [];
+    for (let i = 0; i < 110; i++) {
+      parts.push({
+        x: cv.width / 2, y: cv.height * 0.42,
+        vx: (Math.random() - 0.5) * 12, vy: (Math.random() * -1 - 0.4) * 11,
+        r: 3 + Math.random() * 4, c: colors[i % colors.length],
+        rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.5,
+      });
+    }
+    let f = 0;
+    (function anim() {
+      f++; ctx.clearRect(0, 0, cv.width, cv.height);
+      parts.forEach(p => {
+        p.vy += 0.4; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+        ctx.fillStyle = p.c; ctx.fillRect(-p.r, -p.r, p.r * 2, p.r * 2);
+        ctx.restore();
+      });
+      if (f < 95) requestAnimationFrame(anim); else cv.remove();
+    })();
   }
 
   // ===== المتجر =====
