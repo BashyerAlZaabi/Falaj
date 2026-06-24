@@ -64,12 +64,12 @@ const AI_INTENTS = [
 
 // Farm-monitor zones (dashboard map). x/y are % positions on the map.
 const MON_ZONES = [
-  { id: 'Z1', cropKey: 'crop.tomato', moisture: 26, status: 'alert', issueKey: 'mon.iss.moisture', x: 22, y: 40 },
-  { id: 'Z2', cropKey: 'crop.dates',  moisture: 63, status: 'ok',    x: 52, y: 24 },
-  { id: 'Z3', cropKey: 'crop.wheat',  moisture: 57, status: 'ok',    x: 38, y: 62 },
-  { id: 'Z4', cropKey: 'crop.maize',  moisture: 21, status: 'alert', issueKey: 'mon.iss.attention', x: 76, y: 44 },
-  { id: 'Z5', cropKey: 'crop.potato', moisture: 70, status: 'ok',    x: 66, y: 20 },
-  { id: 'Z6', cropKey: 'crop.tomato', moisture: 48, status: 'ok',    x: 82, y: 68 },
+  { id: 'Z1', cropKey: 'crop.tomato', moisture: 26, status: 'alert', issueKey: 'mon.iss.moisture', x: 22, y: 40, temp: 34, humidity: 38, ph: 6.4, n: 55, p: 40, k: 48 },
+  { id: 'Z2', cropKey: 'crop.dates',  moisture: 63, status: 'ok',    x: 52, y: 24, temp: 33, humidity: 45, ph: 7.0, n: 70, p: 58, k: 62 },
+  { id: 'Z3', cropKey: 'crop.wheat',  moisture: 57, status: 'ok',    x: 38, y: 62, temp: 35, humidity: 41, ph: 6.8, n: 64, p: 55, k: 60 },
+  { id: 'Z4', cropKey: 'crop.maize',  moisture: 21, status: 'alert', issueKey: 'mon.iss.attention', x: 76, y: 44, temp: 36, humidity: 30, ph: 5.8, n: 48, p: 40, k: 45 },
+  { id: 'Z5', cropKey: 'crop.potato', moisture: 70, status: 'ok',    x: 66, y: 20, temp: 32, humidity: 50, ph: 7.1, n: 75, p: 65, k: 68 },
+  { id: 'Z6', cropKey: 'crop.tomato', moisture: 48, status: 'ok',    x: 82, y: 68, temp: 34, humidity: 44, ph: 6.9, n: 60, p: 52, k: 58 },
 ];
 
 // Marketplace listings. seller is a proper name (not translated). hue = thumbnail colour.
