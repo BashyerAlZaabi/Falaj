@@ -127,6 +127,14 @@ const I18N = {
     'sen.tapHint': 'Tap any sensor for live readings', 'sen.live': 'Live', 'sen.temp': 'Temperature', 'sen.humid': 'Humidity',
     'sen.ph': 'Soil pH', 'sen.npk': 'Nutrients (N-P-K)', 'sen.crop': 'Assigned crop', 'sen.healthy': 'All levels healthy',
     'sen.recLow': 'Moisture low — irrigation recommended', 'sen.recAcidic': 'Soil is acidic — consider applying lime',
+    'mon.recDyn': 'Increase irrigation in {z} (now {n}%)', 'mon.allHealthy': 'All zones are healthy',
+    'mon.whyDyn': '{z} moisture is {n}% — below the 40% threshold for its crop. A short irrigation cycle restores it.',
+    'mon.zoneN': 'Zone {n}', 'mon.needAttn': '{n} need water',
+    'ans.waterLive': 'Right now {z} is your driest at {n}% — water that first.',
+    'ans.status': 'Your farm looks healthy. All zones are above their moisture thresholds.',
+    'ans.statusGood': 'Your farm looks healthy 🌱 every zone is above its moisture threshold.',
+    'ans.statusBad': '{c} zone(s) need water — driest is {z} at {n}%. Open Farm Monitor to irrigate.',
+    'toast.irrigated': '{z} irrigated 💧', 'toast.crop': 'Crop updated to {c}',
   },
 
   ar: {
@@ -247,6 +255,14 @@ const I18N = {
     'sen.tapHint': 'اضغط أي مستشعر لقراءات حيّة', 'sen.live': 'حيّ', 'sen.temp': 'درجة الحرارة', 'sen.humid': 'الرطوبة',
     'sen.ph': 'حموضة التربة', 'sen.npk': 'المغذّيات (N-P-K)', 'sen.crop': 'المحصول المخصّص', 'sen.healthy': 'كل المستويات سليمة',
     'sen.recLow': 'رطوبة منخفضة — يُنصح بالريّ', 'sen.recAcidic': 'التربة حمضية — فكّر بإضافة الجير',
+    'mon.recDyn': 'زِد الريّ في {z} (الآن {n}%)', 'mon.allHealthy': 'كل المناطق سليمة',
+    'mon.whyDyn': 'رطوبة {z} هي {n}% — تحت حدّ 40% لمحصولها. دورة ريّ قصيرة تعيدها لطبيعتها.',
+    'mon.zoneN': 'المنطقة {n}', 'mon.needAttn': '{n} تحتاج ماءً',
+    'ans.waterLive': 'حالياً {z} هي الأكثر جفافاً عند {n}% — اسقِها أولاً.',
+    'ans.status': 'مزرعتك تبدو سليمة. كل المناطق فوق حدود الرطوبة.',
+    'ans.statusGood': 'مزرعتك تبدو سليمة 🌱 كل منطقة فوق حدّ رطوبتها.',
+    'ans.statusBad': '{c} منطقة تحتاج ماءً — الأكثر جفافاً {z} عند {n}%. افتح مراقبة المزرعة للريّ.',
+    'toast.irrigated': 'تم ريّ {z} 💧', 'toast.crop': 'تم تغيير المحصول إلى {c}',
   },
 
   ur: {
@@ -367,6 +383,14 @@ const I18N = {
     'sen.tapHint': 'لائیو ریڈنگ کے لیے کسی بھی سینسر پر ٹیپ کریں', 'sen.live': 'لائیو', 'sen.temp': 'درجہ حرارت', 'sen.humid': 'نمی',
     'sen.ph': 'مٹی کی پی ایچ', 'sen.npk': 'غذائی اجزا (N-P-K)', 'sen.crop': 'مختص فصل', 'sen.healthy': 'تمام سطحیں ٹھیک ہیں',
     'sen.recLow': 'نمی کم — آبپاشی کی سفارش', 'sen.recAcidic': 'مٹی تیزابی — چونا ڈالنے پر غور کریں',
+    'mon.recDyn': '{z} میں آبپاشی بڑھائیں (اب {n}%)', 'mon.allHealthy': 'تمام زونز ٹھیک ہیں',
+    'mon.whyDyn': '{z} کی نمی {n}% ہے — فصل کی 40% حد سے کم۔ مختصر آبپاشی اسے بحال کر دے گی۔',
+    'mon.zoneN': 'زون {n}', 'mon.needAttn': '{n} کو پانی چاہیے',
+    'ans.waterLive': 'اس وقت {z} سب سے خشک ہے {n}% پر — پہلے اسے پانی دیں۔',
+    'ans.status': 'آپ کا فارم ٹھیک لگتا ہے۔ تمام زونز نمی کی حد سے اوپر ہیں۔',
+    'ans.statusGood': 'آپ کا فارم ٹھیک ہے 🌱 ہر زون اپنی نمی کی حد سے اوپر ہے۔',
+    'ans.statusBad': '{c} زون کو پانی چاہیے — سب سے خشک {z} {n}% پر۔ آبپاشی کے لیے فارم مانیٹر کھولیں۔',
+    'toast.irrigated': '{z} کو پانی دے دیا 💧', 'toast.crop': 'فصل {c} میں تبدیل',
   },
 
   hi: {
@@ -487,6 +511,14 @@ const I18N = {
     'sen.tapHint': 'लाइव रीडिंग के लिए किसी सेंसर पर टैप करें', 'sen.live': 'लाइव', 'sen.temp': 'तापमान', 'sen.humid': 'आर्द्रता',
     'sen.ph': 'मिट्टी pH', 'sen.npk': 'पोषक तत्व (N-P-K)', 'sen.crop': 'निर्धारित फसल', 'sen.healthy': 'सभी स्तर सामान्य',
     'sen.recLow': 'नमी कम — सिंचाई की सलाह', 'sen.recAcidic': 'मिट्टी अम्लीय — चूना डालने पर विचार करें',
+    'mon.recDyn': '{z} में सिंचाई बढ़ाएँ (अभी {n}%)', 'mon.allHealthy': 'सभी ज़ोन स्वस्थ हैं',
+    'mon.whyDyn': '{z} की नमी {n}% है — फसल की 40% सीमा से नीचे। थोड़ी सिंचाई इसे ठीक कर देगी।',
+    'mon.zoneN': 'ज़ोन {n}', 'mon.needAttn': '{n} को पानी चाहिए',
+    'ans.waterLive': 'अभी {z} सबसे सूखा है {n}% पर — पहले उसे पानी दें।',
+    'ans.status': 'आपका फ़ार्म स्वस्थ दिखता है। सभी ज़ोन नमी सीमा से ऊपर हैं।',
+    'ans.statusGood': 'आपका फ़ार्म स्वस्थ है 🌱 हर ज़ोन अपनी नमी सीमा से ऊपर है।',
+    'ans.statusBad': '{c} ज़ोन को पानी चाहिए — सबसे सूखा {z} {n}% पर। सिंचाई हेतु फ़ार्म मॉनिटर खोलें।',
+    'toast.irrigated': '{z} सिंचित 💧', 'toast.crop': 'फसल {c} में बदली',
   },
 };
 

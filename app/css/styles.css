@@ -305,6 +305,17 @@ input{font-family:inherit}
 .mc-ai{flex:1;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--ink)}
 .mc-ai .ico{width:18px;height:18px;color:var(--green)}
 .mc-foot .chev{color:var(--ink-3)}
+.mc-issues{position:absolute;top:10px;inset-inline-end:10px;display:flex;align-items:center;gap:5px;background:var(--red);color:#fff;
+  font-size:11px;font-weight:800;padding:4px 9px;border-radius:20px;z-index:3;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+.mc-issues .ico{width:13px;height:13px}
+
+/* motion + tactile polish */
+@keyframes screenIn{from{opacity:.45;transform:translateY(5px)}to{opacity:1;transform:none}}
+.scroll{animation:screenIn .22s ease}
+@media(prefers-reduced-motion:reduce){.scroll{animation:none}}
+.tool,.monitor-card,.field-card,.prod,.fchip,.mini-btn,.tab,.row,.btn-green,.btn-ghost{transition:transform .12s ease}
+.tool:active,.monitor-card:active,.field-card:active,.prod:active,.row:active{transform:scale(.985)}
+.fchip:active,.mini-btn:active,.tab:active{transform:scale(.94)}
 .zbadge{position:absolute;transform:translate(-50%,-50%);background:#fff;border-radius:20px;padding:3px 8px;font-size:11px;font-weight:800;color:var(--ink);box-shadow:0 3px 10px rgba(0,0,0,.3);display:inline-flex;align-items:center;gap:5px;z-index:2}
 .zbadge i{width:15px;height:15px;border-radius:50%;display:grid;place-items:center;font-size:10px;font-style:normal;color:#fff}
 .zbadge.ok i{background:var(--ok)}.zbadge.alert i{background:var(--red)}
