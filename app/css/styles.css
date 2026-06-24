@@ -183,14 +183,9 @@ input{font-family:inherit}
 .fc-body em{font-style:normal;font-weight:700;color:var(--green)}
 
 /* thumbnail (satellite-ish) */
-.thumb{position:relative;border-radius:14px;flex:none;overflow:hidden;
-  background:
-    repeating-linear-gradient(115deg, hsl(var(--hue) 30% 42%) 0 18px, hsl(calc(var(--hue) - 12) 28% 36%) 18px 38px),
-    hsl(var(--hue) 30% 40%)}
-.thumb::after{content:"";position:absolute;inset:0;background:
-  radial-gradient(60% 50% at 30% 30%, rgba(120,150,90,.4),transparent),
-  radial-gradient(50% 40% at 75% 70%, rgba(90,70,45,.45),transparent)}
-.thumb svg{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+.thumb{position:relative;border-radius:14px;flex:none;overflow:hidden;background:#465a2f}
+.satmap{position:absolute;inset:0;width:100%;height:100%;display:block}
+.thumb .thumb-poly{position:absolute;inset:0;width:100%;height:100%;z-index:1}
 .thumb.sm{width:78px;height:64px}
 .thumb.hero{width:100%;height:190px;border-radius:16px}
 
@@ -297,8 +292,8 @@ input{font-family:inherit}
 /* home header photo + monitor + tools */
 .ghead.home{background-image:linear-gradient(180deg,rgba(18,26,54,.72),rgba(18,26,54,.9)),url(../assets/farm-team.png);background-size:cover;background-position:center}
 .monitor-card{display:block;width:100%;padding:0;overflow:hidden;text-align:start;margin-bottom:14px}
-.mc-map{position:relative;height:148px;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.4)),url(../assets/farm-hero.png);background-size:cover;background-position:center}
-.mc-grad{position:absolute;inset:0}
+.mc-map{position:relative;height:148px;overflow:hidden;background:#465a2f}
+.mc-grad{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.04),rgba(0,0,0,.42))}
 .mc-ttl{position:absolute;inset-inline-start:14px;bottom:12px;display:flex;align-items:center;gap:7px;color:#fff;z-index:2}
 .mc-ttl b{font-size:15px;font-weight:800}.mc-ttl .ico{width:18px;height:18px}
 .mc-foot{display:flex;align-items:center;gap:8px;padding:13px 14px}
@@ -326,8 +321,7 @@ input{font-family:inherit}
 .tool small{font-size:12px;font-weight:700;color:var(--ink)}
 
 /* zones screen */
-.zmap{position:relative;height:228px;border-radius:var(--r);overflow:hidden;margin-bottom:14px;box-shadow:var(--sh-sm);
-  background:linear-gradient(180deg,rgba(0,0,0,.06),rgba(0,0,0,.4)),url(../assets/farm-hero.png);background-size:cover;background-position:center}
+.zmap{position:relative;height:228px;border-radius:var(--r);overflow:hidden;margin-bottom:14px;box-shadow:var(--sh-sm);background:#465a2f}
 .issue{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line-2)}
 .issue:first-of-type{border-top:none}
 .iss-ic{width:34px;height:34px;border-radius:10px;background:#fdecec;color:var(--red);display:grid;place-items:center;flex:none}
