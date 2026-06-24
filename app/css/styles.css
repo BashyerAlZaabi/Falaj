@@ -185,6 +185,8 @@ input{font-family:inherit}
 /* thumbnail (satellite-ish) */
 .thumb{position:relative;border-radius:14px;flex:none;overflow:hidden;background:#465a2f}
 .satmap{position:absolute;inset:0;width:100%;height:100%;display:block}
+.satimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;z-index:0}
+.mc-grad{z-index:1}
 .thumb .thumb-poly{position:absolute;inset:0;width:100%;height:100%;z-index:1}
 .thumb.sm{width:78px;height:64px}
 .thumb.hero{width:100%;height:190px;border-radius:16px}
