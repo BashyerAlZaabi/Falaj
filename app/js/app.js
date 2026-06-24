@@ -284,7 +284,7 @@ function screenHome() {
         <div class="w-temp">${icon('cloudsun', 'big')}<em>${WEATHER.tempC}<sup>°C</sup></em></div><span class="w-cond">${t(WEATHER.condKey)}</span></div>
       <div class="w-right"><small>${t('home.today')}, ${WEATHER.date}</small>
         <span>${t('home.wind')} ${WEATHER.wind}km/h</span><span>${t('home.rain')} ${WEATHER.rain}%</span>
-        <svg class="w-line" viewBox="0 0 90 30"><path d="M2 22 Q20 6 38 16 T86 8" fill="none" stroke="#3aa55f" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+        <svg class="w-line" viewBox="0 0 90 30"><path d="M2 22 Q20 6 38 16 T86 8" fill="none" stroke="#5171ff" stroke-width="2.5" stroke-linecap="round"/></svg></div>
     </div>
 
     <div class="sec-row"><h3>${t('home.market')}</h3><button class="link" data-action="go" data-route="fields">${t('common.viewAll')} ${icon('chevron', 'mini ' + flip())}</button></div>
