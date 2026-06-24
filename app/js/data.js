@@ -62,6 +62,48 @@ const AI_INTENTS = [
   { key: 'ans.hello',      kw: ['hello', 'hey', 'salam', 'مرحبا', 'سلام', 'नमस्ते', 'नमस्कार'] },
 ];
 
+// Farm-monitor zones (dashboard map). x/y are % positions on the map.
+const MON_ZONES = [
+  { id: 'Z1', cropKey: 'crop.tomato', moisture: 26, status: 'alert', issueKey: 'mon.iss.moisture', x: 22, y: 40 },
+  { id: 'Z2', cropKey: 'crop.dates',  moisture: 63, status: 'ok',    x: 52, y: 24 },
+  { id: 'Z3', cropKey: 'crop.wheat',  moisture: 57, status: 'ok',    x: 38, y: 62 },
+  { id: 'Z4', cropKey: 'crop.maize',  moisture: 21, status: 'alert', issueKey: 'mon.iss.attention', x: 76, y: 44 },
+  { id: 'Z5', cropKey: 'crop.potato', moisture: 70, status: 'ok',    x: 66, y: 20 },
+  { id: 'Z6', cropKey: 'crop.tomato', moisture: 48, status: 'ok',    x: 82, y: 68 },
+];
+
+// Marketplace listings. seller is a proper name (not translated). hue = thumbnail colour.
+const PRODUCTS = [
+  { nameKey: 'prod.fertilizer', cat: 'tools', price: 30, seller: "Al Mazra'a",   hot: true,  hue: 28 },
+  { nameKey: 'prod.tomatoSeed', cat: 'seeds', price: 12, seller: 'Al Ain Farms',  hot: true,  hue: 6 },
+  { nameKey: 'prod.drip',       cat: 'tools', price: 85, seller: 'FALAJ Store',   hot: false, hue: 200 },
+  { nameKey: 'prod.dates',      cat: 'crops', price: 25, seller: 'Liwa Dates',    hot: false, hue: 30 },
+  { nameKey: 'prod.compost',    cat: 'tools', price: 18, seller: "Al Mazra'a",    hot: false, hue: 96 },
+  { nameKey: 'prod.wheatSeed',  cat: 'seeds', price: 9,  seller: 'Sharjah Co-op', hot: false, hue: 52 },
+];
+const MKT_FILTERS = [['all', 'mkt.all'], ['crops', 'mkt.crops'], ['tools', 'mkt.tools'], ['seeds', 'mkt.seeds']];
+
+// Registered IoT devices. loc is a proper place name (not translated).
+const DEVICES = [
+  { id: 'FLJ-001', zone: 'Z1', loc: 'Al Ain', status: 'active' },
+  { id: 'FLJ-002', zone: 'Z3', loc: 'Al Ain', status: 'active' },
+  { id: 'FLJ-004', zone: 'Z4', loc: 'Liwa',   status: 'offline' },
+  { id: 'FLJ-005', zone: 'Z6', loc: 'Sharjah', status: 'error' },
+];
+
+// Rewards.
+const POINTS = 420;
+const REDEEMS = [
+  { key: 'rew.r1', pts: 100, hue: 28 },
+  { key: 'rew.r2', pts: 250, hue: 200 },
+  { key: 'rew.r3', pts: 400, hue: 96 },
+];
+const BADGES = [
+  { key: 'badge.sale',  earned: true,  icon: 'cash' },
+  { key: 'badge.month', earned: true,  icon: 'calendar' },
+  { key: 'badge.top',   earned: false, icon: 'spark' },
+];
+
 // Cascading location picker (UAE-first).
 const COUNTRIES = [
   { name: 'United Arab Emirates', states: [

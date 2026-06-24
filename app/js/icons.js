@@ -32,6 +32,10 @@ const ICON_PATHS = {
   hectare: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 4v16M15 4v16M4 9h16M4 15h16"/>',
   spark:   '<path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/><path d="M19 14l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
   send:    '<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>',
+  chip:    '<rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/>',
+  gift:    '<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 13h18M12 9v12"/><path d="M12 9S10.5 4 8 5s.5 4 4 4zM12 9s1.5-5 4-4-.5 4-4 4z"/>',
+  trophy:  '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5H5v2a3 3 0 0 0 3 3M16 5h3v2a3 3 0 0 1-3 3M10 14h4M9 20h6M12 14v6"/>',
+  alert:   '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
 };
 
 function icon(name, cls) {

@@ -21,6 +21,8 @@ function defaultState() {
     fields: FIELDS.map(f => Object.assign({}, f, { exp: Object.assign({}, f.exp), bars: f.bars.slice() })),
     notifications: NOTIFICATIONS.map(n => Object.assign({}, n)),
     notifEmpty: false,
+    monZones: MON_ZONES.map(z => Object.assign({}, z)),
+    mktFilter: 'all',
   };
 }
 function loadState() {
@@ -122,9 +124,10 @@ function renderOnboarding() {
 function renderAuth() {
   const back = `<button class="auth-back" data-action="auth-back">${icon('back', flip())}</button>`;
   const logo = `<div class="auth-logo">${falajLogo('color', 34)}</div>`;
+  const hero = `<div class="auth-hero"><img src="assets/farm-hero.png" alt=""><div class="auth-hero-ov"></div><div class="auth-hero-logo">${falajLogo('white', 30)}</div></div>`;
   const langChip = `<button class="auth-lang" data-action="openlang">${LANGS.find(l => l.code === CURRENT_LANG).flag}</button>`;
 
-  if (authScreen === 'login') return `<div class="auth">${langChip}${logo}
+  if (authScreen === 'login') return `<div class="auth has-hero">${langChip}${hero}
     <div class="fields">
       ${input('login_id', 'auth.username', 'user')}
       ${passInput('login_pw', 'auth.password')}
@@ -135,7 +138,7 @@ function renderAuth() {
     <p class="auth-foot">${t('auth.noAccount')} <button class="link inline" data-action="to-signup">${t('auth.signup')}</button></p>
   </div>`;
 
-  if (authScreen === 'signup') return `<div class="auth">${langChip}${logo}
+  if (authScreen === 'signup') return `<div class="auth has-hero">${langChip}${hero}
     <div class="fields">
       ${input('su_name', 'auth.name', 'user')}
       ${input('su_email', 'auth.email', 'mail')}
@@ -254,6 +257,10 @@ function renderApp() {
     case 'support': body = screenSupport(); break;
     case 'settings': body = screenSettings(); break;
     case 'notifications': body = screenNotifications(); break;
+    case 'zones': body = screenZones(); break;
+    case 'marketplace': body = screenMarketplace(); break;
+    case 'rewards': body = screenRewards(); break;
+    case 'devices': body = screenDevices(); break;
     default: body = screenHome();
   }
   const showNav = S.route !== 'fieldDetail' && S.route !== 'notifications';
@@ -285,6 +292,18 @@ function screenHome() {
       <div class="w-right"><small>${t('home.today')}, ${WEATHER.date}</small>
         <span>${t('home.wind')} ${WEATHER.wind}km/h</span><span>${t('home.rain')} ${WEATHER.rain}%</span>
         <svg class="w-line" viewBox="0 0 90 30"><path d="M2 22 Q20 6 38 16 T86 8" fill="none" stroke="#5171ff" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+    </div>
+
+    <button class="monitor-card card" data-action="go" data-route="zones">
+      <div class="mc-map">
+        ${S.monZones.slice(0, 4).map(z => `<span class="zbadge ${z.status}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${z.status === 'alert' ? '!' : '✓'}</i></span>`).join('')}
+        <div class="mc-grad"></div>
+        <div class="mc-ttl">${icon('pin')}<b>${t('mon.title')}</b></div>
+      </div>
+      <div class="mc-foot"><span class="mc-ai">${icon('spark')}${t('mon.rec')}</span>${icon('chevron', 'chev ' + flip())}</div>
+    </button>
+    <div class="tools">
+      ${[['marketplace', 'store', 'mkt.title'], ['rewards', 'gift', 'rew.title'], ['devices', 'chip', 'dev.title']].map(([r, ic, k]) => `<button class="tool card" data-action="go" data-route="${r}"><span class="tool-ic">${icon(ic)}</span><small>${t(k)}</small></button>`).join('')}
     </div>
 
     <div class="sec-row"><h3>${t('home.market')}</h3><button class="link" data-action="go" data-route="fields">${t('common.viewAll')} ${icon('chevron', 'mini ' + flip())}</button></div>
@@ -405,6 +424,104 @@ function screenSettings() {
   </div>`;
 }
 
+/* ---------- shared back header ---------- */
+function gheadBack(titleKey) {
+  return `<header class="ghead detail"><div class="ghead-row">
+    <button class="bell" data-action="go" data-route="home">${icon('back', flip())}</button>
+    <b class="center">${t(titleKey)}</b><span class="sp"></span></div></header>`;
+}
+
+/* ---------- zone monitor ---------- */
+function screenZones() {
+  const alerts = S.monZones.filter(z => z.status === 'alert');
+  return `${gheadBack('mon.title')}
+  <div class="scroll detail-scroll">
+    <div class="zmap">${S.monZones.map(z => `<span class="zbadge ${z.status}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${z.status === 'alert' ? '!' : '✓'}</i></span>`).join('')}</div>
+
+    <div class="card pad">
+      <h3 class="sect tight">${t('mon.issues')}</h3>
+      ${alerts.length ? alerts.map(z => `<div class="issue">
+        <span class="iss-ic">${icon('alert')}</span>
+        <div class="iss-b"><b>${z.id} · ${t(z.issueKey)}</b><small>${t('mon.ago', { n: 3 })}</small></div>
+        <button class="mini-btn" data-action="zone-irrigate" data-id="${z.id}">${icon('drop')}${t('mon.irrigate')}</button>
+      </div>`).join('') : `<p class="muted">${t('mon.healthy')} ✓</p>`}
+    </div>
+
+    <div class="card pad">
+      <div class="airec-row"><h3 class="sect tight">${t('mon.airec')}</h3><button class="link" data-action="ai-why">${t('mon.why')}</button></div>
+      <div class="airec-body"><span class="ai-bulb">${icon('spark')}</span><p>${t('mon.rec')}</p>${icon('chevron', 'chev ' + flip())}</div>
+    </div>
+
+    <h3 class="d-sec">${t('mon.zones')}</h3>
+    ${S.monZones.map(z => {
+      const low = z.moisture < 40;
+      return `<div class="zrow card">
+        <div class="zrow-id ${z.status}">${z.id}</div>
+        <div class="zrow-b"><b>${t(z.cropKey)}</b><div class="zbar"><div class="zfill ${low ? 'low' : ''}" style="width:${z.moisture}%"></div></div></div>
+        <div class="zrow-m"><b class="${low ? 'c-red' : ''}">${z.moisture}%</b><button class="mini-btn ghost" data-action="zone-irrigate" data-id="${z.id}">${t('mon.irrigate')}</button></div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+/* ---------- marketplace ---------- */
+function screenMarketplace() {
+  const list = PRODUCTS.filter(p => S.mktFilter === 'all' || p.cat === S.mktFilter);
+  return `${gheadBack('mkt.title')}
+  <div class="scroll flat">
+    <div class="filters">${MKT_FILTERS.map(([c, k]) => `<button class="fchip ${S.mktFilter === c ? 'on' : ''}" data-action="mkt-filter" data-cat="${c}">${t(k)}</button>`).join('')}</div>
+    <button class="btn-green sell-btn" data-action="toast-soon">${icon('plus')}${t('mkt.sell')}</button>
+    ${list.map(p => `<div class="prod card">
+      <div class="prod-th" style="--hue:${p.hue}">${icon('leaf')}</div>
+      <div class="prod-b"><b>${t(p.nameKey)}</b><small>${t('mkt.seller')}: ${p.seller}</small>${p.hot ? `<span class="hot">${icon('trend')}${t('mkt.demand')}</span>` : ''}</div>
+      <div class="prod-p">AED ${p.price}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ---------- rewards ---------- */
+function screenRewards() {
+  return `${gheadBack('rew.title')}
+  <div class="scroll flat">
+    <div class="pts-card"><span class="pts-ic">${icon('trophy')}</span><div><b>${POINTS}</b><small>${t('rew.season')}</small></div></div>
+    <div class="card pad chal"><div class="chal-top">${icon('spark')}<b>${t('rew.challenge')}</b></div>
+      <p>${t('rew.c1')}</p><div class="zbar"><div class="zfill" style="width:66%"></div></div><small class="muted">2 / 3</small></div>
+    <h3 class="d-sec">${t('rew.earn')}</h3>
+    <div class="list card">${['rew.e1', 'rew.e2', 'rew.e3'].map(k => `<div class="row static"><span class="r-ico green">${icon('check')}</span><span>${t(k)}</span></div>`).join('')}</div>
+    <h3 class="d-sec">${t('rew.redeem')}</h3>
+    ${REDEEMS.map(r => `<div class="prod card">
+      <div class="prod-th" style="--hue:${r.hue}">${icon('gift')}</div>
+      <div class="prod-b"><b>${t(r.key)}</b><small>${t('rew.pts', { n: r.pts })}</small></div>
+      <button class="mini-btn ${POINTS >= r.pts ? '' : 'dis'}" data-action="toast-soon">${t('rew.redeemBtn')}</button>
+    </div>`).join('')}
+    <h3 class="d-sec">${t('rew.badges')}</h3>
+    <div class="badges">${BADGES.map(b => `<div class="badge ${b.earned ? 'on' : ''}"><span>${icon(b.icon)}</span><small>${t(b.key)}</small></div>`).join('')}</div>
+  </div>`;
+}
+
+/* ---------- devices ---------- */
+function screenDevices() {
+  const tone = { active: 'green', offline: 'amber', error: 'red' };
+  return `${gheadBack('dev.title')}
+  <div class="scroll flat">
+    <button class="btn-green sell-btn" data-action="toast-soon">${icon('plus')}${t('dev.add')}</button>
+    <div class="list card">${DEVICES.map(d => `<div class="row static">
+      <span class="r-ico ${tone[d.status]}">${icon('chip')}</span>
+      <div class="dev-b"><b>${d.id}</b><small>${t('dev.zone')} ${d.zone.replace('Z', '')} · ${d.loc}</small></div>
+      <span class="dstat ${tone[d.status]}"><i></i>${t('dev.' + d.status)}</span>
+    </div>`).join('')}</div>
+    <div class="aitip card">${icon('spark')}<div><b>${t('dev.aiTitle')}</b><p>${t('dev.aiBody')}</p></div></div>
+  </div>`;
+}
+
+/* ---------- toast ---------- */
+function toast(msg) {
+  const host = document.getElementById('app'); if (!host) return;
+  const d = document.createElement('div'); d.className = 'toast'; d.textContent = msg; host.appendChild(d);
+  setTimeout(() => d.classList.add('show'), 10);
+  setTimeout(() => { d.classList.remove('show'); setTimeout(() => d.remove(), 250); }, 2800);
+}
+
 /* ---------- bottom sheet (lang / location) ---------- */
 function renderSheet() {
   let title = '', rows = '';
@@ -464,6 +581,10 @@ document.addEventListener('click', (e) => {
     'clear-notif': () => { S.notifEmpty = true; save(); render(); },
     'ai-send': () => aiSend(),
     'ai-suggest': () => aiSend(t(d.q)),
+    'zone-irrigate': () => { const z = S.monZones.find(x => x.id === d.id); if (z) { z.moisture = 78; z.status = 'ok'; } save(); render(); },
+    'ai-why': () => toast(t('mon.whyText')),
+    'mkt-filter': () => { S.mktFilter = d.cat; save(); render(); },
+    'toast-soon': () => toast(t('common.soon')),
     'logout': () => { S.user = null; S.farm = null; S.route = 'home'; authScreen = 'login'; save(); render(); },
   };
   if (map[a]) map[a]();
