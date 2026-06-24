@@ -62,10 +62,27 @@ function farmSummary() {
   return t('ans.statusBad', { c: lows.length, z: zoneLabel(w), n: Math.round(w.moisture) });
 }
 
+/* Top-down "satellite" aerial farm map (SVG, always renders) */
+function satMap() {
+  const fills = ['#5d7a3c', '#6c8a44', '#7a9a4e', '#536e36', '#86793f', '#9c8b54', '#47602e'];
+  const cols = 5, rows = 4, W = 320, H = 220, cw = W / cols, ch = H / rows;
+  let cells = '';
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const i = r * cols + c, f = fills[(i * 3 + r) % fills.length], pad = 2 + (i % 3), rot = (i % 2 ? -1.4 : 1.1);
+    const x = c * cw + pad, y = r * ch + pad, w = cw - pad * 2, h = ch - pad * 2, cx = x + w / 2, cy = y + h / 2;
+    cells += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${f}" transform="rotate(${rot} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`;
+    if (i % 2 === 0) for (let l = 1; l < 4; l++) { const ly = (y + h * l / 4).toFixed(1); cells += `<line x1="${x.toFixed(1)}" y1="${ly}" x2="${(x + w).toFixed(1)}" y2="${ly}" stroke="rgba(0,0,0,.12)" stroke-width="1"/>`; }
+  }
+  const roads = `<line x1="0" y1="${ch}" x2="320" y2="${ch}" stroke="#bca878" stroke-width="3"/><line x1="${cw * 2}" y1="0" x2="${cw * 2}" y2="220" stroke="#bca878" stroke-width="3"/><line x1="0" y1="${(ch * 2.6).toFixed(1)}" x2="320" y2="${(ch * 2.6).toFixed(1)}" stroke="#c8ba8a" stroke-width="2"/>`;
+  const pivot = (px, py, rr, fl) => `<circle cx="${px}" cy="${py}" r="${rr}" fill="${fl}"/>` + Array.from({ length: 14 }, (_, k) => { const a = k / 14 * 6.2832; return `<line x1="${px}" y1="${py}" x2="${(px + Math.cos(a) * rr).toFixed(1)}" y2="${(py + Math.sin(a) * rr).toFixed(1)}" stroke="rgba(255,255,255,.07)" stroke-width="1"/>`; }).join('');
+  const channel = `<path d="M0 ${ch} L120 ${ch} L150 ${(ch * 2.6).toFixed(1)} L320 ${(ch * 2.6).toFixed(1)}" fill="none" stroke="#3aa6c2" stroke-width="3" opacity=".7"/>`;
+  return `<svg class="satmap" viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="320" height="220" fill="#465a2f"/>${cells}${roads}${pivot(70, 152, 30, '#5e7e3a')}${pivot(250, 72, 24, '#6b8a40')}${channel}</svg>`;
+}
+
 function fieldThumb(f, cls) {
-  return `<div class="thumb ${cls || ''}" style="--hue:${f.hue}">
-    <svg viewBox="0 0 100 70" preserveAspectRatio="none">
-      <polygon points="18,42 44,18 86,32 60,58" fill="rgba(244,208,63,.12)" stroke="#f4d03f" stroke-width="2"/>
+  return `<div class="thumb ${cls || ''}">${satMap()}
+    <svg class="thumb-poly" viewBox="0 0 100 70" preserveAspectRatio="none">
+      <polygon points="18,42 44,18 86,32 60,58" fill="rgba(244,208,63,.14)" stroke="#f4d03f" stroke-width="2"/>
       ${[[18, 42], [44, 18], [86, 32], [60, 58]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.4" fill="#f4d03f"/>`).join('')}
     </svg></div>`;
 }
@@ -324,6 +341,7 @@ function screenHome() {
 
     <button class="monitor-card card" data-action="go" data-route="zones">
       <div class="mc-map">
+        ${satMap()}
         ${S.monZones.slice(0, 4).map(z => `<span class="zbadge ${zStatus(z)}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${zStatus(z) === 'alert' ? '!' : '✓'}</i></span>`).join('')}
         ${lowZones().length ? `<span class="mc-issues">${icon('alert')}${t('mon.needAttn', { n: lowZones().length })}</span>` : ''}
         <div class="mc-grad"></div>
@@ -474,7 +492,7 @@ function screenZones() {
   const alerts = lowZones();
   return `${gheadBack('mon.title')}
   <div class="scroll detail-scroll">
-    <div class="zmap">${S.monZones.map(z => `<span class="zbadge ${zStatus(z)}" data-action="open-sensor" data-id="${z.id}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${zStatus(z) === 'alert' ? '!' : '✓'}</i></span>`).join('')}</div>
+    <div class="zmap">${satMap()}${S.monZones.map(z => `<span class="zbadge ${zStatus(z)}" data-action="open-sensor" data-id="${z.id}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${zStatus(z) === 'alert' ? '!' : '✓'}</i></span>`).join('')}</div>
     <p class="muted maphint">${icon('pin')}${t('sen.tapHint')}</p>
 
     <div class="card pad">
