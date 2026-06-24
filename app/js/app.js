@@ -45,6 +45,23 @@ function aed(n) { return 'AED ' + Number(n).toLocaleString('en-US'); }
 function greetKey() { const h = new Date().getHours(); return h < 12 ? 'home.morning' : h < 18 ? 'home.afternoon' : 'home.evening'; }
 function flip() { return langDir() === 'rtl' ? 'flip' : ''; }
 
+/* ---------- live farm intelligence ---------- */
+const MOIST_MIN = 40;
+function zStatus(z) { return z.moisture < MOIST_MIN ? 'alert' : 'ok'; }
+function lowZones() { return S.monZones.filter(z => z.moisture < MOIST_MIN); }
+function worstZone() { return S.monZones.slice().sort((a, b) => a.moisture - b.moisture)[0]; }
+function zoneLabel(z) { return t('mon.zoneN', { n: z.id.replace('Z', '') }); }
+function aiRecText() {
+  const w = worstZone();
+  return w && w.moisture < MOIST_MIN ? t('mon.recDyn', { z: zoneLabel(w), n: Math.round(w.moisture) }) : t('mon.allHealthy');
+}
+function farmSummary() {
+  const lows = lowZones();
+  if (!lows.length) return t('ans.statusGood');
+  const w = worstZone();
+  return t('ans.statusBad', { c: lows.length, z: zoneLabel(w), n: Math.round(w.moisture) });
+}
+
 function fieldThumb(f, cls) {
   return `<div class="thumb ${cls || ''}" style="--hue:${f.hue}">
     <svg viewBox="0 0 100 70" preserveAspectRatio="none">
@@ -307,11 +324,12 @@ function screenHome() {
 
     <button class="monitor-card card" data-action="go" data-route="zones">
       <div class="mc-map">
-        ${S.monZones.slice(0, 4).map(z => `<span class="zbadge ${z.status}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${z.status === 'alert' ? '!' : '✓'}</i></span>`).join('')}
+        ${S.monZones.slice(0, 4).map(z => `<span class="zbadge ${zStatus(z)}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${zStatus(z) === 'alert' ? '!' : '✓'}</i></span>`).join('')}
+        ${lowZones().length ? `<span class="mc-issues">${icon('alert')}${t('mon.needAttn', { n: lowZones().length })}</span>` : ''}
         <div class="mc-grad"></div>
         <div class="mc-ttl">${icon('pin')}<b>${t('mon.title')}</b></div>
       </div>
-      <div class="mc-foot"><span class="mc-ai">${icon('spark')}${t('mon.rec')}</span>${icon('chevron', 'chev ' + flip())}</div>
+      <div class="mc-foot"><span class="mc-ai">${icon('spark')}${aiRecText()}</span>${icon('chevron', 'chev ' + flip())}</div>
     </button>
     <div class="tools">
       ${[['marketplace', 'store', 'mkt.title'], ['rewards', 'gift', 'rew.title'], ['devices', 'chip', 'dev.title'], ['log', 'spark', 'log.title'], ['messages', 'chat', 'msg.title'], ['contracts', 'list', 'ct.title']].map(([r, ic, k]) => `<button class="tool card" data-action="go" data-route="${r}"><span class="tool-ic">${icon(ic)}</span><small>${t(k)}</small></button>`).join('')}
@@ -406,7 +424,16 @@ function screenSupport() {
 }
 function aiReply(text) {
   const low = (text || '').toLowerCase();
-  for (const it of AI_INTENTS) if (it.kw.some(k => low.includes(k.toLowerCase()))) return t(it.key);
+  for (const it of AI_INTENTS) {
+    if (!it.kw.some(k => low.includes(k.toLowerCase()))) continue;
+    if (it.key === 'ans.status') return farmSummary();
+    let ans = t(it.key);
+    if (it.key === 'ans.water') {
+      const w = worstZone();
+      if (w && w.moisture < MOIST_MIN) ans += ' ' + t('ans.waterLive', { z: zoneLabel(w), n: Math.round(w.moisture) });
+    }
+    return ans;
+  }
   return t('ans.fallback');
 }
 function aiSend(q) {
@@ -444,31 +471,31 @@ function gheadBack(titleKey) {
 
 /* ---------- zone monitor ---------- */
 function screenZones() {
-  const alerts = S.monZones.filter(z => z.status === 'alert');
+  const alerts = lowZones();
   return `${gheadBack('mon.title')}
   <div class="scroll detail-scroll">
-    <div class="zmap">${S.monZones.map(z => `<span class="zbadge ${z.status}" data-action="open-sensor" data-id="${z.id}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${z.status === 'alert' ? '!' : '✓'}</i></span>`).join('')}</div>
+    <div class="zmap">${S.monZones.map(z => `<span class="zbadge ${zStatus(z)}" data-action="open-sensor" data-id="${z.id}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${zStatus(z) === 'alert' ? '!' : '✓'}</i></span>`).join('')}</div>
     <p class="muted maphint">${icon('pin')}${t('sen.tapHint')}</p>
 
     <div class="card pad">
       <h3 class="sect tight">${t('mon.issues')}</h3>
       ${alerts.length ? alerts.map(z => `<div class="issue">
         <span class="iss-ic">${icon('alert')}</span>
-        <div class="iss-b"><b>${z.id} · ${t(z.issueKey)}</b><small>${t('mon.ago', { n: 3 })}</small></div>
+        <div class="iss-b"><b>${zoneLabel(z)} · ${t('mon.iss.moisture')}</b><small>${Math.round(z.moisture)}% · ${t('mon.ago', { n: 3 })}</small></div>
         <button class="mini-btn" data-action="zone-irrigate" data-id="${z.id}">${icon('drop')}${t('mon.irrigate')}</button>
       </div>`).join('') : `<p class="muted">${t('mon.healthy')} ✓</p>`}
     </div>
 
     <div class="card pad">
       <div class="airec-row"><h3 class="sect tight">${t('mon.airec')}</h3><button class="link" data-action="ai-why">${t('mon.why')}</button></div>
-      <div class="airec-body"><span class="ai-bulb">${icon('spark')}</span><p>${t('mon.rec')}</p>${icon('chevron', 'chev ' + flip())}</div>
+      <div class="airec-body"><span class="ai-bulb">${icon('spark')}</span><p>${aiRecText()}</p>${icon('chevron', 'chev ' + flip())}</div>
     </div>
 
     <h3 class="d-sec">${t('mon.zones')}</h3>
     ${S.monZones.map(z => {
       const low = z.moisture < 40;
       return `<div class="zrow card">
-        <div class="zrow-id ${z.status}">${z.id}</div>
+        <div class="zrow-id ${zStatus(z)}">${z.id}</div>
         <div class="zrow-b"><b>${t(z.cropKey)}</b><div class="zbar"><div class="zfill ${low ? 'low' : ''}" style="width:${z.moisture}%"></div></div></div>
         <div class="zrow-m"><b class="${low ? 'c-red' : ''}">${z.moisture}%</b><button class="mini-btn ghost" data-action="zone-irrigate" data-id="${z.id}">${t('mon.irrigate')}</button></div>
       </div>`;
@@ -685,10 +712,10 @@ document.addEventListener('click', (e) => {
     'clear-notif': () => { S.notifEmpty = true; save(); render(); },
     'ai-send': () => aiSend(),
     'ai-suggest': () => aiSend(t(d.q)),
-    'zone-irrigate': () => { const z = S.monZones.find(x => x.id === d.id); if (z) { z.moisture = 78; z.status = 'ok'; } save(); render(); },
+    'zone-irrigate': () => { const z = S.monZones.find(x => x.id === d.id); if (z) { z.moisture = 78; z.status = 'ok'; } save(); render(); if (z) toast(t('toast.irrigated', { z: zoneLabel(z) })); },
     'open-sensor': () => { sensorId = d.id; sheet = 'sensor'; render(); },
-    'sensor-crop': () => { const z = S.monZones.find(x => x.id === d.id); if (z) z.cropKey = d.crop; save(); render(); },
-    'ai-why': () => toast(t('mon.whyText')),
+    'sensor-crop': () => { const z = S.monZones.find(x => x.id === d.id); if (z) z.cropKey = d.crop; save(); render(); if (z) toast(t('toast.crop', { c: t(d.crop) })); },
+    'ai-why': () => { const w = worstZone(); toast(w && w.moisture < MOIST_MIN ? t('mon.whyDyn', { z: zoneLabel(w), n: Math.round(w.moisture) }) : t('mon.allHealthy')); },
     'mkt-filter': () => { S.mktFilter = d.cat; save(); render(); },
     'toast-soon': () => toast(t('common.soon')),
     'open-thread': () => { S.currentThreadId = d.id; S.route = 'thread'; save(); render(); },

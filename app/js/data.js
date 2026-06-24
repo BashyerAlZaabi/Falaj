@@ -53,6 +53,7 @@ const NOTIFICATIONS = [
 // AI assistant intents. First intent whose keyword appears in the message wins.
 // Keywords span EN/AR/UR/HI so localized questions match too.
 const AI_INTENTS = [
+  { key: 'ans.status',     kw: ['status', 'overview', 'summary', 'how is my', 'how are my', 'my farm', 'حال مزرعت', 'مزرعتي', 'كيف مزرعت', 'فارم کیسا', 'فارم کیسی', 'میرا فارم', 'खेत कैसा', 'खेत कैसी', 'मेरा फ़ार्म', 'स्थिति'] },
   { key: 'ans.water',      kw: ['water', 'irrigat', 'moisture', 'سقي', 'ريّ', 'رطوبة', 'مياه', 'پانی', 'آبپاش', 'पानी', 'सिंच', 'नमी'] },
   { key: 'ans.pest',       kw: ['pest', 'disease', 'sick', 'bug', 'آفة', 'مرض', 'مريض', 'کیڑ', 'بیمار', 'कीट', 'रोग', 'बीमार'] },
   { key: 'ans.fertilizer', kw: ['fertil', 'nutrient', 'سماد', 'مغذّ', 'کھاد', 'खाद', 'पोषक'] },
