@@ -5,11 +5,13 @@
   const SAVE_KEY = 'falaj_fitness_save_v1';
   const REWARD_VIDEO_COINS = 50;
   const POINTS_PER_LEVEL = 250;
+  const DAILY_BONUS = 60;
 
   // ===== الحالة =====
   let state = null;
   let avatar3dReady = false;
   let avatarMounted = false;
+  let theme = localStorage.getItem('falaj_theme') || 'dark';
 
   window.addEventListener('falaj-avatar-ready', () => {
     avatar3dReady = true;
@@ -34,6 +36,7 @@
     },
     shopFilter: 'outfit',
     unlocked: [],
+    dailyDoneDay: '',
   });
 
   // ===== أدوات مساعدة =====
@@ -53,11 +56,48 @@
     } catch (e) { return null; }
   }
 
+  // ===== المظهر (ثيم) =====
+  function applyTheme() {
+    document.body.classList.toggle('theme-light', theme === 'light');
+    const m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', theme === 'light' ? '#eceef2' : '#0a0a0c');
+  }
+  function toggleTheme() {
+    theme = theme === 'light' ? 'dark' : 'light';
+    localStorage.setItem('falaj_theme', theme);
+    applyTheme();
+    updateSettingsUI();
+  }
+  function updateSettingsUI() {
+    const ico = $('#themeIco'); if (ico) ico.innerHTML = ICON(theme === 'light' ? 'moon' : 'sun', { size: 20 });
+    const tv = $('#themeVal'); if (tv) tv.textContent = I18N.t(theme === 'light' ? 'theme_light' : 'theme_dark');
+    const lv = $('#langVal'); if (lv) lv.textContent = I18N.t('lang_name');
+  }
+
+  // ===== تحدّي اليوم =====
+  function featuredWorkout() {
+    const key = todayKey();
+    let h = 0;
+    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+    return WORKOUTS[h % WORKOUTS.length];
+  }
+  function renderDaily() {
+    const w = featuredWorkout();
+    const done = state.dailyDoneDay === todayKey();
+    $('#dailyName').textContent = I18N.loc(w, 'name');
+    $('#dailyReward').innerHTML = done
+      ? ICON('check', { size: 16 })
+      : `<span class="ico star">${ICON('star', { size: 14 })}</span> +${DAILY_BONUS}`;
+    $('#dailyCard').classList.toggle('done', done);
+  }
+
   // ===== التهيئة =====
   function init() {
+    applyTheme();
     fillIcons();
     I18N.applyStatic();
     bindLang();
+    bindSettings();
     updateLangUI();
     state = load();
     if (state) {
@@ -83,6 +123,10 @@
     I18N.applyStatic();
     updateLangUI();
     if (state && !$('#app').classList.contains('hidden')) { bindShop(); renderAll(); }
+  }
+  function bindSettings() {
+    const tb = $('#themeBtn'); if (tb) tb.addEventListener('click', toggleTheme);
+    const lr = $('#langRow'); if (lr) lr.addEventListener('click', () => setLanguage(I18N.other()));
   }
 
   function handleDailyStreak() {
@@ -136,6 +180,10 @@
     updateLangUI();
     bindNav();
     bindShop();
+    $('#dailyCard').addEventListener('click', () => {
+      if (state.dailyDoneDay === todayKey()) goto('workout');
+      else startWorkout(featuredWorkout());
+    });
     renderAll();
   }
 
@@ -186,6 +234,9 @@
     $('#levelNum').textContent = level;
     $('#levelHint').textContent = I18N.t('level_hint', { n: POINTS_PER_LEVEL - into, m: level + 1 });
     $('#levelRing').innerHTML = ringSVG(pct, { size: 96, stroke: 11 });
+
+    // تحدّي اليوم
+    renderDaily();
 
     // الترتيب
     $('#homeRank').textContent = '#' + computeRank();
@@ -407,6 +458,14 @@
     state.points += w.points;
     state.coins += w.coins;
     state.totalWorkouts += 1;
+
+    // مكافأة تحدّي اليوم
+    let dailyMsg = null;
+    if (w.id === featuredWorkout().id && state.dailyDoneDay !== todayKey()) {
+      state.dailyDoneDay = todayKey();
+      state.points += DAILY_BONUS;
+      dailyMsg = I18N.t('toast_daily', { n: DAILY_BONUS });
+    }
     save();
 
     setTimeout(() => {
@@ -414,6 +473,7 @@
       renderTopbar();
       renderHome();
       toast(`<span class="ico star">${ICON('star', { size: 16 })}</span> +${w.points}　<span class="ico coin">${ICON('coin', { size: 16 })}</span> +${w.coins}`);
+      if (dailyMsg) setTimeout(() => toast(dailyMsg), 1400);
       const newLevel = levelOf(state.points);
       if (newLevel > oldLevel) setTimeout(() => levelUp(newLevel), 600);
       else checkAchievements();
@@ -487,6 +547,8 @@
         <span class="ach-desc">${on ? I18N.loc(a, 'desc') : `+${a.reward}`}</span>
       </div>`;
     }).join('');
+
+    updateSettingsUI();
   }
 
   // ===== احتفال confetti نيون =====
@@ -687,11 +749,11 @@
     const off = c * (1 - Math.max(0, Math.min(1, pct / 100)));
     const center = opts.center !== undefined ? opts.center : Math.round(pct) + '%';
     return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="#2b2b34" stroke-width="${sw}"/>
+      <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" style="stroke:var(--surface-3)" stroke-width="${sw}"/>
       <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="url(#ringGrad)" stroke-width="${sw}"
         stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"
         transform="rotate(-90 ${cx} ${cx})" filter="url(#ringGlow)"/>
-      ${center ? `<text x="${cx}" y="${cx}" text-anchor="middle" dominant-baseline="central" fill="#fff" font-size="${(size * 0.26).toFixed(0)}" font-weight="800">${center}</text>` : ''}
+      ${center ? `<text x="${cx}" y="${cx}" text-anchor="middle" dominant-baseline="central" style="fill:var(--label)" font-size="${(size * 0.26).toFixed(0)}" font-weight="800">${center}</text>` : ''}
     </svg>`;
   }
   function initials(name) {

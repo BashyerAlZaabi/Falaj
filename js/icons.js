@@ -59,6 +59,12 @@ const ICONS = {
   plus: '<path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
 
   sparkle: '<path d="M12 2.5l1.6 4.4c.3.8.9 1.4 1.7 1.7L19.5 12l-4.4 1.6c-.8.3-1.4.9-1.7 1.7L12 19.5l-1.6-4.4c-.3-.8-.9-1.4-1.7-1.7L4.5 12l4.2-1.4c.8-.3 1.4-.9 1.7-1.7Z"/>',
+
+  sun: '<circle cx="12" cy="12" r="4.4"/><g stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6M5.2 5.2l1.8 1.8M17 17l1.8 1.8M18.8 5.2 17 7M7 17l-1.8 1.8"/></g>',
+
+  moon: '<path d="M20.5 14.8A8.2 8.2 0 0 1 9.2 3.5 7.2 7.2 0 1 0 20.5 14.8Z"/>',
+
+  globe: '<g fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.8 2.6 2.8 15.4 0 18M12 3c-2.8 2.6-2.8 15.4 0 18"/></g>',
 };
 
 function ICON(name, opts) {

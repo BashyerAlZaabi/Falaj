@@ -99,6 +99,15 @@
           </div>
         </div>
 
+        <button class="daily-card" id="dailyCard">
+          <span class="dc-ico" data-icon="bolt" data-icon-size="24"></span>
+          <span class="dc-body">
+            <span class="dc-label" data-i18n="daily_challenge"></span>
+            <span class="dc-name" id="dailyName">—</span>
+          </span>
+          <span class="dc-reward" id="dailyReward"></span>
+        </button>
+
         <div class="quick-grid">
           <div class="quick-card">
             <span class="qc-ico c-pink" data-icon="flame" data-icon-size="22"></span>
@@ -163,6 +172,20 @@
           <span class="ach-prog" id="achProgress"></span>
         </div>
         <div class="ach-grid" id="achGrid"></div>
+
+        <div class="section-head"><h3 class="section-h" data-i18n="settings"></h3></div>
+        <div class="stat-rows">
+          <button class="stat-row setting-row" id="themeBtn">
+            <span class="sr-ico" id="themeIco"></span>
+            <span class="sr-label" data-i18n="theme"></span>
+            <span class="sr-val" id="themeVal"></span>
+          </button>
+          <button class="stat-row setting-row" id="langRow">
+            <span class="sr-ico" data-icon="globe"></span>
+            <span class="sr-label" data-i18n="language"></span>
+            <span class="sr-val" id="langVal"></span>
+          </button>
+        </div>
       </section>
     </main>
 
