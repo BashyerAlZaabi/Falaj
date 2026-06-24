@@ -79,8 +79,14 @@ function satMap() {
   return `<svg class="satmap" viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="320" height="220" fill="#465a2f"/>${cells}${roads}${pivot(70, 152, 30, '#5e7e3a')}${pivot(250, 72, 24, '#6b8a40')}${channel}</svg>`;
 }
 
+// Real satellite imagery of Al Ain Oasis (Esri World Imagery, keyless). SVG aerial shows if it fails to load.
+const SAT_URL = 'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?bboxSR=4326&imageSR=3857&size=700,440&format=jpg&f=image&bbox=55.755,24.206,55.780,24.222';
+function aerialMap() {
+  return satMap() + `<img class="satimg" src="${SAT_URL}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+}
+
 function fieldThumb(f, cls) {
-  return `<div class="thumb ${cls || ''}">${satMap()}
+  return `<div class="thumb ${cls || ''}">${aerialMap()}
     <svg class="thumb-poly" viewBox="0 0 100 70" preserveAspectRatio="none">
       <polygon points="18,42 44,18 86,32 60,58" fill="rgba(244,208,63,.14)" stroke="#f4d03f" stroke-width="2"/>
       ${[[18, 42], [44, 18], [86, 32], [60, 58]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.4" fill="#f4d03f"/>`).join('')}
@@ -341,7 +347,7 @@ function screenHome() {
 
     <button class="monitor-card card" data-action="go" data-route="zones">
       <div class="mc-map">
-        ${satMap()}
+        ${aerialMap()}
         ${S.monZones.slice(0, 4).map(z => `<span class="zbadge ${zStatus(z)}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${zStatus(z) === 'alert' ? '!' : '✓'}</i></span>`).join('')}
         ${lowZones().length ? `<span class="mc-issues">${icon('alert')}${t('mon.needAttn', { n: lowZones().length })}</span>` : ''}
         <div class="mc-grad"></div>
@@ -492,7 +498,7 @@ function screenZones() {
   const alerts = lowZones();
   return `${gheadBack('mon.title')}
   <div class="scroll detail-scroll">
-    <div class="zmap">${satMap()}${S.monZones.map(z => `<span class="zbadge ${zStatus(z)}" data-action="open-sensor" data-id="${z.id}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${zStatus(z) === 'alert' ? '!' : '✓'}</i></span>`).join('')}</div>
+    <div class="zmap">${aerialMap()}${S.monZones.map(z => `<span class="zbadge ${zStatus(z)}" data-action="open-sensor" data-id="${z.id}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${zStatus(z) === 'alert' ? '!' : '✓'}</i></span>`).join('')}</div>
     <p class="muted maphint">${icon('pin')}${t('sen.tapHint')}</p>
 
     <div class="card pad">
