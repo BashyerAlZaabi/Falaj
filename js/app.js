@@ -33,6 +33,7 @@
       shoes: 'shoes_default',
     },
     shopFilter: 'outfit',
+    unlocked: [],
   });
 
   // ===== أدوات مساعدة =====
@@ -144,6 +145,7 @@
     renderWorkouts();
     renderShop();
     renderLeaderboard();
+    renderProfile();
   }
 
   // ===== الشريط العلوي =====
@@ -162,8 +164,11 @@
     $$('.screen').forEach(s => s.classList.toggle('active', s.dataset.screen === screen));
     $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.goto === screen));
     if (screen === 'leaderboard') renderLeaderboard();
+    if (screen === 'profile') renderProfile();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
+  function levelOf(points) { return Math.floor(points / POINTS_PER_LEVEL) + 1; }
 
   // ===== الرئيسية =====
   function renderHome() {
@@ -398,6 +403,7 @@
     haptic([30, 40, 60]);
     confettiBurst();
 
+    const oldLevel = levelOf(state.points);
     state.points += w.points;
     state.coins += w.coins;
     state.totalWorkouts += 1;
@@ -408,7 +414,79 @@
       renderTopbar();
       renderHome();
       toast(`<span class="ico star">${ICON('star', { size: 16 })}</span> +${w.points}　<span class="ico coin">${ICON('coin', { size: 16 })}</span> +${w.coins}`);
+      const newLevel = levelOf(state.points);
+      if (newLevel > oldLevel) setTimeout(() => levelUp(newLevel), 600);
+      else checkAchievements();
     }, 1100);
+  }
+
+  // ===== المستوى والإنجازات =====
+  function levelUp(n) {
+    const bonus = n * 20;
+    state.coins += bonus;
+    save();
+    renderTopbar();
+    $('#luBadge').innerHTML = ICON('star', { size: 38 });
+    $('#luSub').textContent = I18N.t('levelup_sub', { n });
+    $('#luReward').innerHTML = `<span class="ico coin">${ICON('coin', { size: 20 })}</span> ${I18N.t('reward_coins', { n: bonus })}`;
+    $('#levelModal').classList.remove('hidden');
+    confettiBurst();
+    haptic([30, 40, 80]);
+    $('#luClose').onclick = () => { $('#levelModal').classList.add('hidden'); checkAchievements(); };
+  }
+
+  function checkAchievements() {
+    if (!state.unlocked) state.unlocked = [];
+    const newly = [];
+    ACHIEVEMENTS.forEach(a => {
+      if (!state.unlocked.includes(a.id) && a.check(state)) {
+        state.unlocked.push(a.id);
+        state.coins += a.reward;
+        newly.push(a);
+      }
+    });
+    if (newly.length) {
+      save();
+      renderTopbar();
+      renderProfile();
+      newly.forEach((a, i) => setTimeout(() =>
+        toast(`${ICON('check', { size: 16 })} ${I18N.t('ach_unlocked', { name: I18N.loc(a, 'name') })}`), 500 * i));
+    }
+  }
+
+  // ===== الملف الشخصي =====
+  function renderProfile() {
+    if (!state) return;
+    $('#profileName').textContent = state.name;
+    $('#profileRank').textContent = computeRank();
+    const ava = $('#profileAva');
+    ava.style.background = avatarColor(state.name);
+    ava.textContent = initials(state.name);
+
+    const owned = state.owned.filter(id => { const it = SHOP.find(s => s.id === id); return it && !it.default; }).length;
+    const rows = [
+      { icon: 'star',     color: 'star',   label: I18N.t('total_points'),   val: fmt(state.points) },
+      { icon: 'flame',    color: 'c-pink', label: I18N.t('streak'),         val: state.streak },
+      { icon: 'dumbbell', color: 'c-green',label: I18N.t('workouts_done'),  val: state.totalWorkouts },
+      { icon: 'tshirt',   color: 'c-blue', label: I18N.t('owned'),          val: owned },
+    ];
+    $('#profileStats').innerHTML = rows.map(r => `
+      <div class="stat-row">
+        <span class="sr-ico ${r.color}">${ICON(r.icon, { size: 20 })}</span>
+        <span class="sr-label">${r.label}</span>
+        <span class="sr-val">${r.val}</span>
+      </div>`).join('');
+
+    const unlocked = state.unlocked || [];
+    $('#achProgress').textContent = I18N.t('ach_progress', { n: unlocked.length, m: ACHIEVEMENTS.length });
+    $('#achGrid').innerHTML = ACHIEVEMENTS.map(a => {
+      const on = unlocked.includes(a.id);
+      return `<div class="ach ${on ? 'on' : 'off'}">
+        <span class="ach-ico">${ICON(on ? a.icon : 'ring', { size: 24 })}</span>
+        <span class="ach-name">${I18N.loc(a, 'name')}</span>
+        <span class="ach-desc">${on ? I18N.loc(a, 'desc') : `+${a.reward}`}</span>
+      </div>`;
+    }).join('');
   }
 
   // ===== احتفال confetti نيون =====
@@ -515,6 +593,7 @@
     renderShop();
     renderHome();
     toast(I18N.t('toast_bought', { name: I18N.loc(item, 'name') }));
+    checkAchievements();
   }
 
   function equip(item) {

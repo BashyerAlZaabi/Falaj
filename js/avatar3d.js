@@ -13,6 +13,9 @@ const OUTFIT = {
   outfit_navy:           0x2f4068,
   outfit_sport:          0x27b16b,
   outfit_red:            0x9e3b34,
+  outfit_emerald:        0x1f9168,
+  outfit_purple:         0x6b3fa0,
+  outfit_white:          0xf2f2f2,
 };
 const C_SKIN = 0xeebf94;
 

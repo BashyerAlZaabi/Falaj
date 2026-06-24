@@ -10,6 +10,10 @@ const WORKOUTS = [
   { id: 'jump',    name: 'نط الحبل',  name_en: 'Jump rope',  icon: 'bolt',     mode: 'reps', reps: 20, seconds: 30, points: 38, coins: 22, desc: 'رشاقة',        desc_en: 'Agility' },
   { id: 'swim',    name: 'سباحة',     name_en: 'Swimming',   icon: 'waves',    mode: 'reps', reps: 16, seconds: 30, points: 55, coins: 32, desc: 'كامل الجسم',   desc_en: 'Full body' },
   { id: 'weights', name: 'حديد',      name_en: 'Weights',    icon: 'dumbbell', mode: 'reps', reps: 12, seconds: 30, points: 50, coins: 30, desc: 'قوة',          desc_en: 'Strength' },
+  { id: 'burpee',  name: 'بيربي',     name_en: 'Burpees',    icon: 'bolt',     mode: 'reps', reps: 12, seconds: 30, points: 48, coins: 28, desc: 'كامل الجسم',   desc_en: 'Full body' },
+  { id: 'lunge',   name: 'طعن',       name_en: 'Lunges',     icon: 'figure',   mode: 'reps', reps: 14, seconds: 30, points: 34, coins: 20, desc: 'أرجل',         desc_en: 'Legs' },
+  { id: 'climber', name: 'متسلّق',    name_en: 'Climbers',   icon: 'figure',   mode: 'reps', reps: 24, seconds: 30, points: 42, coins: 26, desc: 'كارديو',       desc_en: 'Cardio' },
+  { id: 'stretch', name: 'إطالة',     name_en: 'Stretch',    icon: 'waves',    mode: 'hold', reps: 0,  seconds: 15, points: 28, coins: 16, desc: 'مرونة',        desc_en: 'Mobility' },
 ];
 
 // عناصر المتجر (cat: outfit | head | eyes | accessory | shoes)
@@ -19,6 +23,9 @@ const SHOP = [
   { id: 'outfit_navy',    name: 'كندورة كحلية',  name_en: 'Navy robe',       cat: 'outfit', price: 250, icon: 'tshirt', color: '#314a78' },
   { id: 'outfit_sport',   name: 'بدلة رياضية',   name_en: 'Sport suit',      cat: 'outfit', price: 300, icon: 'tshirt', color: '#23805f' },
   { id: 'outfit_red',     name: 'زي أحمر فاخر',  name_en: 'Red outfit',      cat: 'outfit', price: 400, icon: 'tshirt', color: '#a83535' },
+  { id: 'outfit_emerald', name: 'زمردي',         name_en: 'Emerald',         cat: 'outfit', price: 320, icon: 'tshirt', color: '#1f9168' },
+  { id: 'outfit_purple',  name: 'بنفسجي ملكي',   name_en: 'Royal purple',    cat: 'outfit', price: 360, icon: 'tshirt', color: '#6b3fa0' },
+  { id: 'outfit_white',   name: 'أبيض فاخر',     name_en: 'Pure white',      cat: 'outfit', price: 280, icon: 'tshirt', color: '#f2f2f2' },
 
   { id: 'head_default',   name: 'الغترة البيضاء', name_en: 'White Ghutra',   cat: 'head', price: 0,   icon: 'cap', color: '#e9e9ec', default: true },
   { id: 'head_shemagh',   name: 'شماغ أحمر',      name_en: 'Red Shemagh',    cat: 'head', price: 200, icon: 'cap', color: '#d12f2f' },
@@ -75,3 +82,18 @@ const BOTS = [
   { name: 'ماركو ب.',      name_en: 'Marco B.',    country: 'ألمانيا',  country_en: 'Germany', base: 1520 },
   { name: 'عائشة ب.',      name_en: 'Aisha B.',    country: 'نيجيريا',  country_en: 'Nigeria', base: 1180 },
 ];
+
+// الإنجازات (badge) — check تُحسب من الحالة، reward عملات تُمنح عند الفتح
+const ACHIEVEMENTS = [
+  { id: 'first',      name: 'البداية',        name_en: 'First Step',    desc: 'أكمل أول تمرين',          desc_en: 'Complete your first workout', icon: 'bolt',    reward: 50,  check: s => s.totalWorkouts >= 1 },
+  { id: 'streak3',    name: 'ثلاثة أيام',      name_en: '3-Day Streak',  desc: 'حافظ على 3 أيام متتالية', desc_en: 'Keep a 3-day streak',         icon: 'flame',   reward: 80,  check: s => s.streak >= 3 },
+  { id: 'ten',        name: 'مثابر',           name_en: 'Committed',     desc: 'أكمل 10 تمارين',          desc_en: 'Complete 10 workouts',        icon: 'dumbbell',reward: 120, check: s => s.totalWorkouts >= 10 },
+  { id: 'level5',     name: 'صاعد',            name_en: 'Rising',        desc: 'اوصل للمستوى 5',          desc_en: 'Reach level 5',               icon: 'star',    reward: 150, check: s => Math.floor(s.points / 250) + 1 >= 5 },
+  { id: 'collector',  name: 'أنيق',            name_en: 'Stylish',       desc: 'امتلك 5 قطع',             desc_en: 'Own 5 items',                 icon: 'tshirt',  reward: 120, check: s => ownedCount(s) >= 5 },
+  { id: 'marathon',   name: 'ماراثون',         name_en: 'Marathon',      desc: 'أكمل 25 تمريناً',         desc_en: 'Complete 25 workouts',        icon: 'trophy',  reward: 250, check: s => s.totalWorkouts >= 25 },
+  { id: 'level10',    name: 'محترف',           name_en: 'Pro',           desc: 'اوصل للمستوى 10',         desc_en: 'Reach level 10',              icon: 'trophy',  reward: 300, check: s => Math.floor(s.points / 250) + 1 >= 10 },
+  { id: 'wardrobe',   name: 'خزانة كاملة',     name_en: 'Full Wardrobe', desc: 'امتلك 10 قطع',            desc_en: 'Own 10 items',                icon: 'bag',     reward: 300, check: s => ownedCount(s) >= 10 },
+];
+function ownedCount(s) {
+  return (s.owned || []).filter(id => { const it = SHOP.find(x => x.id === id); return it && !it.default; }).length;
+}
