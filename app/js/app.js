@@ -265,7 +265,7 @@ function renderNav() {
     <button class="tab ${S.route === 'home' ? 'on' : ''}" data-action="go" data-route="home">${icon('home')}</button>
     <button class="tab ${S.route === 'fields' ? 'on' : ''}" data-action="go" data-route="fields">${icon('fields')}</button>
     <button class="fab" data-action="add-field">${icon('plus')}</button>
-    <button class="tab ${S.route === 'support' ? 'on' : ''}" data-action="go" data-route="support">${icon('support')}</button>
+    <button class="tab ${S.route === 'support' ? 'on' : ''}" data-action="go" data-route="support">${icon('spark')}</button>
     <button class="tab ${S.route === 'settings' ? 'on' : ''}" data-action="go" data-route="settings">${icon('settings')}</button>
   </nav>`;
 }
@@ -359,14 +359,34 @@ function screenNotifications() {
   </div>`;
 }
 
-/* ---------- support ---------- */
+/* ---------- AI support (chat) ---------- */
 function screenSupport() {
-  return `<header class="ghead"><div class="ghead-row"><b>${t('support.title')}</b>${bell()}</div></header>
-  <div class="scroll">
-    <div class="support-hero card">${icon('support', 'big2')}<b>${t('support.title')}</b><p>${t('support.body')}</p></div>
-    <button class="row card btn-row"><span class="r-ico green">${icon('chat')}</span><span>${t('support.chat')}</span>${icon('chevron', 'chev ' + flip())}</button>
-    <button class="row card btn-row"><span class="r-ico amber">${icon('phone')}</span><span>${t('support.call')}</span>${icon('chevron', 'chev ' + flip())}</button>
+  const msgs = (S.chat && S.chat.length) ? S.chat : [{ role: 'bot', text: t('ai.welcome') }];
+  const fresh = !S.chat || S.chat.length <= 1;
+  return `<header class="ghead"><div class="ghead-row">
+    <div class="ai-head"><span class="ai-ava">${icon('spark')}</span><div><b>${t('ai.title')}</b><small><i class="d-on"></i>${t('ai.online')}</small></div></div>${bell()}</div></header>
+  <div class="scroll chatscroll">
+    <div class="chat">${msgs.map(m => `<div class="msg ${m.role}">${m.role === 'bot' ? '<span class="m-ava">' + icon('spark') + '</span>' : ''}<div class="bubble">${m.text}</div></div>`).join('')}</div>
+    ${fresh ? `<div class="suggests">${['ai.s1', 'ai.s2', 'ai.s3', 'ai.s4'].map(k => `<button class="chip" data-action="ai-suggest" data-q="${k}">${t(k)}</button>`).join('')}</div>` : ''}
+  </div>
+  <div class="composer">
+    <input id="aiInput" placeholder="${t('ai.placeholder')}" autocomplete="off">
+    <button class="ai-send" data-action="ai-send" aria-label="send">${icon('send')}</button>
   </div>`;
+}
+function aiReply(text) {
+  const low = (text || '').toLowerCase();
+  for (const it of AI_INTENTS) if (it.kw.some(k => low.includes(k.toLowerCase()))) return t(it.key);
+  return t('ans.fallback');
+}
+function aiSend(q) {
+  const text = q != null ? q : val('aiInput');
+  if (!text) return;
+  if (!S.chat || !S.chat.length) S.chat = [{ role: 'bot', text: t('ai.welcome') }];
+  S.chat.push({ role: 'user', text });
+  S.chat.push({ role: 'bot', text: aiReply(text) });
+  save(); render();
+  const sc = document.querySelector('.chatscroll'); if (sc) sc.scrollTop = sc.scrollHeight;
 }
 
 /* ---------- settings ---------- */
@@ -442,6 +462,8 @@ document.addEventListener('click', (e) => {
     'open-field': () => { S.currentFieldId = d.id; S.route = 'fieldDetail'; save(); render(); },
     'add-field': () => { wizardStep = 1; wizardData = {}; S.farm = null; save(); render(); },
     'clear-notif': () => { S.notifEmpty = true; save(); render(); },
+    'ai-send': () => aiSend(),
+    'ai-suggest': () => aiSend(t(d.q)),
     'logout': () => { S.user = null; S.farm = null; S.route = 'home'; authScreen = 'login'; save(); render(); },
   };
   if (map[a]) map[a]();
@@ -455,6 +477,10 @@ document.addEventListener('input', (e) => {
     el.value = el.value.replace(/\D/g, '');
     if (el.value) { const nx = document.getElementById('otp' + (Number(el.dataset.i) + 1)); if (nx) nx.focus(); }
   }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target && e.target.id === 'aiInput') { e.preventDefault(); aiSend(); }
 });
 
 function val(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }

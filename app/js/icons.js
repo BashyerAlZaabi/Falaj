@@ -30,6 +30,8 @@ const ICON_PATHS = {
   list:    '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
   tag:     '<path d="M3 12l9-9 9 9-9 9z"/><circle cx="12" cy="12" r="2"/>',
   hectare: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 4v16M15 4v16M4 9h16M4 15h16"/>',
+  spark:   '<path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z"/><path d="M19 14l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/>',
+  send:    '<path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/>',
 };
 
 function icon(name, cls) {

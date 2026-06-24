@@ -50,6 +50,18 @@ const NOTIFICATIONS = [
   { id: 'n6', key: 'notif.market',  icon: 'tag',      unread: false },
 ];
 
+// AI assistant intents. First intent whose keyword appears in the message wins.
+// Keywords span EN/AR/UR/HI so localized questions match too.
+const AI_INTENTS = [
+  { key: 'ans.water',      kw: ['water', 'irrigat', 'moisture', 'سقي', 'ريّ', 'رطوبة', 'مياه', 'پانی', 'آبپاش', 'पानी', 'सिंच', 'नमी'] },
+  { key: 'ans.pest',       kw: ['pest', 'disease', 'sick', 'bug', 'آفة', 'مرض', 'مريض', 'کیڑ', 'بیمار', 'कीट', 'रोग', 'बीमार'] },
+  { key: 'ans.fertilizer', kw: ['fertil', 'nutrient', 'سماد', 'مغذّ', 'کھاد', 'खाद', 'पोषक'] },
+  { key: 'ans.market',     kw: ['price', 'market', 'sell', 'tomato', 'سعر', 'سوق', 'طماطم', 'قیمت', 'مارکیٹ', 'ٹماٹر', 'दाम', 'मूल्य', 'बाज़ार', 'टमाटर'] },
+  { key: 'ans.weather',    kw: ['weather', 'rain', 'طقس', 'مطر', 'موسم', 'بارش', 'मौसम', 'वर्षा', 'बारिश'] },
+  { key: 'ans.harvest',    kw: ['harvest', 'reap', 'حصد', 'کٹائی', 'कटाई'] },
+  { key: 'ans.hello',      kw: ['hello', 'hey', 'salam', 'مرحبا', 'سلام', 'नमस्ते', 'नमस्कार'] },
+];
+
 // Cascading location picker (UAE-first).
 const COUNTRIES = [
   { name: 'United Arab Emirates', states: [
