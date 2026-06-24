@@ -31,7 +31,11 @@ function loadState() {
   try { const r = localStorage.getItem(STORE_KEY); S = r ? Object.assign(defaultState(), JSON.parse(r)) : defaultState(); }
   catch (e) { S = defaultState(); }
 }
-function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {} }
+let _pushTimer = null;
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {}
+  if (BK.enabled && BK.user) { clearTimeout(_pushTimer); _pushTimer = setTimeout(() => BK.push(S), 800); }
+}
 function fieldById(id) { return S.fields.find(f => f.id === id); }
 function unread() { return S.notifications.filter(n => n.unread && !S.notifEmpty).length; }
 
@@ -632,8 +636,8 @@ document.addEventListener('click', (e) => {
     'to-login': () => { authScreen = 'login'; render(); },
     'go-forgot': () => { authScreen = 'forgotEmail'; render(); },
     'auth-back': () => { authScreen = authScreen === 'reset' ? 'otp' : authScreen === 'otp' ? 'forgotEmail' : 'login'; render(); },
-    'do-login': () => { S.user = { name: val('login_id') || 'Jacob Jones', email: (val('login_id') || 'jacob@falajae.com') }; S.farm = S.farm || demoFarm(); save(); render(); },
-    'do-signup': () => { S.user = { name: val('su_name') || 'Jacob Jones', email: val('su_email') || 'jacob@falajae.com' }; S.farm = null; wizardStep = 1; wizardData = {}; save(); render(); },
+    'do-login': () => { if (BK.enabled) return doAuthRemote('login'); S.user = { name: val('login_id') || 'Jacob Jones', email: (val('login_id') || 'jacob@falajae.com') }; S.farm = S.farm || demoFarm(); save(); render(); },
+    'do-signup': () => { if (BK.enabled) return doAuthRemote('signup'); S.user = { name: val('su_name') || 'Jacob Jones', email: val('su_email') || 'jacob@falajae.com' }; S.farm = null; wizardStep = 1; wizardData = {}; save(); render(); },
     'send-code': () => { authScreen = 'otp'; render(); setTimeout(() => { const f = document.getElementById('otp0'); if (f) f.focus(); }, 30); },
     'verify-otp': () => { authScreen = 'reset'; render(); },
     'save-pass': () => { if (val('rs_pw') && val('rs_pw') !== val('rs_pw2')) { const e2 = document.getElementById('rsErr'); if (e2) e2.classList.remove('hidden'); return; } authScreen = 'login'; render(); },
@@ -660,7 +664,7 @@ document.addEventListener('click', (e) => {
     'toast-soon': () => toast(t('common.soon')),
     'open-thread': () => { S.currentThreadId = d.id; S.route = 'thread'; save(); render(); },
     'msg-send': () => msgSend(),
-    'logout': () => { S.user = null; S.farm = null; S.route = 'home'; authScreen = 'login'; save(); render(); },
+    'logout': () => { if (BK.enabled) BK.signOut(); S.user = null; S.farm = null; S.route = 'home'; authScreen = 'login'; save(); render(); },
   };
   if (map[a]) map[a]();
 });
@@ -716,7 +720,35 @@ function finishWizard() {
   S._addField = false; wizardStep = 1; wizardData = {}; S.route = 'home'; save(); render();
 }
 
+/* ---------- backend auth ---------- */
+function mapUser(u) {
+  const name = (u.user_metadata && u.user_metadata.name) || (u.email || '').split('@')[0];
+  return { name, email: u.email || '' };
+}
+async function doAuthRemote(mode) {
+  const email = mode === 'login' ? val('login_id') : val('su_email');
+  const pw = mode === 'login' ? val('login_pw') : val('su_pw');
+  if (!email || !pw) { toast(t('auth.' + (mode === 'login' ? 'login' : 'signup'))); return; }
+  const res = mode === 'login' ? await BK.signIn(email, pw) : await BK.signUp(email, pw, val('su_name'));
+  if (res.error) { toast(res.error); return; }
+  if (res.needsConfirm) { toast(t('auth.otpHint')); authScreen = 'login'; render(); return; }
+  S.user = mapUser(res.user || BK.user);
+  const remote = await BK.pull();
+  if (remote) { const u = S.user; Object.assign(S, remote); S.user = u; }
+  else if (mode === 'signup') { S.farm = null; wizardStep = 1; wizardData = {}; }
+  S.route = 'home'; save(); render();
+}
+
 /* ---------- boot ---------- */
 loadState();
 setLang(CURRENT_LANG);
-render();
+if (BK.enabled) {
+  S.user = null;            // trust the backend session, not local cache
+  render();
+  BK.init().then(async (u) => {
+    if (u) { S.user = mapUser(u); const r = await BK.pull(); if (r) { const uu = S.user; Object.assign(S, r); S.user = uu; } }
+    render();
+  }).catch(() => render());
+} else {
+  render();
+}
