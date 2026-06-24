@@ -1,78 +1,73 @@
-/* ===== FALAJ — static data ===== */
+/* ===== FALAJ — static data (UAE demo, AED currency) ===== */
 
-// Irrigation zones. nameKey/cropKey are i18n keys. moistureMin = auto-water threshold.
-const ZONES = [
-  { id: 'A', cropKey: 'crop.dates',  area: 4.0, moistureMin: 35, baseMoisture: 58 },
-  { id: 'B', cropKey: 'crop.tomato', area: 1.5, moistureMin: 45, baseMoisture: 49 },
-  { id: 'C', cropKey: 'crop.wheat',  area: 3.0, moistureMin: 30, baseMoisture: 62 },
-  { id: 'D', cropKey: 'crop.veg',    area: 0.8, moistureMin: 50, baseMoisture: 71 },
+const ONBOARDING = [
+  { titleKey: 'ob.s1.title', bodyKey: 'ob.s1.body', scene: 'plant' },
+  { titleKey: 'ob.s2.title', bodyKey: 'ob.s2.body', scene: 'harvest' },
+  { titleKey: 'ob.s3.title', bodyKey: 'ob.s3.body', scene: 'market' },
 ];
 
-// Subscription plans (deck slide 26). featureKeys are inlined English+translated below.
-const PLANS = [
-  {
-    id: 'basic', nameKey: 'plan.basic.name', price: 99, accent: '#16a34a',
-    features: {
-      en: ['Essential farm management tools', 'Basic irrigation support', 'Limited chat support'],
-      ar: ['أدوات إدارة المزرعة الأساسية', 'دعم الريّ الأساسي', 'دعم محادثة محدود'],
-      ur: ['بنیادی فارم منیجمنٹ ٹولز', 'بنیادی آبپاشی سپورٹ', 'محدود چیٹ سپورٹ'],
-      hi: ['आवश्यक फ़ार्म प्रबंधन उपकरण', 'बेसिक सिंचाई सहायता', 'सीमित चैट सहायता'],
-    },
-  },
-  {
-    id: 'standard', nameKey: 'plan.standard.name', price: 249, accent: '#2f4cff', popular: true,
-    features: {
-      en: ['Advanced farm management tools', 'Smart irrigation integration', 'Chat & email support', 'Weekly analytics reports'],
-      ar: ['أدوات إدارة متقدّمة', 'تكامل الريّ الذكي', 'دعم محادثة وبريد', 'تقارير تحليلية أسبوعية'],
-      ur: ['ایڈوانسڈ فارم منیجمنٹ ٹولز', 'سمارٹ آبپاشی انضمام', 'چیٹ اور ای میل سپورٹ', 'ہفتہ وار تجزیاتی رپورٹس'],
-      hi: ['उन्नत फ़ार्म प्रबंधन उपकरण', 'स्मार्ट सिंचाई एकीकरण', 'चैट और ईमेल सहायता', 'साप्ताहिक विश्लेषण रिपोर्ट'],
-    },
-  },
-  {
-    id: 'premium', nameKey: 'plan.premium.name', price: 499, accent: '#a855ff',
-    features: {
-      en: ['Full access to all tools', 'Customizable smart irrigation', 'Priority support & account manager', 'Custom analytics & insights'],
-      ar: ['وصول كامل لكل الأدوات', 'ريّ ذكي قابل للتخصيص', 'دعم أولوية ومدير حساب', 'تحليلات ورؤى مخصّصة'],
-      ur: ['تمام ٹولز تک مکمل رسائی', 'حسبِ ضرورت سمارٹ آبپاشی', 'ترجیحی سپورٹ اور اکاؤنٹ مینیجر', 'حسبِ ضرورت تجزیات و بصیرت'],
-      hi: ['सभी उपकरणों तक पूर्ण पहुँच', 'अनुकूलन योग्य स्मार्ट सिंचाई', 'प्राथमिकता सहायता व खाता प्रबंधक', 'कस्टम विश्लेषण व अंतर्दृष्टि'],
-    },
-  },
-  {
-    id: 'custom', nameKey: 'plan.custom.name', price: null, accent: '#0ea5b7',
-    features: {
-      en: ['Tailored to your farm', 'Flexible feature-based pricing', 'Personalized support', 'Continuous improvement'],
-      ar: ['مصمّم لمزرعتك', 'تسعير مرن حسب الميزات', 'دعم شخصي', 'تحسين مستمر'],
-      ur: ['آپ کے فارم کے مطابق', 'فیچر کے مطابق لچکدار قیمت', 'ذاتی سپورٹ', 'مسلسل بہتری'],
-      hi: ['आपके फ़ार्म के अनुरूप', 'फ़ीचर-आधारित लचीली कीमत', 'व्यक्तिगत सहायता', 'निरंतर सुधार'],
-    },
-  },
+// Demo farms/fields. revenue/expense in AED. bars = 7-day water-use (relative %).
+const FIELDS = [
+  { id: 'f1', name: 'Al Ain Grove', cropKey: 'crop.dates', water: 75, expense: 12500, revenue: 25000,
+    revChange: 8, health: 'good', planting: '12/01/2024', harvest: 4,
+    consumption: 5392, workTime: 420, hectares: 296, bars: [30, 42, 28, 33, 26, 40, 31],
+    exp: { seeds: 42, fertilizer: 20, pesticide: 26, chemicals: 12 }, hue: 96 },
+  { id: 'f2', name: 'Tomato Field', cropKey: 'crop.tomato', water: 10, expense: 2500, revenue: 0,
+    revChange: -10, health: 'fair', planting: '03/03/2025', harvest: 2,
+    consumption: 1820, workTime: 160, hectares: 42, bars: [18, 22, 15, 20, 24, 17, 21],
+    exp: { seeds: 35, fertilizer: 25, pesticide: 28, chemicals: 12 }, hue: 28 },
+  { id: 'f3', name: 'Maize Field', cropKey: 'crop.maize', water: 85, expense: 6000, revenue: 4000,
+    revChange: 5, health: 'good', planting: '01/02/2025', harvest: 3,
+    consumption: 3960, workTime: 300, hectares: 120, bars: [26, 30, 22, 28, 34, 24, 29],
+    exp: { seeds: 30, fertilizer: 30, pesticide: 25, chemicals: 15 }, hue: 78 },
+  { id: 'f4', name: 'Wheat Field', cropKey: 'crop.wheat', water: 60, expense: 3500, revenue: 5200,
+    revChange: 3, health: 'good', planting: '15/12/2024', harvest: 5,
+    consumption: 2800, workTime: 210, hectares: 90, bars: [20, 24, 18, 26, 22, 28, 21],
+    exp: { seeds: 38, fertilizer: 28, pesticide: 20, chemicals: 14 }, hue: 64 },
 ];
 
-// Market crops for the online-market preview (Phase 2). prices in AED/kg, trend = weekly %.
+const EXPENSE_KEYS = [
+  { k: 'exp.seeds', c: '#e23b32' }, { k: 'exp.fertilizer', c: '#f0962a' },
+  { k: 'exp.pesticide', c: '#3aa55f' }, { k: 'exp.chemicals', c: '#f4c531' },
+];
+
+// Today's market prices (AED / kg ranges).
 const MARKET = [
-  { cropKey: 'crop.tomato', price: 6.5,  trend: +5 },
-  { cropKey: 'crop.dates',  price: 22.0, trend: +2 },
-  { cropKey: 'crop.veg',    price: 8.0,  trend: -3 },
-  { cropKey: 'crop.wheat',  price: 3.2,  trend: +1 },
+  { cropKey: 'crop.tomato', price: '15–20', region: 'Al Ain', hue: 6 },
+  { cropKey: 'crop.potato', price: '20–22', region: 'Al Ain', hue: 38 },
+  { cropKey: 'crop.dates',  price: '22–30', region: 'Liwa',   hue: 30 },
+  { cropKey: 'crop.wheat',  price: '3–5',   region: 'Sharjah', hue: 52 },
 ];
 
-// National facts (deck slide 4) for the About screen.
-const FACTS = [
-  { value: '80%', key: 'about.fact1' },
-  { value: '70+', key: 'about.fact2' },
-  { value: '<5%', key: 'about.fact3' },
-  { value: '40k', key: 'about.fact4' },
+const WEATHER = { tempC: 25, condKey: 'weather.cloudy', wind: 9, rain: 2, location: 'Al Ain, UAE', date: '19 Aug' };
+
+const NOTIFICATIONS = [
+  { id: 'n1', key: 'notif.weather', icon: 'cloudsun', unread: true },
+  { id: 'n2', key: 'notif.water',   icon: 'drop',     unread: true },
+  { id: 'n3', key: 'notif.harvest', icon: 'wheat',    unread: false },
+  { id: 'n4', key: 'notif.checkin', icon: 'list',     unread: false },
+  { id: 'n5', key: 'notif.event',   icon: 'calendar', unread: false },
+  { id: 'n6', key: 'notif.market',  icon: 'tag',      unread: false },
 ];
 
-// Alert templates. Each generates a notification with translated title/body + params.
-const ALERT_TEMPLATES = [
-  { type: 'market',   icon: 'trend',   tone: 'amber',  param: () => ({ n: 5 }) },
-  { type: 'weather',  icon: 'cloud',   tone: 'blue',   param: () => ({ n: 12 }) },
-  { type: 'water',    icon: 'drop',    tone: 'cyan',   param: () => ({ n: 10 }) },
-  { type: 'crop',     icon: 'leaf',    tone: 'green',  param: () => ({ z: 'B' }) },
-  { type: 'sales',    icon: 'cash',    tone: 'green',  param: () => ({ n: '1,200' }) },
-  { type: 'nutrient', icon: 'flask',   tone: 'red',    param: () => ({ n: 15, z: 'C' }) },
+// Cascading location picker (UAE-first).
+const COUNTRIES = [
+  { name: 'United Arab Emirates', states: [
+    { name: 'Abu Dhabi', cities: ['Al Ain', 'Liwa', 'Madinat Zayed', 'Al Dhafra'] },
+    { name: 'Dubai', cities: ['Hatta', 'Al Marmoom', 'Al Lisaili'] },
+    { name: 'Sharjah', cities: ['Al Dhaid', 'Kalba', 'Mleiha'] },
+    { name: 'Ras Al Khaimah', cities: ['Digdaga', 'Al Rams'] },
+  ] },
+  { name: 'Saudi Arabia', states: [
+    { name: 'Riyadh', cities: ['Al Kharj', 'Al Quwayiyah'] },
+    { name: 'Eastern Province', cities: ['Al Ahsa', 'Qatif'] },
+  ] },
+  { name: 'Oman', states: [
+    { name: 'Al Batinah', cities: ['Sohar', 'Rustaq'] },
+    { name: 'Ad Dakhiliyah', cities: ['Nizwa', 'Bahla'] },
+  ] },
+  { name: 'Egypt', states: [
+    { name: 'Fayoum', cities: ['Fayoum City', 'Sinnuris'] },
+    { name: 'Beheira', cities: ['Damanhur', 'Kafr El Dawwar'] },
+  ] },
 ];
-
-// Seed alerts shown on first load (matches the deck's notification mockup order).
-const SEED_ALERTS = ['market', 'weather', 'water', 'crop', 'sales', 'nutrient'];
