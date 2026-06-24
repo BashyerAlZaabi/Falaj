@@ -45,17 +45,11 @@ function social(name) {
   return '<svg viewBox="0 0 24 24" fill="#1877F2"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.5h-1.2c-1.2 0-1.6.8-1.6 1.5V12h2.7l-.4 2.9h-2.3v7A10 10 0 0 0 22 12z"/></svg>';
 }
 
-// FALAJ rainbow "sunrise" logo: concentric arcs + wordmark.
-function falajLogo(textColor, size) {
-  const h = size || 30;
-  const tc = textColor || '#173d2e';
-  return `<span class="falaj-brand" style="--lh:${h}px">
-    <svg class="falaj-mark" viewBox="0 0 48 30" fill="none" aria-hidden="true">
-      <path d="M4 26a20 20 0 0 1 40 0" stroke="#e23b32" stroke-width="5" stroke-linecap="round"/>
-      <path d="M10 26a14 14 0 0 1 28 0" stroke="#f0962a" stroke-width="5" stroke-linecap="round"/>
-      <path d="M16 26a8 8 0 0 1 16 0" stroke="#f4c531" stroke-width="5" stroke-linecap="round"/>
-      <circle cx="40" cy="9" r="2.4" fill="#f0962a"/>
-    </svg>
-    <span class="falaj-word" style="color:${tc}">${t('app.name')}</span>
-  </span>`;
+// FALAJ official wordmark. variant: 'white' (dark bg) | 'color' (blue) | 'black'.
+function falajLogo(variant, size) {
+  const h = size || 28;
+  const src = variant === 'white' ? 'assets/falaj-white.png'
+            : variant === 'black' ? 'assets/falaj-black.png'
+            : 'assets/falaj-color.png';
+  return `<img class="falaj-logo" src="${src}" alt="FALAJ" style="height:${h}px">`;
 }

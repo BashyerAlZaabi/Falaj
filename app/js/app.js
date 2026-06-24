@@ -121,7 +121,7 @@ function renderOnboarding() {
 /* ---------- auth ---------- */
 function renderAuth() {
   const back = `<button class="auth-back" data-action="auth-back">${icon('back', flip())}</button>`;
-  const logo = `<div class="auth-logo">${falajLogo('#173d2e', 40)}</div>`;
+  const logo = `<div class="auth-logo">${falajLogo('color', 34)}</div>`;
   const langChip = `<button class="auth-lang" data-action="openlang">${LANGS.find(l => l.code === CURRENT_LANG).flag}</button>`;
 
   if (authScreen === 'login') return `<div class="auth">${langChip}${logo}
@@ -194,7 +194,7 @@ function socialRow(key) {
 
 /* ---------- farm wizard ---------- */
 function renderWizard() {
-  const head = `<div class="wiz-head">${falajLogo('#fff', 26)}<button class="wiz-skip" data-action="wiz-skip">${t('common.skip')}</button></div>`;
+  const head = `<div class="wiz-head">${falajLogo('white', 22)}<button class="wiz-skip" data-action="wiz-skip">${t('common.skip')}</button></div>`;
 
   if (wizardStep === 'field') return `<div class="wiz field-select">
     <div class="fs-head"><button class="icon-btn light" data-action="wiz-to1">${icon('back', flip())}</button>
@@ -381,7 +381,7 @@ function screenSettings() {
       <button class="row" data-action="go" data-route="about"><span class="r-ico green">${icon('info')}</span><span>${t('set.about')}</span>${icon('chevron', 'chev ' + flip())}</button>
       <button class="row danger" data-action="logout"><span class="r-ico red">${icon('logout')}</span><span>${t('set.logout')}</span></button>
     </div>
-    <div class="about-box card"><div class="ab-logo">${falajLogo('#173d2e', 30)}</div><p>${t('set.aboutBody')}</p></div>
+    <div class="about-box card"><div class="ab-logo">${falajLogo('color', 26)}</div><p>${t('set.aboutBody')}</p></div>
   </div>`;
 }
 

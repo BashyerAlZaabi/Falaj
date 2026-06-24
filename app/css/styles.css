@@ -28,9 +28,7 @@ input{font-family:inherit}
 }
 
 /* brand */
-.falaj-brand{display:inline-flex;align-items:center;gap:8px}
-.falaj-mark{height:var(--lh);width:auto}
-.falaj-word{font-weight:800;font-size:calc(var(--lh) * .8);letter-spacing:.5px}
+.falaj-logo{width:auto;display:block}
 
 /* buttons */
 .btn-green{width:100%;padding:15px;border-radius:var(--r-sm);background:var(--green);color:#fff;font-size:16px;font-weight:700;
