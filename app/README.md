@@ -63,5 +63,40 @@ app/
 State (onboarding, account, farm, fields, language) is saved in the browser via `localStorage`.
 Weather, market and sensor figures are demo data for the prototype.
 
+## 🔌 Turn on the backend (real accounts + cloud sync)
+
+The app is **backend-ready**. With no keys it runs on-device (localStorage). Add a free
+[Supabase](https://supabase.com) project and it switches to **real email/password accounts** whose
+data syncs across devices — no other code changes needed.
+
+1. **Create a project** — supabase.com → *New project* (free tier is enough).
+2. **Copy your keys** — Project → *Settings → API*: copy the **Project URL** and the **anon public** key.
+3. **Paste them** into `app/js/config.js`:
+   ```js
+   window.FALAJ_CONFIG = {
+     SUPABASE_URL: 'https://YOURPROJECT.supabase.co',
+     SUPABASE_ANON_KEY: 'eyJhbGciOi...'   // anon public key (safe to publish)
+   };
+   ```
+4. **Create the table** — Supabase → *SQL Editor* → run:
+   ```sql
+   create table if not exists app_state (
+     user_id uuid primary key references auth.users(id) on delete cascade,
+     state jsonb,
+     updated_at timestamptz default now()
+   );
+   alter table app_state enable row level security;
+   create policy "own_select" on app_state for select using (auth.uid() = user_id);
+   create policy "own_insert" on app_state for insert with check (auth.uid() = user_id);
+   create policy "own_update" on app_state for update using (auth.uid() = user_id);
+   ```
+5. **Email auth** — *Authentication → Providers → Email* is on by default. For instant login during
+   testing, turn **off** "Confirm email" (*Authentication → Sign In / Providers*).
+6. **Redeploy** (commit the edited `config.js`). Sign Up now creates real accounts; each user's farm,
+   fields and progress are stored in the cloud and load on any device.
+
+The anon key is meant to be public — Row Level Security (step 4) ensures each user only ever reads or
+writes their **own** row.
+
 ---
 صُنع لرؤية الأمن الغذائي الإماراتي 2051 🇦🇪
