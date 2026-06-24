@@ -1,5 +1,5 @@
 /* ===== Service Worker — offline app shell ===== */
-const CACHE = 'active-v3';
+const CACHE = 'active-v4';
 const ASSETS = [
   './',
   'index.html',

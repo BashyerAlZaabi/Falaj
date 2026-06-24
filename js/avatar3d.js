@@ -147,6 +147,9 @@ function buildCharacter(gender, eq) {
       V2(0.28, 2.1), V2(0.22, 2.4), V2(0.12, 2.58),
     ]), mat.robe);
     ab.scale.z = 0.9;
+    // طيّات قماش خفيفة
+    const pleat = new THREE.MeshStandardMaterial({ color: darker(robeColor, 0.88), roughness: 0.85 });
+    [-0.17, 0.17].forEach(px => add(new RoundedBoxGeometry(0.014, 1.7, 0.02, 2, 0.005), pleat, px, 1.0, 0.27).rotation.x = -0.04);
     add(new RoundedBoxGeometry(0.022, 2.2, 0.03, 2, 0.01), new THREE.MeshStandardMaterial({ color: darker(robeColor, 0.8), roughness: 0.7 }), 0, 1.4, 0.31);
     if (eq.outfit === 'outfit_gold' || eq.outfit === 'outfit_red') {
       [-0.06, 0.06].forEach(gx => add(new RoundedBoxGeometry(0.018, 2.2, 0.03, 2, 0.008), mat.gold, gx, 1.4, 0.305));
@@ -159,6 +162,7 @@ function buildCharacter(gender, eq) {
   }
 
   /* ===== الذراعان (مجموعتان مع وقفة مسترخية) ===== */
+  const arms = [];
   [-1, 1].forEach(s => {
     const arm = new THREE.Group();
     const up = new THREE.Mesh(new THREE.CapsuleGeometry(0.1, 0.4, 8, 16), mat.robe); up.position.y = -0.24; up.castShadow = true; arm.add(up);
@@ -167,8 +171,11 @@ function buildCharacter(gender, eq) {
     arm.position.set(s * shoulderX, 2.46, 0);
     arm.rotation.z = s * 0.13;
     arm.rotation.x = -0.06;
+    arm.userData = { baseX: -0.06, phase: s > 0 ? 0 : Math.PI };
     G.add(arm);
+    arms.push(arm);
   });
+  G.userData.arms = arms;
 
   /* ===== الرقبة والرأس ===== */
   add(new THREE.CylinderGeometry(0.1, 0.12, 0.16, 16), mat.skin, 0, 2.64, 0);
@@ -198,8 +205,11 @@ function buildCharacter(gender, eq) {
     });
   }
   add(new THREE.SphereGeometry(0.028, 14, 14), mat.skin, 0, HY - 0.03, FZ + 0.025).scale.set(0.85, 1.15, 1);
-  const mouth = add(new THREE.TorusGeometry(0.05, 0.013, 10, 20, Math.PI), mat.lip, 0, HY - 0.1, FZ - 0.02);
+  const mouth = add(new THREE.TorusGeometry(0.052, 0.013, 10, 20, Math.PI), mat.lip, 0, HY - 0.1, FZ - 0.02);
   mouth.rotation.set(0, 0, Math.PI); mouth.castShadow = false;
+  // خدّان (احمرار خفيف)
+  const blush = new THREE.MeshStandardMaterial({ color: 0xe89b7a, roughness: 0.6, transparent: true, opacity: 0.32 });
+  [-0.125, 0.125].forEach(cx => { const m = add(new THREE.SphereGeometry(0.045, 12, 12), blush, cx, HY - 0.045, FZ - 0.02); m.scale.set(1, 0.7, 0.5); m.castShadow = false; });
   if (!isF) {
     const beard = add(new THREE.SphereGeometry(0.245, 28, 22, 0, Math.PI * 2, Math.PI * 0.58, Math.PI * 0.42),
       new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.85, transparent: true, opacity: 0.3 }), 0, HY, 0.02);
@@ -391,8 +401,10 @@ function mount(container, gender, eq) {
     raf = requestAnimationFrame(loop);
     const t = clock.getElapsedTime();
     if (V && V.charGroup) {
-      V.charGroup.position.y = Math.sin(t * 1.7) * 0.028;
-      V.charGroup.rotation.z = Math.sin(t * 1.1) * 0.006;
+      V.charGroup.position.y = Math.sin(t * 1.6) * 0.024;
+      V.charGroup.rotation.z = Math.sin(t * 1.0) * 0.007;
+      const a = V.charGroup.userData.arms;
+      if (a) a.forEach(arm => { arm.rotation.x = arm.userData.baseX + Math.sin(t * 1.6 + arm.userData.phase) * 0.05; });
     }
     neonRing.material.opacity = 0.6 + Math.sin(t * 2.2) * 0.25;
     controls.update();
