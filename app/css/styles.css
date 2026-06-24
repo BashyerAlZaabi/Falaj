@@ -399,6 +399,31 @@ input{font-family:inherit}
   box-shadow:0 12px 34px rgba(0,0,0,.35);z-index:60;opacity:0;transition:.25s;pointer-events:none}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
+/* ai log */
+.log-intro{margin:0 2px 12px}
+.exp-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:0 0 14px}
+.exp-btn .ico{width:18px;height:18px}
+.logrow{display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line-2)}
+.logrow:last-child{border-bottom:none}
+.rtag{font-size:11px;font-weight:800;padding:4px 10px;border-radius:20px;flex:none}
+.rtag.accepted,.rtag.signed{color:var(--ok);background:#e7f7ee}
+.rtag.dismissed{color:var(--red);background:#fdecec}
+.rtag.pending{color:var(--amber);background:#fff6e6}
+.rtag.draft{color:var(--ink-3);background:var(--line)}
+
+/* messages inbox */
+.inbox{align-items:center}
+.inbox .dev-b{flex:1}
+.inbox .role-tag{margin:0}
+.msgscroll .m-ava{background:var(--ink-3)}
+
+/* contracts */
+.contract{padding:14px;margin-bottom:12px}
+.ct-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ct-top b{font-size:14.5px;font-weight:800}
+.ct-mid{font-size:13px;color:var(--ink-2);font-weight:600}
+.contract .mini-btn{margin-top:12px}
+
 /* ===== Sheet ===== */
 .sheet-mask{position:fixed;inset:0;background:rgba(10,25,16,.5);z-index:40;animation:fade .2s}
 .sheet{position:fixed;left:0;right:0;bottom:0;max-width:460px;margin:0 auto;background:#fff;border-radius:26px 26px 0 0;

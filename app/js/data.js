@@ -104,6 +104,28 @@ const BADGES = [
   { key: 'badge.top',   earned: false, icon: 'spark' },
 ];
 
+// AI iteration / decision log (transparency).
+const AI_LOG = [
+  { time: '09:12', zone: 'Z1', key: 'log.r1', resp: 'accepted' },
+  { time: '08:40', zone: 'Z4', key: 'log.r2', resp: 'dismissed' },
+  { time: '07:55', zone: '—',  key: 'log.r3', resp: 'accepted' },
+  { time: 'Yesterday', zone: 'Z3', key: 'log.r4', resp: 'pending' },
+];
+
+// Phase-2 messaging threads. name = proper noun (not translated). seed = starting messages.
+const THREADS = [
+  { id: 't1', name: 'Al Madina Market', role: 'buyer',    hue: 6,   seed: [{ role: 'them', key: 'msg.b1' }, { role: 'me', key: 'msg.b2' }] },
+  { id: 't2', name: 'FALAJ Store',      role: 'supplier', hue: 200, seed: [{ role: 'them', key: 'msg.s1' }] },
+  { id: 't3', name: 'FALAJ Support',    role: 'support',  hue: 96,  seed: [{ role: 'them', key: 'msg.sup1' }] },
+];
+
+// Phase-2 smart contracts / offers.
+const CONTRACTS = [
+  { party: 'Al Madina Market', cropKey: 'crop.tomato', qty: 500, price: 18, status: 'signed' },
+  { party: 'Gulf Fresh Co.',   cropKey: 'crop.dates',  qty: 200, price: 26, status: 'pending' },
+  { party: 'Green Basket',     cropKey: 'crop.maize',  qty: 300, price: 9,  status: 'draft' },
+];
+
 // Cascading location picker (UAE-first).
 const COUNTRIES = [
   { name: 'United Arab Emirates', states: [

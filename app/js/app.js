@@ -23,6 +23,8 @@ function defaultState() {
     notifEmpty: false,
     monZones: MON_ZONES.map(z => Object.assign({}, z)),
     mktFilter: 'all',
+    currentThreadId: null,
+    threadMsgs: {},
   };
 }
 function loadState() {
@@ -261,6 +263,10 @@ function renderApp() {
     case 'marketplace': body = screenMarketplace(); break;
     case 'rewards': body = screenRewards(); break;
     case 'devices': body = screenDevices(); break;
+    case 'log': body = screenLog(); break;
+    case 'messages': body = screenMessages(); break;
+    case 'thread': body = screenThread(); break;
+    case 'contracts': body = screenContracts(); break;
     default: body = screenHome();
   }
   const showNav = S.route !== 'fieldDetail' && S.route !== 'notifications';
@@ -303,7 +309,7 @@ function screenHome() {
       <div class="mc-foot"><span class="mc-ai">${icon('spark')}${t('mon.rec')}</span>${icon('chevron', 'chev ' + flip())}</div>
     </button>
     <div class="tools">
-      ${[['marketplace', 'store', 'mkt.title'], ['rewards', 'gift', 'rew.title'], ['devices', 'chip', 'dev.title']].map(([r, ic, k]) => `<button class="tool card" data-action="go" data-route="${r}"><span class="tool-ic">${icon(ic)}</span><small>${t(k)}</small></button>`).join('')}
+      ${[['marketplace', 'store', 'mkt.title'], ['rewards', 'gift', 'rew.title'], ['devices', 'chip', 'dev.title'], ['log', 'spark', 'log.title'], ['messages', 'chat', 'msg.title'], ['contracts', 'list', 'ct.title']].map(([r, ic, k]) => `<button class="tool card" data-action="go" data-route="${r}"><span class="tool-ic">${icon(ic)}</span><small>${t(k)}</small></button>`).join('')}
     </div>
 
     <div class="sec-row"><h3>${t('home.market')}</h3><button class="link" data-action="go" data-route="fields">${t('common.viewAll')} ${icon('chevron', 'mini ' + flip())}</button></div>
@@ -514,6 +520,73 @@ function screenDevices() {
   </div>`;
 }
 
+/* ---------- AI iteration log ---------- */
+function screenLog() {
+  const tone = { accepted: 'green', dismissed: 'red', pending: 'amber' };
+  return `${gheadBack('log.title')}
+  <div class="scroll flat">
+    <p class="muted log-intro">${t('log.intro')}</p>
+    <button class="btn-ghost exp-btn" data-action="toast-soon">${icon('chart')}${t('log.export')}</button>
+    <div class="list card">${AI_LOG.map(e => `<div class="logrow">
+      <span class="r-ico ${tone[e.resp]}">${icon('spark')}</span>
+      <div class="dev-b"><b>${t(e.key)}</b><small>${e.time}${e.zone === '—' ? '' : ' · ' + t('dev.zone') + ' ' + e.zone.replace('Z', '')}</small></div>
+      <span class="rtag ${e.resp}">${t('log.' + e.resp)}</span>
+    </div>`).join('')}</div>
+  </div>`;
+}
+
+/* ---------- messages (inbox + thread) ---------- */
+function threadLast(th) {
+  const a = S.threadMsgs[th.id] || [];
+  const last = a.length ? a[a.length - 1] : th.seed[th.seed.length - 1];
+  return last.text || t(last.key);
+}
+function screenMessages() {
+  return `${gheadBack('msg.title')}
+  <div class="scroll flat">
+    <div class="list card">${THREADS.map(th => `<button class="row inbox" data-action="open-thread" data-id="${th.id}">
+      <span class="prod-th" style="--hue:${th.hue}">${icon('user')}</span>
+      <div class="dev-b"><b>${th.name}</b><small>${threadLast(th)}</small></div>
+      <span class="role-tag">${t('msg.' + th.role)}</span>
+    </button>`).join('')}</div>
+  </div>`;
+}
+function screenThread() {
+  const th = THREADS.find(x => x.id === S.currentThreadId) || THREADS[0];
+  const msgs = th.seed.concat(S.threadMsgs[th.id] || []);
+  return `<header class="ghead detail"><div class="ghead-row">
+    <button class="bell" data-action="go" data-route="messages">${icon('back', flip())}</button>
+    <b class="center">${th.name}</b><span class="sp"></span></div></header>
+  <div class="scroll chatscroll msgscroll">
+    <div class="chat">${msgs.map(m => `<div class="msg ${m.role === 'me' ? 'user' : 'bot'}">${m.role !== 'me' ? '<span class="m-ava">' + icon('user') + '</span>' : ''}<div class="bubble">${m.text || t(m.key)}</div></div>`).join('')}</div>
+  </div>
+  <div class="composer">
+    <input id="msgInput" placeholder="${t('msg.placeholder')}" autocomplete="off">
+    <button class="ai-send" data-action="msg-send" aria-label="send">${icon('send')}</button>
+  </div>`;
+}
+function msgSend() {
+  const id = S.currentThreadId; const text = val('msgInput'); if (!id || !text) return;
+  S.threadMsgs[id] = S.threadMsgs[id] || [];
+  S.threadMsgs[id].push({ role: 'me', text });
+  S.threadMsgs[id].push({ role: 'them', key: 'msg.reply' });
+  save(); render();
+  const sc = document.querySelector('.msgscroll'); if (sc) sc.scrollTop = sc.scrollHeight;
+}
+
+/* ---------- contracts ---------- */
+function screenContracts() {
+  return `${gheadBack('ct.title')}
+  <div class="scroll flat">
+    <button class="btn-green sell-btn" data-action="toast-soon">${icon('plus')}${t('ct.new')}</button>
+    ${CONTRACTS.map(c => `<div class="contract card">
+      <div class="ct-top"><b>${c.party}</b><span class="rtag ${c.status}">${t('ct.' + c.status)}</span></div>
+      <div class="ct-mid">${t(c.cropKey)} · ${c.qty} kg · AED ${c.price}${t('ct.per')}</div>
+      ${c.status === 'pending' ? `<button class="mini-btn ghost" data-action="toast-soon">${t('ct.counter')}</button>` : ''}
+    </div>`).join('')}
+  </div>`;
+}
+
 /* ---------- toast ---------- */
 function toast(msg) {
   const host = document.getElementById('app'); if (!host) return;
@@ -585,6 +658,8 @@ document.addEventListener('click', (e) => {
     'ai-why': () => toast(t('mon.whyText')),
     'mkt-filter': () => { S.mktFilter = d.cat; save(); render(); },
     'toast-soon': () => toast(t('common.soon')),
+    'open-thread': () => { S.currentThreadId = d.id; S.route = 'thread'; save(); render(); },
+    'msg-send': () => msgSend(),
     'logout': () => { S.user = null; S.farm = null; S.route = 'home'; authScreen = 'login'; save(); render(); },
   };
   if (map[a]) map[a]();
@@ -601,7 +676,10 @@ document.addEventListener('input', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && e.target && e.target.id === 'aiInput') { e.preventDefault(); aiSend(); }
+  if (e.key === 'Enter' && e.target) {
+    if (e.target.id === 'aiInput') { e.preventDefault(); aiSend(); }
+    else if (e.target.id === 'msgInput') { e.preventDefault(); msgSend(); }
+  }
 });
 
 function val(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
