@@ -36,6 +36,9 @@ const ICON_PATHS = {
   gift:    '<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 13h18M12 9v12"/><path d="M12 9S10.5 4 8 5s.5 4 4 4zM12 9s1.5-5 4-4-.5 4-4 4z"/>',
   trophy:  '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5H5v2a3 3 0 0 0 3 3M16 5h3v2a3 3 0 0 1-3 3M10 14h4M9 20h6M12 14v6"/>',
   alert:   '<path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+  temp:    '<path d="M14 14V5a2 2 0 0 0-4 0v9a4 4 0 1 0 4 0z"/>',
+  humid:   '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/><path d="M9 14a3 3 0 0 0 3 3"/>',
+  flask:   '<path d="M9 3h6M10 3v6l-5 9a1 1 0 0 0 1 1.5h12A1 1 0 0 0 19 18l-5-9V3"/>',
 };
 
 function icon(name, cls) {

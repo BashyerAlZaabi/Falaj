@@ -8,7 +8,8 @@ let obIndex = 0;
 let authScreen = 'login';          // login | signup | forgotEmail | otp | reset
 let wizardStep = 1;                // 1 | 'field' | 2
 let wizardData = {};
-let sheet = null;                  // lang | country | state | city | null
+let sheet = null;                  // lang | country | state | city | sensor | null
+let sensorId = null;               // selected sensor/zone for the live sheet
 
 /* ---------- state ---------- */
 function defaultState() {
@@ -446,7 +447,8 @@ function screenZones() {
   const alerts = S.monZones.filter(z => z.status === 'alert');
   return `${gheadBack('mon.title')}
   <div class="scroll detail-scroll">
-    <div class="zmap">${S.monZones.map(z => `<span class="zbadge ${z.status}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${z.status === 'alert' ? '!' : '✓'}</i></span>`).join('')}</div>
+    <div class="zmap">${S.monZones.map(z => `<span class="zbadge ${z.status}" data-action="open-sensor" data-id="${z.id}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${z.status === 'alert' ? '!' : '✓'}</i></span>`).join('')}</div>
+    <p class="muted maphint">${icon('pin')}${t('sen.tapHint')}</p>
 
     <div class="card pad">
       <h3 class="sect tight">${t('mon.issues')}</h3>
@@ -600,7 +602,32 @@ function toast(msg) {
 }
 
 /* ---------- bottom sheet (lang / location) ---------- */
+function renderSensorSheet() {
+  const z = S.monZones.find(x => x.id === sensorId) || S.monZones[0];
+  const low = z.moisture < 40, acidic = z.ph < 6;
+  const rec = low ? t('sen.recLow') : acidic ? t('sen.recAcidic') : t('sen.healthy');
+  const crops = ['crop.tomato', 'crop.dates', 'crop.wheat', 'crop.maize', 'crop.potato'];
+  const cell = (ic, lbl, id, val) => `<div class="sn-cell">${icon(ic)}<small>${lbl}</small><b id="${id}">${val}</b></div>`;
+  return `<div class="sheet-mask" data-action="closesheet"></div>
+  <div class="sheet sensor-sheet"><div class="grip"></div>
+    <div class="sn-head"><span class="sn-pin ${z.status}">${z.id}</span><div><b>${t(z.cropKey)}</b><small><i class="d-on"></i>${t('sen.live')}</small></div></div>
+    <div class="sn-grid">
+      ${cell('drop', t('mon.moisture'), 'sn-moist', Math.round(z.moisture) + '%')}
+      ${cell('temp', t('sen.temp'), 'sn-temp', z.temp.toFixed(0) + '°C')}
+      ${cell('humid', t('sen.humid'), 'sn-humid', z.humidity.toFixed(0) + '%')}
+      ${cell('flask', t('sen.ph'), 'sn-ph', z.ph.toFixed(1))}
+      ${cell('leaf', t('sen.npk'), 'sn-npk', z.n + '-' + z.p + '-' + z.k)}
+    </div>
+    <div class="zbar sn-bar-wrap"><div id="sn-bar" class="zfill ${low ? 'low' : ''}" style="width:${z.moisture}%"></div></div>
+    <div class="airec-body sn-rec"><span class="ai-bulb">${icon('spark')}</span><p>${rec}</p></div>
+    <label class="sn-lbl">${t('sen.crop')}</label>
+    <div class="filters">${crops.map(c => `<button class="fchip ${z.cropKey === c ? 'on' : ''}" data-action="sensor-crop" data-id="${z.id}" data-crop="${c}">${t(c)}</button>`).join('')}</div>
+    <button class="btn-green" data-action="zone-irrigate" data-id="${z.id}">${icon('drop')} ${t('mon.irrigate')}</button>
+  </div>`;
+}
+
 function renderSheet() {
+  if (sheet === 'sensor') return renderSensorSheet();
   let title = '', rows = '';
   if (sheet === 'lang') {
     title = t('set.language');
@@ -659,6 +686,8 @@ document.addEventListener('click', (e) => {
     'ai-send': () => aiSend(),
     'ai-suggest': () => aiSend(t(d.q)),
     'zone-irrigate': () => { const z = S.monZones.find(x => x.id === d.id); if (z) { z.moisture = 78; z.status = 'ok'; } save(); render(); },
+    'open-sensor': () => { sensorId = d.id; sheet = 'sensor'; render(); },
+    'sensor-crop': () => { const z = S.monZones.find(x => x.id === d.id); if (z) z.cropKey = d.crop; save(); render(); },
     'ai-why': () => toast(t('mon.whyText')),
     'mkt-filter': () => { S.mktFilter = d.cat; save(); render(); },
     'toast-soon': () => toast(t('common.soon')),
@@ -739,6 +768,28 @@ async function doAuthRemote(mode) {
   S.route = 'home'; save(); render();
 }
 
+/* ---------- live sensor simulation ---------- */
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function setTxt(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
+function sensorTick() {
+  if (!S || !S.monZones) return;
+  S.monZones.forEach(z => {
+    z.moisture = clamp(z.moisture + rnd(-1.0, 0.8), 6, 96);
+    z.temp = clamp(z.temp + rnd(-0.3, 0.3), 20, 45);
+    z.humidity = clamp(z.humidity + rnd(-1, 1), 20, 82);
+    z.ph = clamp(z.ph + rnd(-0.05, 0.05), 4.5, 8.5);
+  });
+  if (sheet === 'sensor') {
+    const z = S.monZones.find(x => x.id === sensorId); if (!z) return;
+    setTxt('sn-moist', Math.round(z.moisture) + '%');
+    setTxt('sn-temp', z.temp.toFixed(0) + '°C');
+    setTxt('sn-humid', z.humidity.toFixed(0) + '%');
+    setTxt('sn-ph', z.ph.toFixed(1));
+    const bar = document.getElementById('sn-bar'); if (bar) bar.style.width = z.moisture + '%';
+  }
+}
+
 /* ---------- boot ---------- */
 loadState();
 setLang(CURRENT_LANG);
@@ -752,3 +803,4 @@ if (BK.enabled) {
 } else {
   render();
 }
+setInterval(sensorTick, 2500);

@@ -124,6 +124,9 @@ const I18N = {
     'msg.s1': 'Your fertilizer order has shipped.', 'msg.sup1': 'Hi! How can we help with your FALAJ device?',
     'ct.title': 'Contracts', 'ct.new': 'New offer', 'ct.signed': 'Signed', 'ct.pending': 'Pending', 'ct.draft': 'Draft',
     'ct.per': '/kg', 'ct.counter': 'Counter-offer',
+    'sen.tapHint': 'Tap any sensor for live readings', 'sen.live': 'Live', 'sen.temp': 'Temperature', 'sen.humid': 'Humidity',
+    'sen.ph': 'Soil pH', 'sen.npk': 'Nutrients (N-P-K)', 'sen.crop': 'Assigned crop', 'sen.healthy': 'All levels healthy',
+    'sen.recLow': 'Moisture low — irrigation recommended', 'sen.recAcidic': 'Soil is acidic — consider applying lime',
   },
 
   ar: {
@@ -241,6 +244,9 @@ const I18N = {
     'msg.s1': 'تم شحن طلب السماد الخاص بك.', 'msg.sup1': 'مرحباً! كيف نساعدك في جهاز فلج؟',
     'ct.title': 'العقود', 'ct.new': 'عرض جديد', 'ct.signed': 'موقّع', 'ct.pending': 'معلّق', 'ct.draft': 'مسودة',
     'ct.per': '/كجم', 'ct.counter': 'عرض مضاد',
+    'sen.tapHint': 'اضغط أي مستشعر لقراءات حيّة', 'sen.live': 'حيّ', 'sen.temp': 'درجة الحرارة', 'sen.humid': 'الرطوبة',
+    'sen.ph': 'حموضة التربة', 'sen.npk': 'المغذّيات (N-P-K)', 'sen.crop': 'المحصول المخصّص', 'sen.healthy': 'كل المستويات سليمة',
+    'sen.recLow': 'رطوبة منخفضة — يُنصح بالريّ', 'sen.recAcidic': 'التربة حمضية — فكّر بإضافة الجير',
   },
 
   ur: {
@@ -358,6 +364,9 @@ const I18N = {
     'msg.s1': 'آپ کے کھاد کا آرڈر بھیج دیا گیا ہے۔', 'msg.sup1': 'سلام! آپ کے فلج ڈیوائس میں کیا مدد کریں؟',
     'ct.title': 'معاہدے', 'ct.new': 'نیا آفر', 'ct.signed': 'دستخط شدہ', 'ct.pending': 'زیر التوا', 'ct.draft': 'مسودہ',
     'ct.per': '/کلو', 'ct.counter': 'جوابی آفر',
+    'sen.tapHint': 'لائیو ریڈنگ کے لیے کسی بھی سینسر پر ٹیپ کریں', 'sen.live': 'لائیو', 'sen.temp': 'درجہ حرارت', 'sen.humid': 'نمی',
+    'sen.ph': 'مٹی کی پی ایچ', 'sen.npk': 'غذائی اجزا (N-P-K)', 'sen.crop': 'مختص فصل', 'sen.healthy': 'تمام سطحیں ٹھیک ہیں',
+    'sen.recLow': 'نمی کم — آبپاشی کی سفارش', 'sen.recAcidic': 'مٹی تیزابی — چونا ڈالنے پر غور کریں',
   },
 
   hi: {
@@ -475,6 +484,9 @@ const I18N = {
     'msg.s1': 'आपका खाद ऑर्डर भेज दिया गया है।', 'msg.sup1': 'नमस्ते! आपके फलज डिवाइस में कैसे मदद करें?',
     'ct.title': 'अनुबंध', 'ct.new': 'नया प्रस्ताव', 'ct.signed': 'हस्ताक्षरित', 'ct.pending': 'लंबित', 'ct.draft': 'ड्राफ़्ट',
     'ct.per': '/किग्रा', 'ct.counter': 'प्रति-प्रस्ताव',
+    'sen.tapHint': 'लाइव रीडिंग के लिए किसी सेंसर पर टैप करें', 'sen.live': 'लाइव', 'sen.temp': 'तापमान', 'sen.humid': 'आर्द्रता',
+    'sen.ph': 'मिट्टी pH', 'sen.npk': 'पोषक तत्व (N-P-K)', 'sen.crop': 'निर्धारित फसल', 'sen.healthy': 'सभी स्तर सामान्य',
+    'sen.recLow': 'नमी कम — सिंचाई की सलाह', 'sen.recAcidic': 'मिट्टी अम्लीय — चूना डालने पर विचार करें',
   },
 };
 
