@@ -138,10 +138,14 @@ function donut(exp) {
 function render() {
   const app = document.getElementById('app');
   document.documentElement.dir = langDir();
-  if (!S.onboarded) { app.innerHTML = renderOnboarding(); return; }
-  if (!S.user) { app.innerHTML = renderAuth(); return; }
-  if (!S.farm) { app.innerHTML = renderWizard(); return; }
-  app.innerHTML = renderApp() + (sheet ? renderSheet() : '');
+  let screen;
+  if (!S.onboarded) screen = renderOnboarding();
+  else if (!S.user) screen = renderAuth();
+  else if (!S.farm) screen = renderWizard();
+  else screen = renderApp();
+  // The bottom-sheet overlay (language picker, wizard country/state/city, live sensor)
+  // must be available on every screen — not just the main app.
+  app.innerHTML = screen + (sheet ? renderSheet() : '');
 }
 
 /* ---------- onboarding ---------- */

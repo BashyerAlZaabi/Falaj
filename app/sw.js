@@ -3,8 +3,8 @@
      • navigations  → network-first, fall back to cached index.html when offline
      • static files → stale-while-revalidate (fast, self-healing)
    Bump CACHE when you ship new assets to retire the old cache. */
-const CACHE = 'falaj-v20260705';
-const ASSET_V = '20260624h';
+const CACHE = 'falaj-v20260705a';
+const ASSET_V = '20260705a';
 const SHELL = [
   './',
   './index.html',
