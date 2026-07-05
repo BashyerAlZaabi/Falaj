@@ -1,30 +1,36 @@
-/* ===== Service Worker — offline app shell ===== */
-const CACHE = 'active-v4';
-const ASSETS = [
+/* ===== FALAJ — service worker (offline app shell) =====
+   Strategy:
+     • navigations  → network-first, fall back to cached index.html when offline
+     • static files → stale-while-revalidate (fast, self-healing)
+   Bump CACHE when you ship new assets to retire the old cache. */
+const CACHE = 'falaj-v20260705b';
+const ASSET_V = '20260705b';
+const SHELL = [
   './',
-  'index.html',
-  'css/styles.css',
-  'js/i18n.js',
-  'js/icons.js',
-  'js/data.js',
-  'js/avatar.js',
-  'js/app.js',
-  'js/avatar3d.js',
-  'js/vendor/three.module.js',
-  'js/vendor/OrbitControls.js',
-  'js/vendor/RoomEnvironment.js',
-  'manifest.webmanifest',
-  'assets/icon-192.png',
-  'assets/icon-512.png',
+  './index.html',
+  `./css/styles.css?v=${ASSET_V}`,
+  `./js/i18n.js?v=${ASSET_V}`,
+  `./js/icons.js?v=${ASSET_V}`,
+  `./js/data.js?v=${ASSET_V}`,
+  `./js/config.js?v=${ASSET_V}`,
+  `./js/backend.js?v=${ASSET_V}`,
+  `./js/app.js?v=${ASSET_V}`,
+  './manifest.webmanifest',
+  './assets/icon.svg',
+  './assets/icon-192.png',
+  './assets/falaj-color.png',
+  './assets/falaj-white.png',
+  './assets/farm-hero.png',
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -33,23 +39,27 @@ self.addEventListener('fetch', (e) => {
   const req = e.request;
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
-  if (url.origin === location.origin) {
-    // cache-first للملفات المحلية
+  if (url.origin !== self.location.origin) return; // let cross-origin (map tiles, Supabase) hit the network
+
+  if (req.mode === 'navigate') {
     e.respondWith(
-      caches.match(req).then(cached => cached || fetch(req).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copy));
-        return res;
-      }).catch(() => caches.match('index.html')))
+      fetch(req).catch(() => caches.match('./index.html').then((r) => r || caches.match('./')))
     );
-  } else {
-    // network-first مع تخزين احتياطي (الخطوط مثلاً)
-    e.respondWith(
-      fetch(req).then(res => {
-        const copy = res.clone();
-        caches.open(CACHE).then(c => c.put(req, copy));
-        return res;
-      }).catch(() => caches.match(req))
-    );
+    return;
   }
+
+  e.respondWith(
+    caches.match(req).then((cached) => {
+      const network = fetch(req)
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => cached);
+      return cached || network;
+    })
+  );
 });

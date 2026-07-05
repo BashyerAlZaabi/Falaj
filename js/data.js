@@ -1,99 +1,150 @@
-/* ===== بيانات التطبيق الثابتة (ثنائية اللغة) ===== */
+/* ===== FALAJ — static data (UAE demo, AED currency) ===== */
 
-// التمارين (mode: reps = عدّ بالحركة، hold = ثبات)
-const WORKOUTS = [
-  { id: 'run',     name: 'جري',      name_en: 'Run',        icon: 'figure',   mode: 'reps', reps: 20, seconds: 30, points: 40, coins: 25, desc: 'كارديو',       desc_en: 'Cardio' },
-  { id: 'pushup',  name: 'ضغط',      name_en: 'Push-ups',   icon: 'dumbbell', mode: 'reps', reps: 10, seconds: 30, points: 30, coins: 18, desc: 'قوة',          desc_en: 'Strength' },
-  { id: 'squat',   name: 'سكوات',    name_en: 'Squats',     icon: 'figure',   mode: 'reps', reps: 12, seconds: 30, points: 30, coins: 18, desc: 'أرجل',         desc_en: 'Legs' },
-  { id: 'plank',   name: 'بلانك',     name_en: 'Plank',      icon: 'figure',   mode: 'hold', reps: 0,  seconds: 12, points: 35, coins: 20, desc: 'ثبات',         desc_en: 'Core' },
-  { id: 'bike',    name: 'دراجة',     name_en: 'Cycling',    icon: 'bicycle',  mode: 'reps', reps: 20, seconds: 30, points: 45, coins: 28, desc: 'كارديو',       desc_en: 'Cardio' },
-  { id: 'jump',    name: 'نط الحبل',  name_en: 'Jump rope',  icon: 'bolt',     mode: 'reps', reps: 20, seconds: 30, points: 38, coins: 22, desc: 'رشاقة',        desc_en: 'Agility' },
-  { id: 'swim',    name: 'سباحة',     name_en: 'Swimming',   icon: 'waves',    mode: 'reps', reps: 16, seconds: 30, points: 55, coins: 32, desc: 'كامل الجسم',   desc_en: 'Full body' },
-  { id: 'weights', name: 'حديد',      name_en: 'Weights',    icon: 'dumbbell', mode: 'reps', reps: 12, seconds: 30, points: 50, coins: 30, desc: 'قوة',          desc_en: 'Strength' },
-  { id: 'burpee',  name: 'بيربي',     name_en: 'Burpees',    icon: 'bolt',     mode: 'reps', reps: 12, seconds: 30, points: 48, coins: 28, desc: 'كامل الجسم',   desc_en: 'Full body' },
-  { id: 'lunge',   name: 'طعن',       name_en: 'Lunges',     icon: 'figure',   mode: 'reps', reps: 14, seconds: 30, points: 34, coins: 20, desc: 'أرجل',         desc_en: 'Legs' },
-  { id: 'climber', name: 'متسلّق',    name_en: 'Climbers',   icon: 'figure',   mode: 'reps', reps: 24, seconds: 30, points: 42, coins: 26, desc: 'كارديو',       desc_en: 'Cardio' },
-  { id: 'stretch', name: 'إطالة',     name_en: 'Stretch',    icon: 'waves',    mode: 'hold', reps: 0,  seconds: 15, points: 28, coins: 16, desc: 'مرونة',        desc_en: 'Mobility' },
+const ONBOARDING = [
+  { titleKey: 'ob.s1.title', bodyKey: 'ob.s1.body', scene: 'plant' },
+  { titleKey: 'ob.s2.title', bodyKey: 'ob.s2.body', scene: 'harvest' },
+  { titleKey: 'ob.s3.title', bodyKey: 'ob.s3.body', scene: 'market' },
 ];
 
-// عناصر المتجر (cat: outfit | head | eyes | accessory | shoes)
-const SHOP = [
-  { id: 'outfit_classic', name: 'الزي التقليدي', name_en: 'Classic outfit',  cat: 'outfit', price: 0,   icon: 'tshirt', color: '#e9e9ec', default: true },
-  { id: 'outfit_gold',    name: 'كندورة ذهبية',  name_en: 'Gold robe',       cat: 'outfit', price: 350, icon: 'tshirt', color: '#e7c454' },
-  { id: 'outfit_navy',    name: 'كندورة كحلية',  name_en: 'Navy robe',       cat: 'outfit', price: 250, icon: 'tshirt', color: '#314a78' },
-  { id: 'outfit_sport',   name: 'بدلة رياضية',   name_en: 'Sport suit',      cat: 'outfit', price: 300, icon: 'tshirt', color: '#23805f' },
-  { id: 'outfit_red',     name: 'زي أحمر فاخر',  name_en: 'Red outfit',      cat: 'outfit', price: 400, icon: 'tshirt', color: '#a83535' },
-  { id: 'outfit_emerald', name: 'زمردي',         name_en: 'Emerald',         cat: 'outfit', price: 320, icon: 'tshirt', color: '#1f9168' },
-  { id: 'outfit_purple',  name: 'بنفسجي ملكي',   name_en: 'Royal purple',    cat: 'outfit', price: 360, icon: 'tshirt', color: '#6b3fa0' },
-  { id: 'outfit_white',   name: 'أبيض فاخر',     name_en: 'Pure white',      cat: 'outfit', price: 280, icon: 'tshirt', color: '#f2f2f2' },
-
-  { id: 'head_default',   name: 'الغترة البيضاء', name_en: 'White Ghutra',   cat: 'head', price: 0,   icon: 'cap', color: '#e9e9ec', default: true },
-  { id: 'head_shemagh',   name: 'شماغ أحمر',      name_en: 'Red Shemagh',    cat: 'head', price: 200, icon: 'cap', color: '#d12f2f' },
-  { id: 'head_cap',       name: 'كاب رياضي',      name_en: 'Sport cap',      cat: 'head', price: 150, icon: 'cap', color: '#23805f' },
-  { id: 'head_band',      name: 'عصابة رأس',      name_en: 'Headband',       cat: 'head', price: 120, icon: 'cap', color: '#e84393' },
-
-  { id: 'eyes_none',      name: 'بدون نظارة',     name_en: 'No glasses',     cat: 'eyes', price: 0,   icon: 'ring',    color: '#8a8a8e', default: true },
-  { id: 'eyes_shades',    name: 'نظارة شمسية',    name_en: 'Sunglasses',     cat: 'eyes', price: 180, icon: 'glasses', color: '#1c1c1e' },
-  { id: 'eyes_sport',     name: 'نظارة رياضية',   name_en: 'Sport goggles',  cat: 'eyes', price: 160, icon: 'glasses', color: '#23805f' },
-
-  { id: 'acc_none',       name: 'بدون',           name_en: 'None',           cat: 'accessory', price: 0,   icon: 'ring',       color: '#8a8a8e', default: true },
-  { id: 'acc_watch',      name: 'ساعة ذكية',      name_en: 'Smart watch',    cat: 'accessory', price: 220, icon: 'watch',      color: '#3a3a3c' },
-  { id: 'acc_medal',      name: 'حقيبة ظهر',      name_en: 'Backpack',       cat: 'accessory', price: 500, icon: 'bag',        color: '#4a4d3a' },
-  { id: 'acc_headphone',  name: 'سماعات',         name_en: 'Headset',        cat: 'accessory', price: 190, icon: 'headphones', color: '#1c1f24' },
-
-  { id: 'shoes_default',  name: 'حذاء قتالي',     name_en: 'Combat boots',   cat: 'shoes', price: 0,   icon: 'shoe', color: '#2e2a22', default: true },
-  { id: 'shoes_runner',   name: 'حذاء رياضي',     name_en: 'Running shoes',  cat: 'shoes', price: 170, icon: 'shoe', color: '#e9e9ec' },
-  { id: 'shoes_gold',     name: 'حذاء ذهبي',       name_en: 'Gold shoes',     cat: 'shoes', price: 280, icon: 'shoe', color: '#e7c454' },
+// Demo farms/fields. revenue/expense in AED. bars = 7-day water-use (relative %).
+const FIELDS = [
+  { id: 'f1', name: 'Al Ain Grove', cropKey: 'crop.dates', water: 75, expense: 12500, revenue: 25000,
+    revChange: 8, health: 'good', planting: '12/01/2024', harvest: 4,
+    consumption: 5392, workTime: 420, hectares: 296, bars: [30, 42, 28, 33, 26, 40, 31],
+    exp: { seeds: 42, fertilizer: 20, pesticide: 26, chemicals: 12 }, hue: 96 },
+  { id: 'f2', name: 'Tomato Field', cropKey: 'crop.tomato', water: 10, expense: 2500, revenue: 0,
+    revChange: -10, health: 'fair', planting: '03/03/2025', harvest: 2,
+    consumption: 1820, workTime: 160, hectares: 42, bars: [18, 22, 15, 20, 24, 17, 21],
+    exp: { seeds: 35, fertilizer: 25, pesticide: 28, chemicals: 12 }, hue: 28 },
+  { id: 'f3', name: 'Maize Field', cropKey: 'crop.maize', water: 85, expense: 6000, revenue: 4000,
+    revChange: 5, health: 'good', planting: '01/02/2025', harvest: 3,
+    consumption: 3960, workTime: 300, hectares: 120, bars: [26, 30, 22, 28, 34, 24, 29],
+    exp: { seeds: 30, fertilizer: 30, pesticide: 25, chemicals: 15 }, hue: 78 },
+  { id: 'f4', name: 'Wheat Field', cropKey: 'crop.wheat', water: 60, expense: 3500, revenue: 5200,
+    revChange: 3, health: 'good', planting: '15/12/2024', harvest: 5,
+    consumption: 2800, workTime: 210, hectares: 90, bars: [20, 24, 18, 26, 22, 28, 21],
+    exp: { seeds: 38, fertilizer: 28, pesticide: 20, chemicals: 14 }, hue: 64 },
 ];
 
-const SHOP_CATS = [
-  { id: 'outfit',    name: 'الأزياء',     name_en: 'Outfits' },
-  { id: 'head',      name: 'غطاء الرأس',   name_en: 'Headwear' },
-  { id: 'eyes',      name: 'النظارات',     name_en: 'Glasses' },
-  { id: 'accessory', name: 'إكسسوارات',   name_en: 'Accessories' },
-  { id: 'shoes',     name: 'الأحذية',      name_en: 'Footwear' },
+const EXPENSE_KEYS = [
+  { k: 'exp.seeds', c: '#e23b32' }, { k: 'exp.fertilizer', c: '#f0962a' },
+  { k: 'exp.pesticide', c: '#3aa55f' }, { k: 'exp.chemicals', c: '#f4c531' },
 ];
 
-// لاعبو التصنيف العالمي (ثنائيو اللغة)
-const BOTS = [
-  { name: 'راشد الكتبي',   name_en: 'Rashed A.',   country: 'الإمارات', country_en: 'UAE',     base: 9850 },
-  { name: 'صوفيا م.',      name_en: 'Sofia M.',    country: 'البرازيل', country_en: 'Brazil',  base: 9420 },
-  { name: 'علياء النعيمي',  name_en: 'Alia N.',     country: 'الإمارات', country_en: 'UAE',     base: 8970 },
-  { name: 'كينجي ت.',      name_en: 'Kenji T.',    country: 'اليابان',  country_en: 'Japan',   base: 8610 },
-  { name: 'ليام أو.',      name_en: 'Liam O.',     country: 'أيرلندا',  country_en: 'Ireland', base: 8240 },
-  { name: 'فاطمة الزعابي',  name_en: 'Fatima Z.',   country: 'الإمارات', country_en: 'UAE',     base: 7880 },
-  { name: 'كارلوس ر.',     name_en: 'Carlos R.',   country: 'إسبانيا',  country_en: 'Spain',   base: 7510 },
-  { name: 'آنيا ك.',       name_en: 'Anya K.',     country: 'روسيا',    country_en: 'Russia',  base: 7190 },
-  { name: 'سعيد المنصوري',  name_en: 'Saeed M.',    country: 'الإمارات', country_en: 'UAE',     base: 6850 },
-  { name: 'مي ل.',         name_en: 'Mei L.',      country: 'الصين',    country_en: 'China',   base: 6420 },
-  { name: 'ديفيد س.',      name_en: 'David S.',    country: 'أمريكا',   country_en: 'USA',     base: 6080 },
-  { name: 'حمدان الشامسي',  name_en: 'Hamdan S.',   country: 'الإمارات', country_en: 'UAE',     base: 5740 },
-  { name: 'إيلينا ب.',     name_en: 'Elena P.',    country: 'إيطاليا',  country_en: 'Italy',   base: 5390 },
-  { name: 'عمر ف.',        name_en: 'Omar F.',     country: 'مصر',      country_en: 'Egypt',   base: 5010 },
-  { name: 'مريم البلوشي',   name_en: 'Maryam B.',   country: 'الإمارات', country_en: 'UAE',     base: 4680 },
-  { name: 'طارق ن.',       name_en: 'Tariq N.',    country: 'باكستان',  country_en: 'Pakistan',base: 4300 },
-  { name: 'لوكاس ج.',      name_en: 'Lucas G.',    country: 'فرنسا',    country_en: 'France',  base: 3950 },
-  { name: 'نورة الحمادي',   name_en: 'Noura H.',    country: 'الإمارات', country_en: 'UAE',     base: 3600 },
-  { name: 'بريا ر.',       name_en: 'Priya R.',    country: 'الهند',    country_en: 'India',   base: 3240 },
-  { name: 'خالد العامري',   name_en: 'Khalid A.',   country: 'الإمارات', country_en: 'UAE',     base: 2900 },
-  { name: 'حسن أ.',        name_en: 'Hassan A.',   country: 'المغرب',   country_en: 'Morocco', base: 2550 },
-  { name: 'يوكي س.',       name_en: 'Yuki S.',     country: 'اليابان',  country_en: 'Japan',   base: 2200 },
-  { name: 'شيخة الظاهري',   name_en: 'Shaikha Z.',  country: 'الإمارات', country_en: 'UAE',     base: 1870 },
-  { name: 'ماركو ب.',      name_en: 'Marco B.',    country: 'ألمانيا',  country_en: 'Germany', base: 1520 },
-  { name: 'عائشة ب.',      name_en: 'Aisha B.',    country: 'نيجيريا',  country_en: 'Nigeria', base: 1180 },
+// Today's market prices (AED / kg ranges).
+const MARKET = [
+  { cropKey: 'crop.tomato', price: '15–20', region: 'Al Ain', hue: 6 },
+  { cropKey: 'crop.potato', price: '20–22', region: 'Al Ain', hue: 38 },
+  { cropKey: 'crop.dates',  price: '22–30', region: 'Liwa',   hue: 30 },
+  { cropKey: 'crop.wheat',  price: '3–5',   region: 'Sharjah', hue: 52 },
 ];
 
-// الإنجازات (badge) — check تُحسب من الحالة، reward عملات تُمنح عند الفتح
-const ACHIEVEMENTS = [
-  { id: 'first',      name: 'البداية',        name_en: 'First Step',    desc: 'أكمل أول تمرين',          desc_en: 'Complete your first workout', icon: 'bolt',    reward: 50,  check: s => s.totalWorkouts >= 1 },
-  { id: 'streak3',    name: 'ثلاثة أيام',      name_en: '3-Day Streak',  desc: 'حافظ على 3 أيام متتالية', desc_en: 'Keep a 3-day streak',         icon: 'flame',   reward: 80,  check: s => s.streak >= 3 },
-  { id: 'ten',        name: 'مثابر',           name_en: 'Committed',     desc: 'أكمل 10 تمارين',          desc_en: 'Complete 10 workouts',        icon: 'dumbbell',reward: 120, check: s => s.totalWorkouts >= 10 },
-  { id: 'level5',     name: 'صاعد',            name_en: 'Rising',        desc: 'اوصل للمستوى 5',          desc_en: 'Reach level 5',               icon: 'star',    reward: 150, check: s => Math.floor(s.points / 250) + 1 >= 5 },
-  { id: 'collector',  name: 'أنيق',            name_en: 'Stylish',       desc: 'امتلك 5 قطع',             desc_en: 'Own 5 items',                 icon: 'tshirt',  reward: 120, check: s => ownedCount(s) >= 5 },
-  { id: 'marathon',   name: 'ماراثون',         name_en: 'Marathon',      desc: 'أكمل 25 تمريناً',         desc_en: 'Complete 25 workouts',        icon: 'trophy',  reward: 250, check: s => s.totalWorkouts >= 25 },
-  { id: 'level10',    name: 'محترف',           name_en: 'Pro',           desc: 'اوصل للمستوى 10',         desc_en: 'Reach level 10',              icon: 'trophy',  reward: 300, check: s => Math.floor(s.points / 250) + 1 >= 10 },
-  { id: 'wardrobe',   name: 'خزانة كاملة',     name_en: 'Full Wardrobe', desc: 'امتلك 10 قطع',            desc_en: 'Own 10 items',                icon: 'bag',     reward: 300, check: s => ownedCount(s) >= 10 },
+const WEATHER = { tempC: 25, condKey: 'weather.cloudy', wind: 9, rain: 2, location: 'Al Ain, UAE', date: '19 Aug' };
+
+const NOTIFICATIONS = [
+  { id: 'n1', key: 'notif.weather', icon: 'cloudsun', unread: true },
+  { id: 'n2', key: 'notif.water',   icon: 'drop',     unread: true },
+  { id: 'n3', key: 'notif.harvest', icon: 'wheat',    unread: false },
+  { id: 'n4', key: 'notif.checkin', icon: 'list',     unread: false },
+  { id: 'n5', key: 'notif.event',   icon: 'calendar', unread: false },
+  { id: 'n6', key: 'notif.market',  icon: 'tag',      unread: false },
 ];
-function ownedCount(s) {
-  return (s.owned || []).filter(id => { const it = SHOP.find(x => x.id === id); return it && !it.default; }).length;
-}
+
+// AI assistant intents. First intent whose keyword appears in the message wins.
+// Keywords span EN/AR/UR/HI so localized questions match too.
+const AI_INTENTS = [
+  { key: 'ans.status',     kw: ['status', 'overview', 'summary', 'how is my', 'how are my', 'my farm', 'حال مزرعت', 'مزرعتي', 'كيف مزرعت', 'فارم کیسا', 'فارم کیسی', 'میرا فارم', 'खेत कैसा', 'खेत कैसी', 'मेरा फ़ार्म', 'स्थिति'] },
+  { key: 'ans.water',      kw: ['water', 'irrigat', 'moisture', 'سقي', 'ريّ', 'رطوبة', 'مياه', 'پانی', 'آبپاش', 'पानी', 'सिंच', 'नमी'] },
+  { key: 'ans.pest',       kw: ['pest', 'disease', 'sick', 'bug', 'آفة', 'مرض', 'مريض', 'کیڑ', 'بیمار', 'कीट', 'रोग', 'बीमार'] },
+  { key: 'ans.fertilizer', kw: ['fertil', 'nutrient', 'سماد', 'مغذّ', 'کھاد', 'खाद', 'पोषक'] },
+  { key: 'ans.market',     kw: ['price', 'market', 'sell', 'tomato', 'سعر', 'سوق', 'طماطم', 'قیمت', 'مارکیٹ', 'ٹماٹر', 'दाम', 'मूल्य', 'बाज़ार', 'टमाटर'] },
+  { key: 'ans.weather',    kw: ['weather', 'rain', 'طقس', 'مطر', 'موسم', 'بارش', 'मौसम', 'वर्षा', 'बारिश'] },
+  { key: 'ans.harvest',    kw: ['harvest', 'reap', 'حصد', 'کٹائی', 'कटाई'] },
+  { key: 'ans.hello',      kw: ['hello', 'hey', 'salam', 'مرحبا', 'سلام', 'नमस्ते', 'नमस्कार'] },
+];
+
+// Farm-monitor zones (dashboard map). x/y are % positions on the map.
+const MON_ZONES = [
+  { id: 'Z1', cropKey: 'crop.tomato', moisture: 26, status: 'alert', issueKey: 'mon.iss.moisture', x: 22, y: 40, temp: 34, humidity: 38, ph: 6.4, n: 55, p: 40, k: 48 },
+  { id: 'Z2', cropKey: 'crop.dates',  moisture: 63, status: 'ok',    x: 52, y: 24, temp: 33, humidity: 45, ph: 7.0, n: 70, p: 58, k: 62 },
+  { id: 'Z3', cropKey: 'crop.wheat',  moisture: 57, status: 'ok',    x: 38, y: 62, temp: 35, humidity: 41, ph: 6.8, n: 64, p: 55, k: 60 },
+  { id: 'Z4', cropKey: 'crop.maize',  moisture: 21, status: 'alert', issueKey: 'mon.iss.attention', x: 76, y: 44, temp: 36, humidity: 30, ph: 5.8, n: 48, p: 40, k: 45 },
+  { id: 'Z5', cropKey: 'crop.potato', moisture: 70, status: 'ok',    x: 66, y: 20, temp: 32, humidity: 50, ph: 7.1, n: 75, p: 65, k: 68 },
+  { id: 'Z6', cropKey: 'crop.tomato', moisture: 48, status: 'ok',    x: 82, y: 68, temp: 34, humidity: 44, ph: 6.9, n: 60, p: 52, k: 58 },
+];
+
+// Marketplace listings. seller is a proper name (not translated). hue = thumbnail colour.
+const PRODUCTS = [
+  { nameKey: 'prod.fertilizer', cat: 'tools', price: 30, seller: "Al Mazra'a",   hot: true,  hue: 28 },
+  { nameKey: 'prod.tomatoSeed', cat: 'seeds', price: 12, seller: 'Al Ain Farms',  hot: true,  hue: 6 },
+  { nameKey: 'prod.drip',       cat: 'tools', price: 85, seller: 'FALAJ Store',   hot: false, hue: 200 },
+  { nameKey: 'prod.dates',      cat: 'crops', price: 25, seller: 'Liwa Dates',    hot: false, hue: 30 },
+  { nameKey: 'prod.compost',    cat: 'tools', price: 18, seller: "Al Mazra'a",    hot: false, hue: 96 },
+  { nameKey: 'prod.wheatSeed',  cat: 'seeds', price: 9,  seller: 'Sharjah Co-op', hot: false, hue: 52 },
+];
+const MKT_FILTERS = [['all', 'mkt.all'], ['crops', 'mkt.crops'], ['tools', 'mkt.tools'], ['seeds', 'mkt.seeds']];
+
+// Registered IoT devices. loc is a proper place name (not translated).
+const DEVICES = [
+  { id: 'FLJ-001', zone: 'Z1', loc: 'Al Ain', status: 'active' },
+  { id: 'FLJ-002', zone: 'Z3', loc: 'Al Ain', status: 'active' },
+  { id: 'FLJ-004', zone: 'Z4', loc: 'Liwa',   status: 'offline' },
+  { id: 'FLJ-005', zone: 'Z6', loc: 'Sharjah', status: 'error' },
+];
+
+// Rewards.
+const POINTS = 420;
+const REDEEMS = [
+  { key: 'rew.r1', pts: 100, hue: 28 },
+  { key: 'rew.r2', pts: 250, hue: 200 },
+  { key: 'rew.r3', pts: 400, hue: 96 },
+];
+const BADGES = [
+  { key: 'badge.sale',  earned: true,  icon: 'cash' },
+  { key: 'badge.month', earned: true,  icon: 'calendar' },
+  { key: 'badge.top',   earned: false, icon: 'spark' },
+];
+
+// AI iteration / decision log (transparency).
+const AI_LOG = [
+  { time: '09:12', zone: 'Z1', key: 'log.r1', resp: 'accepted' },
+  { time: '08:40', zone: 'Z4', key: 'log.r2', resp: 'dismissed' },
+  { time: '07:55', zone: '—',  key: 'log.r3', resp: 'accepted' },
+  { time: 'Yesterday', zone: 'Z3', key: 'log.r4', resp: 'pending' },
+];
+
+// Phase-2 messaging threads. name = proper noun (not translated). seed = starting messages.
+const THREADS = [
+  { id: 't1', name: 'Al Madina Market', role: 'buyer',    hue: 6,   seed: [{ role: 'them', key: 'msg.b1' }, { role: 'me', key: 'msg.b2' }] },
+  { id: 't2', name: 'FALAJ Store',      role: 'supplier', hue: 200, seed: [{ role: 'them', key: 'msg.s1' }] },
+  { id: 't3', name: 'FALAJ Support',    role: 'support',  hue: 96,  seed: [{ role: 'them', key: 'msg.sup1' }] },
+];
+
+// Phase-2 smart contracts / offers.
+const CONTRACTS = [
+  { party: 'Al Madina Market', cropKey: 'crop.tomato', qty: 500, price: 18, status: 'signed' },
+  { party: 'Gulf Fresh Co.',   cropKey: 'crop.dates',  qty: 200, price: 26, status: 'pending' },
+  { party: 'Green Basket',     cropKey: 'crop.maize',  qty: 300, price: 9,  status: 'draft' },
+];
+
+// Cascading location picker (UAE-first).
+const COUNTRIES = [
+  { name: 'United Arab Emirates', states: [
+    { name: 'Abu Dhabi', cities: ['Al Ain', 'Liwa', 'Madinat Zayed', 'Al Dhafra'] },
+    { name: 'Dubai', cities: ['Hatta', 'Al Marmoom', 'Al Lisaili'] },
+    { name: 'Sharjah', cities: ['Al Dhaid', 'Kalba', 'Mleiha'] },
+    { name: 'Ras Al Khaimah', cities: ['Digdaga', 'Al Rams'] },
+  ] },
+  { name: 'Saudi Arabia', states: [
+    { name: 'Riyadh', cities: ['Al Kharj', 'Al Quwayiyah'] },
+    { name: 'Eastern Province', cities: ['Al Ahsa', 'Qatif'] },
+  ] },
+  { name: 'Oman', states: [
+    { name: 'Al Batinah', cities: ['Sohar', 'Rustaq'] },
+    { name: 'Ad Dakhiliyah', cities: ['Nizwa', 'Bahla'] },
+  ] },
+  { name: 'Egypt', states: [
+    { name: 'Fayoum', cities: ['Fayoum City', 'Sinnuris'] },
+    { name: 'Beheira', cities: ['Damanhur', 'Kafr El Dawwar'] },
+  ] },
+];

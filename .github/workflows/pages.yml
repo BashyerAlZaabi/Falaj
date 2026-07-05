@@ -2,7 +2,7 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: ["claude/fitness-app-emirati-avatar-ddeqsx"]
+    branches: ["claude/professional-rebuild-0h7crk"]
   workflow_dispatch:
 
 permissions:
