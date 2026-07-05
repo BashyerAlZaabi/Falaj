@@ -1,779 +1,876 @@
-/* ===== المنطق الرئيسي لتطبيق فلج رياضة ===== */
-(function () {
-  'use strict';
+/* ===== FALAJ — app logic (onboarding, auth, farm wizard, dashboard) ===== */
 
-  const SAVE_KEY = 'falaj_fitness_save_v1';
-  const REWARD_VIDEO_COINS = 50;
-  const POINTS_PER_LEVEL = 250;
-  const DAILY_BONUS = 60;
+const STORE_KEY = 'falaj_state_v2';
 
-  // ===== الحالة =====
-  let state = null;
-  let avatar3dReady = false;
-  let avatarMounted = false;
-  let theme = localStorage.getItem('falaj_theme') || 'dark';
+let S = null;
+// transient UI state
+let obIndex = 0;
+let authScreen = 'login';          // login | signup | forgotEmail | otp | reset
+let wizardStep = 1;                // 1 | 'field' | 2
+let wizardData = {};
+let sheet = null;                  // lang | country | state | city | sensor | null
+let sensorId = null;               // selected sensor/zone for the live sheet
 
-  window.addEventListener('falaj-avatar-ready', () => {
-    avatar3dReady = true;
-    if (state && !$('#app').classList.contains('hidden')) renderHome();
-  });
+/* ---------- state ---------- */
+function defaultState() {
+  return {
+    onboarded: false,
+    user: null,
+    farm: null,
+    route: 'home',
+    currentFieldId: null,
+    fields: FIELDS.map(f => Object.assign({}, f, { exp: Object.assign({}, f.exp), bars: f.bars.slice() })),
+    notifications: NOTIFICATIONS.map(n => Object.assign({}, n)),
+    notifEmpty: false,
+    monZones: MON_ZONES.map(z => Object.assign({}, z)),
+    mktFilter: 'all',
+    currentThreadId: null,
+    threadMsgs: {},
+  };
+}
+function loadState() {
+  try { const r = localStorage.getItem(STORE_KEY); S = r ? Object.assign(defaultState(), JSON.parse(r)) : defaultState(); }
+  catch (e) { S = defaultState(); }
+}
+let _pushTimer = null;
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) {}
+  if (BK.enabled && BK.user) { clearTimeout(_pushTimer); _pushTimer = setTimeout(() => BK.push(S), 800); }
+}
+function fieldById(id) { return S.fields.find(f => f.id === id); }
+function unread() { return S.notifications.filter(n => n.unread && !S.notifEmpty).length; }
 
-  const defaultState = () => ({
-    name: 'لاعب',
-    gender: 'male',
-    points: 0,
-    coins: 120,           // رصيد بداية بسيط
-    totalWorkouts: 0,
-    streak: 1,
-    lastDay: todayKey(),
-    owned: SHOP.filter(i => i.default).map(i => i.id),
-    equipped: {
-      outfit: 'outfit_classic',
-      head: 'head_default',
-      eyes: 'eyes_none',
-      accessory: 'acc_none',
-      shoes: 'shoes_default',
-    },
-    shopFilter: 'outfit',
-    unlocked: [],
-    dailyDoneDay: '',
-  });
+/* ---------- helpers ---------- */
+function aed(n) { return 'AED ' + Number(n).toLocaleString('en-US'); }
+function greetKey() { const h = new Date().getHours(); return h < 12 ? 'home.morning' : h < 18 ? 'home.afternoon' : 'home.evening'; }
+function flip() { return langDir() === 'rtl' ? 'flip' : ''; }
 
-  // ===== أدوات مساعدة =====
-  const $ = sel => document.querySelector(sel);
-  const $$ = sel => Array.from(document.querySelectorAll(sel));
-  function todayKey() { const d = new Date(); return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`; }
-  function fmt(n) { return n.toLocaleString('en-US'); }
+/* ---------- live farm intelligence ---------- */
+const MOIST_MIN = 40;
+function zStatus(z) { return z.moisture < MOIST_MIN ? 'alert' : 'ok'; }
+function lowZones() { return S.monZones.filter(z => z.moisture < MOIST_MIN); }
+function worstZone() { return S.monZones.slice().sort((a, b) => a.moisture - b.moisture)[0]; }
+function zoneLabel(z) { return t('mon.zoneN', { n: z.id.replace('Z', '') }); }
+function aiRecText() {
+  const w = worstZone();
+  return w && w.moisture < MOIST_MIN ? t('mon.recDyn', { z: zoneLabel(w), n: Math.round(w.moisture) }) : t('mon.allHealthy');
+}
+function farmSummary() {
+  const lows = lowZones();
+  if (!lows.length) return t('ans.statusGood');
+  const w = worstZone();
+  return t('ans.statusBad', { c: lows.length, z: zoneLabel(w), n: Math.round(w.moisture) });
+}
 
-  function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); }
-  function load() {
-    try {
-      const raw = localStorage.getItem(SAVE_KEY);
-      if (!raw) return null;
-      const s = JSON.parse(raw);
-      // ترقية الحقول الناقصة بأمان
-      return Object.assign(defaultState(), s, { equipped: Object.assign(defaultState().equipped, s.equipped || {}) });
-    } catch (e) { return null; }
+/* Top-down "satellite" aerial farm map (SVG, always renders) */
+function satMap() {
+  const fills = ['#5d7a3c', '#6c8a44', '#7a9a4e', '#536e36', '#86793f', '#9c8b54', '#47602e'];
+  const cols = 5, rows = 4, W = 320, H = 220, cw = W / cols, ch = H / rows;
+  let cells = '';
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const i = r * cols + c, f = fills[(i * 3 + r) % fills.length], pad = 2 + (i % 3), rot = (i % 2 ? -1.4 : 1.1);
+    const x = c * cw + pad, y = r * ch + pad, w = cw - pad * 2, h = ch - pad * 2, cx = x + w / 2, cy = y + h / 2;
+    cells += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${f}" transform="rotate(${rot} ${cx.toFixed(1)} ${cy.toFixed(1)})"/>`;
+    if (i % 2 === 0) for (let l = 1; l < 4; l++) { const ly = (y + h * l / 4).toFixed(1); cells += `<line x1="${x.toFixed(1)}" y1="${ly}" x2="${(x + w).toFixed(1)}" y2="${ly}" stroke="rgba(0,0,0,.12)" stroke-width="1"/>`; }
   }
+  const roads = `<line x1="0" y1="${ch}" x2="320" y2="${ch}" stroke="#bca878" stroke-width="3"/><line x1="${cw * 2}" y1="0" x2="${cw * 2}" y2="220" stroke="#bca878" stroke-width="3"/><line x1="0" y1="${(ch * 2.6).toFixed(1)}" x2="320" y2="${(ch * 2.6).toFixed(1)}" stroke="#c8ba8a" stroke-width="2"/>`;
+  const pivot = (px, py, rr, fl) => `<circle cx="${px}" cy="${py}" r="${rr}" fill="${fl}"/>` + Array.from({ length: 14 }, (_, k) => { const a = k / 14 * 6.2832; return `<line x1="${px}" y1="${py}" x2="${(px + Math.cos(a) * rr).toFixed(1)}" y2="${(py + Math.sin(a) * rr).toFixed(1)}" stroke="rgba(255,255,255,.07)" stroke-width="1"/>`; }).join('');
+  const channel = `<path d="M0 ${ch} L120 ${ch} L150 ${(ch * 2.6).toFixed(1)} L320 ${(ch * 2.6).toFixed(1)}" fill="none" stroke="#3aa6c2" stroke-width="3" opacity=".7"/>`;
+  return `<svg class="satmap" viewBox="0 0 320 220" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="320" height="220" fill="#465a2f"/>${cells}${roads}${pivot(70, 152, 30, '#5e7e3a')}${pivot(250, 72, 24, '#6b8a40')}${channel}</svg>`;
+}
 
-  // ===== المظهر (ثيم) =====
-  function applyTheme() {
-    document.body.classList.toggle('theme-light', theme === 'light');
-    const m = document.querySelector('meta[name="theme-color"]');
-    if (m) m.setAttribute('content', theme === 'light' ? '#eceef2' : '#0a0a0c');
-  }
-  function toggleTheme() {
-    theme = theme === 'light' ? 'dark' : 'light';
-    localStorage.setItem('falaj_theme', theme);
-    applyTheme();
-    updateSettingsUI();
-  }
-  function updateSettingsUI() {
-    const ico = $('#themeIco'); if (ico) ico.innerHTML = ICON(theme === 'light' ? 'moon' : 'sun', { size: 20 });
-    const tv = $('#themeVal'); if (tv) tv.textContent = I18N.t(theme === 'light' ? 'theme_light' : 'theme_dark');
-    const lv = $('#langVal'); if (lv) lv.textContent = I18N.t('lang_name');
-  }
+// Real satellite imagery of Al Ain Oasis (Esri World Imagery, keyless). SVG aerial shows if it fails to load.
+const SAT_URL = 'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/export?bboxSR=4326&imageSR=3857&size=700,440&format=jpg&f=image&bbox=55.755,24.206,55.780,24.222';
+function aerialMap() {
+  return satMap() + `<img class="satimg" src="${SAT_URL}" alt="" loading="lazy" onerror="this.style.display='none'">`;
+}
 
-  // ===== تحدّي اليوم =====
-  function featuredWorkout() {
-    const key = todayKey();
-    let h = 0;
-    for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
-    return WORKOUTS[h % WORKOUTS.length];
-  }
-  function renderDaily() {
-    const w = featuredWorkout();
-    const done = state.dailyDoneDay === todayKey();
-    $('#dailyName').textContent = I18N.loc(w, 'name');
-    $('#dailyReward').innerHTML = done
-      ? ICON('check', { size: 16 })
-      : `<span class="ico star">${ICON('star', { size: 14 })}</span> +${DAILY_BONUS}`;
-    $('#dailyCard').classList.toggle('done', done);
-  }
+function fieldThumb(f, cls) {
+  return `<div class="thumb ${cls || ''}">${aerialMap()}
+    <svg class="thumb-poly" viewBox="0 0 100 70" preserveAspectRatio="none">
+      <polygon points="18,42 44,18 86,32 60,58" fill="rgba(244,208,63,.14)" stroke="#f4d03f" stroke-width="2"/>
+      ${[[18, 42], [44, 18], [86, 32], [60, 58]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.4" fill="#f4d03f"/>`).join('')}
+    </svg></div>`;
+}
 
-  // ===== التهيئة =====
-  function init() {
-    applyTheme();
-    fillIcons();
-    I18N.applyStatic();
-    bindLang();
-    bindSettings();
-    updateLangUI();
-    state = load();
-    if (state) {
-      handleDailyStreak();
-      enterApp();
-    } else {
-      setupOnboarding();
+function illustration(scene) {
+  const sun = `<g><path d="M70 70a30 30 0 0 1 60 0" fill="none" stroke="#e23b32" stroke-width="6" stroke-linecap="round"/>
+    <path d="M80 70a20 20 0 0 1 40 0" fill="none" stroke="#f0962a" stroke-width="6" stroke-linecap="round"/>
+    <path d="M90 70a10 10 0 0 1 20 0" fill="none" stroke="#f4c531" stroke-width="6" stroke-linecap="round"/></g>`;
+  if (scene === 'plant') return `<svg viewBox="0 0 200 150">${sun}
+    <ellipse cx="100" cy="120" rx="78" ry="16" fill="#6b4a2b"/>
+    <path d="M100 120c0-22 0-34 0-34" stroke="#2f8f4e" stroke-width="5" stroke-linecap="round"/>
+    <path d="M100 96c-14-2-20-12-20-20 12 0 18 8 20 16M100 100c12-2 18-10 18-18-10 0-16 6-18 12" fill="#3aa55f"/></svg>`;
+  if (scene === 'harvest') return `<svg viewBox="0 0 200 150">${sun}
+    <ellipse cx="100" cy="124" rx="84" ry="14" fill="#caa84e"/>
+    ${[60, 84, 108, 132].map((x, i) => `<g transform="translate(${x} 0)"><path d="M0 124V70" stroke="#caa84e" stroke-width="4"/>
+      <path d="M0 78c-7-3-11-9-11-16 8 0 12 5 13 11M0 86c7-3 11-9 11-16-8 0-12 5-13 11M0 70c-7-3-11-9-11-16 8 0 12 5 13 11" fill="#e3b94e"/></g>`).join('')}</svg>`;
+  return `<svg viewBox="0 0 200 150">${sun}
+    <ellipse cx="100" cy="128" rx="84" ry="12" fill="#6b4a2b"/>
+    <path d="M58 120l8-26h46l8 26z" fill="#3aa55f"/><path d="M60 110h60" stroke="#2f8f4e" stroke-width="3"/>
+    <circle cx="78" cy="104" r="6" fill="#e23b32"/><circle cx="94" cy="104" r="6" fill="#f0962a"/><circle cx="110" cy="104" r="6" fill="#f4c531"/>
+    <circle cx="128" cy="124" r="10" fill="none" stroke="#173d2e" stroke-width="3"/></svg>`;
+}
+
+function barChart(bars) {
+  const max = 50, grid = [50, 40, 30, 20, 10, 0];
+  const labels = [10, 11, 12, 13, 14, 15, 16];
+  return `<div class="chart">
+    <div class="y-axis">${grid.map(g => `<span>${g}%</span>`).join('')}</div>
+    <div class="plot">
+      <div class="bars">${bars.map((v, i) => `<div class="bar ${i % 2 ? 'lite' : ''}" style="height:${(v / max * 100).toFixed(0)}%"></div>`).join('')}</div>
+      <div class="x-axis"><b>${t('days')}</b>${labels.map(l => `<span>${l}</span>`).join('')}</div>
+    </div>
+  </div>`;
+}
+
+function donut(exp) {
+  const r = 46, c = 2 * Math.PI * r; let acc = 0;
+  const arcs = EXPENSE_KEYS.map(({ k, c: col }) => {
+    const v = exp[k.split('.')[1]]; const len = c * v / 100; const dash = `${len.toFixed(1)} ${(c - len).toFixed(1)}`;
+    const seg = `<circle cx="60" cy="60" r="${r}" fill="none" stroke="${col}" stroke-width="20" stroke-dasharray="${dash}" stroke-dashoffset="${(-acc).toFixed(1)}" transform="rotate(-90 60 60)"/>`;
+    acc += len; return seg;
+  }).join('');
+  return `<svg class="donut" viewBox="0 0 120 120">${arcs}</svg>`;
+}
+
+/* ---------- root render ---------- */
+function render() {
+  const app = document.getElementById('app');
+  document.documentElement.dir = langDir();
+  let screen;
+  if (!S.onboarded) screen = renderOnboarding();
+  else if (!S.user) screen = renderAuth();
+  else if (!S.farm) screen = renderWizard();
+  else screen = renderApp();
+  // The bottom-sheet overlay (language picker, wizard country/state/city, live sensor)
+  // must be available on every screen — not just the main app.
+  app.innerHTML = screen + (sheet ? renderSheet() : '');
+}
+
+/* ---------- onboarding ---------- */
+function renderOnboarding() {
+  const s = ONBOARDING[obIndex];
+  const lang = LANGS.find(l => l.code === CURRENT_LANG);
+  const last = obIndex === ONBOARDING.length - 1;
+  return `<div class="onboard">
+    <div class="ob-top">
+      <button class="lang-drop" data-action="openlang"><span class="flag">${lang.flag}</span>${lang.native}${icon('chevron', 'mini ' + (langDir() === 'rtl' ? '' : 'down'))}</button>
+      <button class="ob-skip" data-action="ob-skip">${t('common.skip')}</button>
+    </div>
+    <div class="ob-illus">${illustration(s.scene)}</div>
+    <div class="ob-card">
+      <h2>${t(s.titleKey)}</h2>
+      <p>${t(s.bodyKey)}</p>
+      ${last ? `<button class="btn-green wide" data-action="ob-done">${t('common.getStarted')}</button>`
+             : `<div class="ob-foot">
+                  <div class="dots">${ONBOARDING.map((_, i) => `<i class="${i === obIndex ? 'on' : ''}"></i>`).join('')}</div>
+                  <button class="ob-next" data-action="ob-next">${icon('chevron', flip())}</button>
+                </div>`}
+    </div>
+  </div>`;
+}
+
+/* ---------- auth ---------- */
+function renderAuth() {
+  const back = `<button class="auth-back" data-action="auth-back">${icon('back', flip())}</button>`;
+  const logo = `<div class="auth-logo">${falajLogo('color', 34)}</div>`;
+  const hero = `<div class="auth-hero"><img src="assets/farm-hero.png" alt=""><div class="auth-hero-ov"></div><div class="auth-hero-logo">${falajLogo('white', 30)}</div></div>`;
+  const langChip = `<button class="auth-lang" data-action="openlang">${LANGS.find(l => l.code === CURRENT_LANG).flag}</button>`;
+
+  if (authScreen === 'login') return `<div class="auth has-hero">${langChip}${hero}
+    <div class="fields">
+      ${input('login_id', 'auth.username', 'user')}
+      ${passInput('login_pw', 'auth.password')}
+      <button class="link end" data-action="go-forgot">${t('auth.forgot')}</button>
+    </div>
+    <button class="btn-green" data-action="do-login">${t('auth.login')}</button>
+    ${socialRow('auth.orLogin')}
+    <p class="auth-foot">${t('auth.noAccount')} <button class="link inline" data-action="to-signup">${t('auth.signup')}</button></p>
+  </div>`;
+
+  if (authScreen === 'signup') return `<div class="auth has-hero">${langChip}${hero}
+    <div class="fields">
+      ${input('su_name', 'auth.name', 'user')}
+      ${input('su_email', 'auth.email', 'mail')}
+      ${passInput('su_pw', 'auth.password', true)}
+      <div class="pw-rules" id="pwRules">
+        ${rule('min')}${rule('case')}${rule('special')}
+      </div>
+    </div>
+    <button class="btn-green" data-action="do-signup">${t('auth.signup')}</button>
+    ${socialRow('auth.orSignup')}
+    <p class="auth-foot">${t('auth.haveAccount')} <button class="link inline" data-action="to-login">${t('auth.login')}</button></p>
+  </div>`;
+
+  if (authScreen === 'forgotEmail') return `<div class="auth">${back}${logo}
+    <div class="fields">${input('fp_email', 'auth.enterEmail', 'mail')}</div>
+    <div class="grow"></div>
+    <button class="btn-green" data-action="send-code">${t('auth.sendCode')}</button>
+  </div>`;
+
+  if (authScreen === 'otp') return `<div class="auth">${back}${logo}
+    <p class="otp-hint">${t('auth.otpHint')}</p>
+    <div class="otp">${[0, 1, 2, 3].map(i => `<input class="otp-box" id="otp${i}" inputmode="numeric" maxlength="1" data-i="${i}">`).join('')}</div>
+    <div class="grow"></div>
+    <button class="btn-green" data-action="verify-otp">${t('auth.verify')}</button>
+  </div>`;
+
+  // reset
+  return `<div class="auth">${back}${logo}
+    <div class="fields">
+      ${passInput('rs_pw', 'auth.newPass')}
+      ${passInput('rs_pw2', 'auth.confirm')}
+      <p class="err-msg hidden" id="rsErr">${t('auth.mismatch')}</p>
+    </div>
+    <div class="grow"></div>
+    <button class="btn-green" data-action="save-pass">${t('auth.savePass')}</button>
+  </div>`;
+}
+function input(id, key, ic) {
+  const i = ic === 'mail' ? '✉' : ic === 'user' ? '' : '';
+  return `<div class="field"><span class="fi">${ic === 'mail' ? icon('info', 'hide') : ''}</span>
+    <input id="${id}" type="${ic === 'mail' ? 'email' : 'text'}" placeholder="${t(key)}"></div>`;
+}
+function passInput(id, key, rules) {
+  return `<div class="field pw"><input id="${id}" type="password" placeholder="${t(key)}" ${rules ? 'data-rules="1"' : ''}>
+    <button class="eye" data-action="togglepw" data-target="${id}">${icon('eye')}</button></div>`;
+}
+function rule(kind) { return `<span class="rule" id="rule_${kind}">${icon('info', 'rule-i')}<small>${t('pass.' + kind)}</small></span>`; }
+function socialRow(key) {
+  return `<div class="or"><span>${t(key)}</span></div>
+    <div class="socials">
+      <button class="soc">${social('apple')}</button>
+      <button class="soc">${social('google')}</button>
+      <button class="soc">${social('facebook')}</button>
+    </div>`;
+}
+
+/* ---------- farm wizard ---------- */
+function renderWizard() {
+  const head = `<div class="wiz-head">${falajLogo('white', 22)}<button class="wiz-skip" data-action="wiz-skip">${t('common.skip')}</button></div>`;
+
+  if (wizardStep === 'field') return `<div class="wiz field-select">
+    <div class="fs-head"><button class="icon-btn light" data-action="wiz-to1">${icon('back', flip())}</button>
+      <b>${t('farm.selectField')}</b><button class="link light" data-action="wiz-clearfield">${t('common.clear')}</button></div>
+    <div class="map"><div class="map-grid"></div>
+      <svg class="map-poly" viewBox="0 0 300 360" preserveAspectRatio="none">
+        <polygon points="70,150 150,90 235,160 165,250" fill="rgba(244,208,63,.15)" stroke="#f4d03f" stroke-width="3"/>
+        ${[[70, 150], [150, 90], [235, 160], [165, 250]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="5" fill="#f4d03f"/>`).join('')}
+      </svg>
+      <button class="map-save btn-yellow" data-action="wiz-savefield">${t('farm.saveField')}</button>
+    </div>
+  </div>`;
+
+  const step2 = wizardStep === 2;
+  return `<div class="wiz">${head}
+    <div class="wiz-body">
+      <div class="wiz-titlerow"><h2>${t('farm.add')}</h2><span class="step">${step2 ? '2/2' : '1/2'}</span></div>
+      <p class="wiz-intro">${t('farm.intro')}</p>
+      ${step2 ? wizardStep2() : wizardStep1()}
+    </div>
+    <div class="wiz-actions">
+      <button class="btn-ghost" data-action="wiz-clear">${t('common.clear')}</button>
+      <button class="btn-green flex" data-action="${step2 ? 'wiz-finish' : 'wiz-next'}">${t('common.save')}</button>
+    </div>
+  </div>`;
+}
+function wizardStep1() {
+  return `${wlabel('farm.name')}${winput('w_name', 'farm.enter', wizardData.name)}
+    <h3 class="wiz-sub">${t('farm.location')}</h3>
+    ${wlabel('farm.country')}${wselect('country', wizardData.country, 'farm.country')}
+    ${wlabel('farm.state')}${wselect('state', wizardData.state, 'farm.state')}
+    ${wlabel('farm.city')}${wselect('city', wizardData.city, 'farm.city')}
+    ${wlabel('farm.pincode')}${winput('w_pin', 'farm.pincode', wizardData.pincode)}
+    ${wlabel('farm.field')}
+    <button class="field-pick ${wizardData.field ? 'done' : ''}" data-action="wiz-field">
+      ${wizardData.field ? icon('check', 'c-green') : ''}<span>${wizardData.field ? t('farm.selectField') + ' ✓' : t('farm.clickField')}</span></button>`;
+}
+function wizardStep2() {
+  const f = [['farm.waterUse', 'w_wu'], ['farm.waterCost', 'w_wc'], ['farm.monthRev', 'w_mr'], ['farm.annualRev', 'w_ar'],
+    ['farm.monthExp', 'w_me'], ['farm.annualExp', 'w_ae'], ['farm.otherExp', 'w_oe'], ['farm.cropsType', 'w_ct'], ['farm.desc', 'w_d']];
+  return f.map(([k, id]) => `${wlabel(k)}${winput(id, 'farm.enter', wizardData[id])}`).join('');
+}
+function wlabel(k) { return `<label class="wiz-lbl">${t(k)}</label>`; }
+function winput(id, ph, val) { return `<input class="wiz-input" id="${id}" placeholder="${t(ph)}" value="${val ? String(val).replace(/"/g, '&quot;') : ''}">`; }
+function wselect(kind, val, ph) {
+  return `<button class="wiz-select ${val ? 'has' : ''}" data-action="opensel" data-kind="${kind}">
+    <span>${val || t(ph)}</span>${icon('chevron', 'down')}</button>`;
+}
+
+/* ---------- main app shell ---------- */
+function renderApp() {
+  let body;
+  switch (S.route) {
+    case 'home': body = screenHome(); break;
+    case 'fields': body = screenFields(); break;
+    case 'fieldDetail': body = screenFieldDetail(); break;
+    case 'support': body = screenSupport(); break;
+    case 'settings': body = screenSettings(); break;
+    case 'notifications': body = screenNotifications(); break;
+    case 'zones': body = screenZones(); break;
+    case 'marketplace': body = screenMarketplace(); break;
+    case 'rewards': body = screenRewards(); break;
+    case 'devices': body = screenDevices(); break;
+    case 'log': body = screenLog(); break;
+    case 'messages': body = screenMessages(); break;
+    case 'thread': body = screenThread(); break;
+    case 'contracts': body = screenContracts(); break;
+    case 'about': body = screenAbout(); break;
+    default: body = screenHome();
+  }
+  const showNav = S.route !== 'fieldDetail' && S.route !== 'notifications' && S.route !== 'about';
+  return `<div class="app">${body}${showNav ? renderNav() : ''}</div>`;
+}
+function renderNav() {
+  const items = [['home', 'home'], ['fields', 'fields'], ['support', 'support'], ['settings', 'settings']];
+  return `<nav class="tabbar">
+    <button class="tab ${S.route === 'home' ? 'on' : ''}" data-action="go" data-route="home">${icon('home')}</button>
+    <button class="tab ${S.route === 'fields' ? 'on' : ''}" data-action="go" data-route="fields">${icon('fields')}</button>
+    <button class="fab" data-action="add-field">${icon('plus')}</button>
+    <button class="tab ${S.route === 'support' ? 'on' : ''}" data-action="go" data-route="support">${icon('spark')}</button>
+    <button class="tab ${S.route === 'settings' ? 'on' : ''}" data-action="go" data-route="settings">${icon('settings')}</button>
+  </nav>`;
+}
+function bell() {
+  return `<button class="bell" data-action="go" data-route="notifications">${icon('bell')}${unread() ? `<span class="badge">${unread()}</span>` : ''}</button>`;
+}
+
+/* ---------- home ---------- */
+function screenHome() {
+  return `<header class="ghead home">
+    <div class="ghead-row"><div><small>${t(greetKey())}</small><b>${S.user.name}</b></div>${bell()}</div>
+  </header>
+  <div class="scroll">
+    <div class="weather card">
+      <div class="w-left"><b>${WEATHER.location.split(',')[0]}</b><span>${WEATHER.location.split(',')[1] || ''}</span>
+        <div class="w-temp">${icon('cloudsun', 'big')}<em>${WEATHER.tempC}<sup>°C</sup></em></div><span class="w-cond">${t(WEATHER.condKey)}</span></div>
+      <div class="w-right"><small>${t('home.today')}, ${WEATHER.date}</small>
+        <span>${t('home.wind')} ${WEATHER.wind}km/h</span><span>${t('home.rain')} ${WEATHER.rain}%</span>
+        <svg class="w-line" viewBox="0 0 90 30"><path d="M2 22 Q20 6 38 16 T86 8" fill="none" stroke="#5171ff" stroke-width="2.5" stroke-linecap="round"/></svg></div>
+    </div>
+
+    <button class="monitor-card card" data-action="go" data-route="zones">
+      <div class="mc-map">
+        ${aerialMap()}
+        ${S.monZones.slice(0, 4).map(z => `<span class="zbadge ${zStatus(z)}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${zStatus(z) === 'alert' ? '!' : '✓'}</i></span>`).join('')}
+        ${lowZones().length ? `<span class="mc-issues">${icon('alert')}${t('mon.needAttn', { n: lowZones().length })}</span>` : ''}
+        <div class="mc-grad"></div>
+        <div class="mc-ttl">${icon('pin')}<b>${t('mon.title')}</b></div>
+      </div>
+      <div class="mc-foot"><span class="mc-ai">${icon('spark')}${aiRecText()}</span>${icon('chevron', 'chev ' + flip())}</div>
+    </button>
+    <div class="tools">
+      ${[['marketplace', 'store', 'mkt.title'], ['rewards', 'gift', 'rew.title'], ['devices', 'chip', 'dev.title'], ['log', 'spark', 'log.title'], ['messages', 'chat', 'msg.title'], ['contracts', 'list', 'ct.title']].map(([r, ic, k]) => `<button class="tool card" data-action="go" data-route="${r}"><span class="tool-ic">${icon(ic)}</span><small>${t(k)}</small></button>`).join('')}
+    </div>
+
+    <div class="sec-row"><h3>${t('home.market')}</h3><button class="link" data-action="go" data-route="fields">${t('common.viewAll')} ${icon('chevron', 'mini ' + flip())}</button></div>
+    <div class="market-row">${MARKET.map(m => `<div class="mkt card">
+      <div class="mkt-top"><span class="dot-crop" style="--hue:${m.hue}"></span><b>${t(m.cropKey)}</b></div>
+      <span class="mkt-price">AED ${m.price} ${t('field.perKg')}</span><small>${m.region}</small></div>`).join('')}</div>
+
+    <div class="sec-row"><h3>${t('home.myFields')}</h3><button class="link" data-action="go" data-route="fields">${t('common.viewAll')} ${icon('chevron', 'mini ' + flip())}</button></div>
+    ${S.fields.slice(0, 2).map(fieldCard).join('')}
+  </div>`;
+}
+function fieldCard(f) {
+  return `<button class="field-card card" data-action="open-field" data-id="${f.id}">
+    ${fieldThumb(f, 'sm')}
+    <div class="fc-body"><b>${f.name}</b>
+      <span>${t('field.water')} : <em>${f.water}% ${t('field.normal')}</em></span>
+      <span>${t('field.expense')} : ${aed(f.expense)}</span>
+      <span>${t('field.revenue')} : ${aed(f.revenue)}</span></div>
+  </button>`;
+}
+
+/* ---------- fields ---------- */
+function screenFields() {
+  return `<header class="ghead"><div class="ghead-row"><b>${t('home.myFields')}</b>${bell()}</div></header>
+  <div class="scroll">${S.fields.map(fieldCard).join('')}</div>`;
+}
+
+/* ---------- field detail ---------- */
+function screenFieldDetail() {
+  const f = fieldById(S.currentFieldId) || S.fields[0];
+  const cells = [
+    ['fd.cropHealth', t('fd.' + f.health), '', 'c-green'],
+    ['fd.planting', f.planting, '', ''],
+    ['fd.revenue', aed(f.revenue), (f.revChange < 0 ? f.revChange : '+' + f.revChange) + '%', f.revChange < 0 ? 'c-red' : 'c-green'],
+    ['fd.harvest', t('fd.months', { n: f.harvest }), '', ''],
+  ];
+  return `<header class="ghead detail"><div class="ghead-row">
+    <button class="bell" data-action="go" data-route="fields">${icon('back', flip())}</button><b class="center">${f.name}</b><span class="sp"></span></div></header>
+  <div class="scroll detail-scroll">
+    <div class="hero-map">${fieldThumb(f, 'hero')}</div>
+    <h3 class="d-sec">${t('fd.field')}</h3>
+    <div class="info-grid">${cells.map(c => `<div class="info card"><small>${t(c[0])}</small><div class="info-v"><b>${c[1]}</b>${c[2] ? `<em class="${c[3]}">${c[2]}</em>` : ''}</div></div>`).join('')}</div>
+
+    <h3 class="d-sec">${t('fd.waterTitle')}</h3>
+    <div class="card chart-card">
+      <div class="kpis">
+        <div><small>${t('fd.waterUse')}</small><b>${f.consumption}L</b></div>
+        <div><small>${t('fd.workTime')}</small><b>${f.workTime}h</b></div>
+        <div><small>${t('fd.workedHa')}</small><b>${f.hectares}ha</b></div>
+      </div>${barChart(f.bars)}</div>
+
+    <h3 class="d-sec">${t('fd.expTitle')}</h3>
+    <div class="card exp-card">
+      <div class="exp-top"><small>${t('fd.totalExp')}</small><b>${aed(f.expense)}</b></div>
+      <div class="exp-chart">${donut(f.exp)}
+        <div class="legend">${EXPENSE_KEYS.map(({ k, c }) => `<span><i style="background:${c}"></i>${t(k)} ${f.exp[k.split('.')[1]]}%</span>`).join('')}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---------- notifications ---------- */
+function screenNotifications() {
+  const list = S.notifications;
+  return `<header class="ghead detail"><div class="ghead-row">
+    <button class="bell" data-action="go" data-route="home">${icon('back', flip())}</button><b class="center">${t('notif.title')}</b><span class="sp"></span></div></header>
+  <div class="scroll">
+    ${S.notifEmpty || !list.length ? `<div class="empty"><div class="empty-ill">${icon('bell')}<i class="ex">!</i></div>
+        <b>${t('notif.empty')}</b><p>${t('notif.emptyHint')}</p></div>`
+      : `<button class="link mark" data-action="clear-notif">${t('common.clear')}</button>` + list.map(n => `<div class="notif ${n.unread ? 'unread' : ''}">
+        <span class="n-ico">${icon(n.icon)}${n.unread ? '<i class="d"></i>' : ''}</span><p>${t(n.key)}</p></div>`).join('')}
+  </div>`;
+}
+
+/* ---------- AI support (chat) ---------- */
+function screenSupport() {
+  const msgs = (S.chat && S.chat.length) ? S.chat : [{ role: 'bot', text: t('ai.welcome') }];
+  const fresh = !S.chat || S.chat.length <= 1;
+  return `<header class="ghead"><div class="ghead-row">
+    <div class="ai-head"><span class="ai-ava">${icon('spark')}</span><div><b>${t('ai.title')}</b><small><i class="d-on"></i>${t('ai.online')}</small></div></div>${bell()}</div></header>
+  <div class="scroll chatscroll">
+    <div class="chat">${msgs.map(m => `<div class="msg ${m.role}">${m.role === 'bot' ? '<span class="m-ava">' + icon('spark') + '</span>' : ''}<div class="bubble">${m.text}</div></div>`).join('')}</div>
+    ${fresh ? `<div class="suggests">${['ai.s1', 'ai.s2', 'ai.s3', 'ai.s4'].map(k => `<button class="chip" data-action="ai-suggest" data-q="${k}">${t(k)}</button>`).join('')}</div>` : ''}
+  </div>
+  <div class="composer">
+    <input id="aiInput" placeholder="${t('ai.placeholder')}" autocomplete="off">
+    <button class="ai-send" data-action="ai-send" aria-label="send">${icon('send')}</button>
+  </div>`;
+}
+function aiReply(text) {
+  const low = (text || '').toLowerCase();
+  for (const it of AI_INTENTS) {
+    if (!it.kw.some(k => low.includes(k.toLowerCase()))) continue;
+    if (it.key === 'ans.status') return farmSummary();
+    let ans = t(it.key);
+    if (it.key === 'ans.water') {
+      const w = worstZone();
+      if (w && w.moisture < MOIST_MIN) ans += ' ' + t('ans.waterLive', { z: zoneLabel(w), n: Math.round(w.moisture) });
     }
+    return ans;
   }
+  return t('ans.fallback');
+}
+function aiSend(q) {
+  const text = q != null ? q : val('aiInput');
+  if (!text) return;
+  if (!S.chat || !S.chat.length) S.chat = [{ role: 'bot', text: t('ai.welcome') }];
+  S.chat.push({ role: 'user', text });
+  S.chat.push({ role: 'bot', text: aiReply(text) });
+  save(); render();
+  const sc = document.querySelector('.chatscroll'); if (sc) sc.scrollTop = sc.scrollHeight;
+}
 
-  // ===== اللغة =====
-  function updateLangUI() {
-    const lb = $('#langBtn'); if (lb) lb.textContent = I18N.otherLabel();
-    $$('#langSwitch button').forEach(b => b.classList.toggle('active', b.dataset.lang === I18N.lang));
-  }
-  function bindLang() {
-    $$('#langSwitch button').forEach(b => b.addEventListener('click', () => setLanguage(b.dataset.lang)));
-    const lb = $('#langBtn'); if (lb) lb.addEventListener('click', () => setLanguage(I18N.other()));
-  }
-  function setLanguage(l) {
-    if (l === I18N.lang) return;
-    I18N.setLang(l);
-    I18N.applyStatic();
-    updateLangUI();
-    if (state && !$('#app').classList.contains('hidden')) { bindShop(); renderAll(); }
-  }
-  function bindSettings() {
-    const tb = $('#themeBtn'); if (tb) tb.addEventListener('click', toggleTheme);
-    const lr = $('#langRow'); if (lr) lr.addEventListener('click', () => setLanguage(I18N.other()));
-  }
+/* ---------- settings ---------- */
+function screenSettings() {
+  const lang = LANGS.find(l => l.code === CURRENT_LANG);
+  return `<header class="ghead"><div class="ghead-row"><b>${t('set.title')}</b>${bell()}</div></header>
+  <div class="scroll">
+    <div class="profile card"><div class="pic">${S.user.name.charAt(0).toUpperCase()}</div>
+      <div><b>${S.user.name}</b><span>${S.user.email}</span></div></div>
+    <div class="list card">
+      <button class="row" data-action="openlang"><span class="r-ico blue">${icon('globe')}</span><span>${t('set.language')}</span><em>${lang.flag} ${lang.native}</em>${icon('chevron', 'chev ' + flip())}</button>
+      <button class="row" data-action="go" data-route="about"><span class="r-ico green">${icon('info')}</span><span>${t('set.about')}</span>${icon('chevron', 'chev ' + flip())}</button>
+      <button class="row danger" data-action="logout"><span class="r-ico red">${icon('logout')}</span><span>${t('set.logout')}</span></button>
+    </div>
+    <div class="about-box card"><div class="ab-logo">${falajLogo('color', 26)}</div><p>${t('set.aboutBody')}</p></div>
+  </div>`;
+}
 
-  function handleDailyStreak() {
-    const t = todayKey();
-    if (state.lastDay !== t) {
-      // تحقق إذا كان أمس (مبسّط: أي يوم مختلف يحافظ على السلسلة مرة واحدة)
-      const prev = new Date();
-      prev.setDate(prev.getDate() - 1);
-      const prevKey = `${prev.getFullYear()}-${prev.getMonth()}-${prev.getDate()}`;
-      state.streak = (state.lastDay === prevKey) ? state.streak + 1 : 1;
-      state.lastDay = t;
-      save();
-    }
-  }
+/* ---------- about ---------- */
+function screenAbout() {
+  return `${gheadBack('set.about')}
+  <div class="scroll flat about-screen">
+    <div class="about-box card"><div class="ab-logo">${falajLogo('color', 40)}</div>
+      <p>${t('set.aboutBody')}</p></div>
+    <div class="list card">
+      ${ONBOARDING.map(s => `<div class="row static"><span class="r-ico green">${icon('leaf')}</span>
+        <div class="dev-b"><b>${t(s.titleKey)}</b><small>${t(s.bodyKey)}</small></div></div>`).join('')}
+    </div>
+    <p class="muted about-ver">FALAJ · v1.0 🇦🇪</p>
+  </div>`;
+}
 
-  // ===== شاشة البداية =====
-  function setupOnboarding() {
-    const nameInput = $('#nameInput');
-    const startBtn = $('#startBtn');
-    let chosenGender = null;
+/* ---------- shared back header ---------- */
+function gheadBack(titleKey) {
+  return `<header class="ghead detail"><div class="ghead-row">
+    <button class="bell" data-action="go" data-route="home">${icon('back', flip())}</button>
+    <b class="center">${t(titleKey)}</b><span class="sp"></span></div></header>`;
+}
 
-    $$('.gender-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        $$('.gender-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        chosenGender = btn.dataset.gender;
-        validate();
-      });
-    });
-    nameInput.addEventListener('input', validate);
+/* ---------- zone monitor ---------- */
+function screenZones() {
+  const alerts = lowZones();
+  return `${gheadBack('mon.title')}
+  <div class="scroll detail-scroll">
+    <div class="zmap">${aerialMap()}${S.monZones.map(z => `<span class="zbadge ${zStatus(z)}" data-action="open-sensor" data-id="${z.id}" style="inset-inline-start:${z.x}%;top:${z.y}%">${z.id}<i>${zStatus(z) === 'alert' ? '!' : '✓'}</i></span>`).join('')}</div>
+    <p class="muted maphint">${icon('pin')}${t('sen.tapHint')}</p>
 
-    function validate() {
-      startBtn.disabled = !(nameInput.value.trim().length >= 1 && chosenGender);
-    }
+    <div class="card pad">
+      <h3 class="sect tight">${t('mon.issues')}</h3>
+      ${alerts.length ? alerts.map(z => `<div class="issue">
+        <span class="iss-ic">${icon('alert')}</span>
+        <div class="iss-b"><b>${zoneLabel(z)} · ${t('mon.iss.moisture')}</b><small>${Math.round(z.moisture)}% · ${t('mon.ago', { n: 3 })}</small></div>
+        <button class="mini-btn" data-action="zone-irrigate" data-id="${z.id}">${icon('drop')}${t('mon.irrigate')}</button>
+      </div>`).join('') : `<p class="muted">${t('mon.healthy')} ✓</p>`}
+    </div>
 
-    startBtn.addEventListener('click', () => {
-      state = defaultState();
-      state.name = nameInput.value.trim().slice(0, 16) || I18N.t('default_player');
-      state.gender = chosenGender;
-      save();
-      enterApp();
-    });
-  }
+    <div class="card pad">
+      <div class="airec-row"><h3 class="sect tight">${t('mon.airec')}</h3><button class="link" data-action="ai-why">${t('mon.why')}</button></div>
+      <div class="airec-body"><span class="ai-bulb">${icon('spark')}</span><p>${aiRecText()}</p>${icon('chevron', 'chev ' + flip())}</div>
+    </div>
 
-  // ===== الدخول للتطبيق =====
-  function enterApp() {
-    $('#onboarding').classList.add('hidden');
-    $('#app').classList.remove('hidden');
-    fillIcons($('#app'));
-    I18N.applyStatic($('#app'));
-    updateLangUI();
-    bindNav();
-    bindShop();
-    $('#dailyCard').addEventListener('click', () => {
-      if (state.dailyDoneDay === todayKey()) goto('workout');
-      else startWorkout(featuredWorkout());
-    });
-    renderAll();
-  }
-
-  function renderAll() {
-    renderTopbar();
-    renderHome();
-    renderWorkouts();
-    renderShop();
-    renderLeaderboard();
-    renderProfile();
-  }
-
-  // ===== الشريط العلوي =====
-  function renderTopbar() {
-    $('#topPoints').textContent = fmt(state.points);
-    $('#topCoins').textContent = fmt(state.coins);
-  }
-
-  // ===== التنقل =====
-  function bindNav() {
-    $$('[data-goto]').forEach(el => {
-      el.addEventListener('click', () => goto(el.dataset.goto));
-    });
-  }
-  function goto(screen) {
-    $$('.screen').forEach(s => s.classList.toggle('active', s.dataset.screen === screen));
-    $$('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.goto === screen));
-    if (screen === 'leaderboard') renderLeaderboard();
-    if (screen === 'profile') renderProfile();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function levelOf(points) { return Math.floor(points / POINTS_PER_LEVEL) + 1; }
-
-  // ===== الرئيسية =====
-  function renderHome() {
-    $('#homeName').textContent = state.name;
-    $('#streakDays').textContent = state.streak;
-    $('#totalWorkouts').textContent = state.totalWorkouts;
-    $('#ownedCount').textContent = state.owned.filter(id => {
-      const it = SHOP.find(s => s.id === id); return it && !it.default;
-    }).length;
-
-    // المستوى — حلقة دائرية
-    const level = Math.floor(state.points / POINTS_PER_LEVEL) + 1;
-    const into = state.points % POINTS_PER_LEVEL;
-    const pct = Math.round((into / POINTS_PER_LEVEL) * 100);
-    $('#levelNum').textContent = level;
-    $('#levelHint').textContent = I18N.t('level_hint', { n: POINTS_PER_LEVEL - into, m: level + 1 });
-    $('#levelRing').innerHTML = ringSVG(pct, { size: 96, stroke: 11 });
-
-    // تحدّي اليوم
-    renderDaily();
-
-    // الترتيب
-    $('#homeRank').textContent = '#' + computeRank();
-
-    // الشخصية (3D إن توفّر، وإلا SVG)
-    const stage = $('#avatarStage');
-    if (avatar3dReady && window.FalajAvatar) {
-      if (!avatarMounted) { window.FalajAvatar.mount(stage, state.gender, state.equipped); avatarMounted = true; }
-      else window.FalajAvatar.update(state.gender, state.equipped);
-    } else {
-      stage.innerHTML = buildAvatar(state.gender, state.equipped);
-    }
-  }
-
-  // ===== التمارين =====
-  function renderWorkouts() {
-    const list = $('#workoutList');
-    list.innerHTML = '';
-    WORKOUTS.forEach(w => {
-      const card = document.createElement('div');
-      card.className = 'workout-card';
-      card.innerHTML = `
-        <div class="wc-icon">${ICON(w.icon, { size: 26 })}</div>
-        <div class="wc-body">
-          <h3>${I18N.loc(w, 'name')}</h3>
-          <div class="wc-meta">
-            <span>${I18N.loc(w, 'desc')}</span>
-            <span class="mini"><span class="ico star">${ICON('star', { size: 14 })}</span> <b>${w.points}</b></span>
-            <span class="mini"><span class="ico coin">${ICON('coin', { size: 14 })}</span> <b>${w.coins}</b></span>
-          </div>
-        </div>
-        <span class="wc-chev">${ICON('chevron', { size: 20 })}</span>`;
-      card.addEventListener('click', () => startWorkout(w));
-      list.appendChild(card);
-    });
-  }
-
-  // ===== تنفيذ تمرين مع التحقّق من الحركة =====
-  const REP_THRESHOLD = 5.5;   // شدّة الحركة لاحتساب عدّة (m/s²)
-  const REP_DEBOUNCE = 320;    // أقل فاصل زمني بين عدّتين (ms)
-  const HOLD_MOVE = 2.4;       // حدّ الحركة الذي يُعتبر "غير ثابت" في البلانك
-  let wk = null;
-
-  function haptic(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms || 18); } catch (e) {} } }
-
-  function renderWkRing(pct, center) {
-    $('#wmRing').innerHTML = ringSVG(pct * 100, { size: 150, stroke: 14, center: String(center) });
-  }
-
-  function startWorkout(w) {
-    const modal = $('#workoutModal');
-    modal.classList.remove('hidden');
-    $('#wmIcon').innerHTML = ICON(w.icon, { size: 40 });
-    $('#wmName').textContent = I18N.loc(w, 'name');
-    $('#wmPts').textContent = w.points;
-    $('#wmCoins').textContent = w.coins;
-
-    wk = { w, running: false, count: 0, target: w.mode === 'hold' ? w.seconds : w.reps,
-           lastMag: null, lastPeak: 0, moving: false, held: 0, lastT: 0, raf: null,
-           handler: null, watchdog: null, motionSeen: false };
-
-    if (w.mode === 'hold') {
-      $('#wmGoal').textContent = I18N.t('goal_hold', { n: w.seconds });
-      renderWkRing(0, w.seconds);
-      $('#wmHint').textContent = I18N.t('hint_pre_hold');
-    } else {
-      $('#wmGoal').textContent = I18N.t('goal_reps', { n: w.reps });
-      renderWkRing(0, '0');
-      $('#wmHint').textContent = I18N.t('hint_pre_reps');
-    }
-
-    const action = $('#wmAction');
-    action.innerHTML = '';
-    const startBtn = document.createElement('button');
-    startBtn.className = 'btn-primary';
-    startBtn.textContent = I18N.t('start');
-    startBtn.onclick = () => beginWorkout();
-    action.appendChild(startBtn);
-
-    $('#wmCancel').onclick = () => endWorkout();
-  }
-
-  async function beginWorkout() {
-    if (!wk || wk.running) return;
-    wk.running = true;
-    wk.lastT = performance.now();
-    $('#wmAction').innerHTML = '';
-
-    let granted = true;
-    try {
-      if (window.DeviceMotionEvent && typeof DeviceMotionEvent.requestPermission === 'function') {
-        granted = (await DeviceMotionEvent.requestPermission()) === 'granted';
-      }
-    } catch (e) { granted = false; }
-
-    if (granted && window.DeviceMotionEvent) {
-      wk.handler = onMotion;
-      window.addEventListener('devicemotion', wk.handler);
-    }
-
-    $('#wmHint').textContent = wk.w.mode === 'hold' ? I18N.t('hint_hold') : I18N.t('hint_reps');
-
-    // إن لم تصل أي قراءة حركة خلال 1.6ث → بديل يدوي
-    wk.watchdog = setTimeout(() => { if (!wk.motionSeen) enableManual(); }, 1600);
-
-    if (wk.w.mode === 'hold') startHoldLoop();
-  }
-
-  function onMotion(e) {
-    if (!wk || !wk.running) return;
-    const a = e.accelerationIncludingGravity || e.acceleration;
-    if (!a) return;
-    const mag = Math.sqrt((a.x || 0) ** 2 + (a.y || 0) ** 2 + (a.z || 0) ** 2);
-    if (mag > 0.5) wk.motionSeen = true;   // قراءة حقيقية (جاذبية فعلية)
-    if (wk.lastMag !== null) {
-      const d = Math.abs(mag - wk.lastMag);
-      if (wk.w.mode === 'hold') {
-        wk.moving = d > HOLD_MOVE;
-      } else {
-        const now = performance.now();
-        if (d > REP_THRESHOLD && now - wk.lastPeak > REP_DEBOUNCE) { wk.lastPeak = now; addRep(); }
-      }
-    }
-    wk.lastMag = mag;
-  }
-
-  function addRep() {
-    if (!wk || !wk.running) return;
-    wk.count += 1;
-    renderWkRing(Math.min(1, wk.count / wk.target), wk.count);
-    haptic(20);
-    if (wk.count >= wk.target) completeWorkout();
-  }
-
-  function startHoldLoop() {
-    const step = () => {
-      if (!wk || !wk.running) return;
-      const now = performance.now();
-      const dt = (now - wk.lastT) / 1000; wk.lastT = now;
-      if (!wk.moving) wk.held += dt;
-      const pct = Math.min(1, wk.held / wk.w.seconds);
-      renderWkRing(pct, Math.max(0, Math.ceil(wk.w.seconds - wk.held)));
-      $('#wmHint').textContent = wk.moving ? I18N.t('hint_hold_move') : I18N.t('hint_hold_ok');
-      if (wk.held >= wk.w.seconds) { completeWorkout(); return; }
-      wk.raf = requestAnimationFrame(step);
-    };
-    wk.raf = requestAnimationFrame(step);
-  }
-
-  // بديل يدوي عند غياب مستشعر الحركة
-  function enableManual() {
-    if (!wk || !wk.running) return;
-    if (wk.handler) { window.removeEventListener('devicemotion', wk.handler); wk.handler = null; }
-    const action = $('#wmAction');
-    action.innerHTML = '';
-
-    if (wk.w.mode === 'hold') {
-      $('#wmHint').textContent = I18N.t('hint_manual_hold');
-      const b = document.createElement('button');
-      b.className = 'btn-primary wm-press';
-      b.textContent = I18N.t('press_hold');
-      action.appendChild(b);
-      let holding = false;
-      wk.lastT = performance.now();
-      const loop = () => {
-        if (!wk || !wk.running) return;
-        const now = performance.now();
-        const dt = (now - wk.lastT) / 1000; wk.lastT = now;
-        if (holding) wk.held += dt;
-        renderWkRing(Math.min(1, wk.held / wk.w.seconds), Math.max(0, Math.ceil(wk.w.seconds - wk.held)));
-        if (wk.held >= wk.w.seconds) { completeWorkout(); return; }
-        wk.raf = requestAnimationFrame(loop);
-      };
-      const dn = (e) => { e.preventDefault(); holding = true; b.classList.add('active'); };
-      const up = () => { holding = false; b.classList.remove('active'); };
-      b.addEventListener('pointerdown', dn);
-      b.addEventListener('pointerup', up);
-      b.addEventListener('pointerleave', up);
-      wk.raf = requestAnimationFrame(loop);
-    } else {
-      $('#wmHint').textContent = I18N.t('hint_manual_reps');
-      const b = document.createElement('button');
-      b.className = 'btn-primary wm-tap';
-      b.textContent = I18N.t('tap_rep');
-      action.appendChild(b);
-      b.addEventListener('click', () => {
-        const now = performance.now();
-        if (now - wk.lastPeak < 250) return;   // منع الضغط السريع جداً
-        wk.lastPeak = now; addRep();
-      });
-    }
-  }
-
-  function cleanupWk() {
-    if (!wk) return;
-    if (wk.handler) { window.removeEventListener('devicemotion', wk.handler); wk.handler = null; }
-    if (wk.watchdog) { clearTimeout(wk.watchdog); wk.watchdog = null; }
-    if (wk.raf) { cancelAnimationFrame(wk.raf); wk.raf = null; }
-  }
-
-  function endWorkout() {
-    cleanupWk();
-    if (wk) wk.running = false;
-    $('#workoutModal').classList.add('hidden');
-  }
-
-  function completeWorkout() {
-    if (!wk || !wk.running) return;
-    wk.running = false;
-    cleanupWk();
-    const w = wk.w;
-    renderWkRing(1, wk.w.mode === 'hold' ? '0' : wk.count);
-    $('#wmHint').textContent = I18N.t('verified');
-    $('#wmAction').innerHTML = '';
-    haptic([30, 40, 60]);
-    confettiBurst();
-
-    const oldLevel = levelOf(state.points);
-    state.points += w.points;
-    state.coins += w.coins;
-    state.totalWorkouts += 1;
-
-    // مكافأة تحدّي اليوم
-    let dailyMsg = null;
-    if (w.id === featuredWorkout().id && state.dailyDoneDay !== todayKey()) {
-      state.dailyDoneDay = todayKey();
-      state.points += DAILY_BONUS;
-      dailyMsg = I18N.t('toast_daily', { n: DAILY_BONUS });
-    }
-    save();
-
-    setTimeout(() => {
-      $('#workoutModal').classList.add('hidden');
-      renderTopbar();
-      renderHome();
-      toast(`<span class="ico star">${ICON('star', { size: 16 })}</span> +${w.points}　<span class="ico coin">${ICON('coin', { size: 16 })}</span> +${w.coins}`);
-      if (dailyMsg) setTimeout(() => toast(dailyMsg), 1400);
-      const newLevel = levelOf(state.points);
-      if (newLevel > oldLevel) setTimeout(() => levelUp(newLevel), 600);
-      else checkAchievements();
-    }, 1100);
-  }
-
-  // ===== المستوى والإنجازات =====
-  function levelUp(n) {
-    const bonus = n * 20;
-    state.coins += bonus;
-    save();
-    renderTopbar();
-    $('#luBadge').innerHTML = ICON('star', { size: 38 });
-    $('#luSub').textContent = I18N.t('levelup_sub', { n });
-    $('#luReward').innerHTML = `<span class="ico coin">${ICON('coin', { size: 20 })}</span> ${I18N.t('reward_coins', { n: bonus })}`;
-    $('#levelModal').classList.remove('hidden');
-    confettiBurst();
-    haptic([30, 40, 80]);
-    $('#luClose').onclick = () => { $('#levelModal').classList.add('hidden'); checkAchievements(); };
-  }
-
-  function checkAchievements() {
-    if (!state.unlocked) state.unlocked = [];
-    const newly = [];
-    ACHIEVEMENTS.forEach(a => {
-      if (!state.unlocked.includes(a.id) && a.check(state)) {
-        state.unlocked.push(a.id);
-        state.coins += a.reward;
-        newly.push(a);
-      }
-    });
-    if (newly.length) {
-      save();
-      renderTopbar();
-      renderProfile();
-      newly.forEach((a, i) => setTimeout(() =>
-        toast(`${ICON('check', { size: 16 })} ${I18N.t('ach_unlocked', { name: I18N.loc(a, 'name') })}`), 500 * i));
-    }
-  }
-
-  // ===== الملف الشخصي =====
-  function renderProfile() {
-    if (!state) return;
-    $('#profileName').textContent = state.name;
-    $('#profileRank').textContent = computeRank();
-    const ava = $('#profileAva');
-    ava.style.background = avatarColor(state.name);
-    ava.textContent = initials(state.name);
-
-    const owned = state.owned.filter(id => { const it = SHOP.find(s => s.id === id); return it && !it.default; }).length;
-    const rows = [
-      { icon: 'star',     color: 'star',   label: I18N.t('total_points'),   val: fmt(state.points) },
-      { icon: 'flame',    color: 'c-pink', label: I18N.t('streak'),         val: state.streak },
-      { icon: 'dumbbell', color: 'c-green',label: I18N.t('workouts_done'),  val: state.totalWorkouts },
-      { icon: 'tshirt',   color: 'c-blue', label: I18N.t('owned'),          val: owned },
-    ];
-    $('#profileStats').innerHTML = rows.map(r => `
-      <div class="stat-row">
-        <span class="sr-ico ${r.color}">${ICON(r.icon, { size: 20 })}</span>
-        <span class="sr-label">${r.label}</span>
-        <span class="sr-val">${r.val}</span>
-      </div>`).join('');
-
-    const unlocked = state.unlocked || [];
-    $('#achProgress').textContent = I18N.t('ach_progress', { n: unlocked.length, m: ACHIEVEMENTS.length });
-    $('#achGrid').innerHTML = ACHIEVEMENTS.map(a => {
-      const on = unlocked.includes(a.id);
-      return `<div class="ach ${on ? 'on' : 'off'}">
-        <span class="ach-ico">${ICON(on ? a.icon : 'ring', { size: 24 })}</span>
-        <span class="ach-name">${I18N.loc(a, 'name')}</span>
-        <span class="ach-desc">${on ? I18N.loc(a, 'desc') : `+${a.reward}`}</span>
+    <h3 class="d-sec">${t('mon.zones')}</h3>
+    ${S.monZones.map(z => {
+      const low = z.moisture < 40;
+      return `<div class="zrow card">
+        <div class="zrow-id ${zStatus(z)}">${z.id}</div>
+        <div class="zrow-b"><b>${t(z.cropKey)}</b><div class="zbar"><div class="zfill ${low ? 'low' : ''}" style="width:${z.moisture}%"></div></div></div>
+        <div class="zrow-m"><b class="${low ? 'c-red' : ''}">${z.moisture}%</b><button class="mini-btn ghost" data-action="zone-irrigate" data-id="${z.id}">${t('mon.irrigate')}</button></div>
       </div>`;
-    }).join('');
+    }).join('')}
+  </div>`;
+}
 
-    updateSettingsUI();
+/* ---------- marketplace ---------- */
+function screenMarketplace() {
+  const list = PRODUCTS.filter(p => S.mktFilter === 'all' || p.cat === S.mktFilter);
+  return `${gheadBack('mkt.title')}
+  <div class="scroll flat">
+    <div class="filters">${MKT_FILTERS.map(([c, k]) => `<button class="fchip ${S.mktFilter === c ? 'on' : ''}" data-action="mkt-filter" data-cat="${c}">${t(k)}</button>`).join('')}</div>
+    <button class="btn-green sell-btn" data-action="toast-soon">${icon('plus')}${t('mkt.sell')}</button>
+    ${list.map(p => `<div class="prod card">
+      <div class="prod-th" style="--hue:${p.hue}">${icon('leaf')}</div>
+      <div class="prod-b"><b>${t(p.nameKey)}</b><small>${t('mkt.seller')}: ${p.seller}</small>${p.hot ? `<span class="hot">${icon('trend')}${t('mkt.demand')}</span>` : ''}</div>
+      <div class="prod-p">AED ${p.price}</div>
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ---------- rewards ---------- */
+function screenRewards() {
+  return `${gheadBack('rew.title')}
+  <div class="scroll flat">
+    <div class="pts-card"><span class="pts-ic">${icon('trophy')}</span><div><b>${POINTS}</b><small>${t('rew.season')}</small></div></div>
+    <div class="card pad chal"><div class="chal-top">${icon('spark')}<b>${t('rew.challenge')}</b></div>
+      <p>${t('rew.c1')}</p><div class="zbar"><div class="zfill" style="width:66%"></div></div><small class="muted">2 / 3</small></div>
+    <h3 class="d-sec">${t('rew.earn')}</h3>
+    <div class="list card">${['rew.e1', 'rew.e2', 'rew.e3'].map(k => `<div class="row static"><span class="r-ico green">${icon('check')}</span><span>${t(k)}</span></div>`).join('')}</div>
+    <h3 class="d-sec">${t('rew.redeem')}</h3>
+    ${REDEEMS.map(r => `<div class="prod card">
+      <div class="prod-th" style="--hue:${r.hue}">${icon('gift')}</div>
+      <div class="prod-b"><b>${t(r.key)}</b><small>${t('rew.pts', { n: r.pts })}</small></div>
+      <button class="mini-btn ${POINTS >= r.pts ? '' : 'dis'}" data-action="toast-soon">${t('rew.redeemBtn')}</button>
+    </div>`).join('')}
+    <h3 class="d-sec">${t('rew.badges')}</h3>
+    <div class="badges">${BADGES.map(b => `<div class="badge ${b.earned ? 'on' : ''}"><span>${icon(b.icon)}</span><small>${t(b.key)}</small></div>`).join('')}</div>
+  </div>`;
+}
+
+/* ---------- devices ---------- */
+function screenDevices() {
+  const tone = { active: 'green', offline: 'amber', error: 'red' };
+  return `${gheadBack('dev.title')}
+  <div class="scroll flat">
+    <button class="btn-green sell-btn" data-action="toast-soon">${icon('plus')}${t('dev.add')}</button>
+    <div class="list card">${DEVICES.map(d => `<div class="row static">
+      <span class="r-ico ${tone[d.status]}">${icon('chip')}</span>
+      <div class="dev-b"><b>${d.id}</b><small>${t('dev.zone')} ${d.zone.replace('Z', '')} · ${d.loc}</small></div>
+      <span class="dstat ${tone[d.status]}"><i></i>${t('dev.' + d.status)}</span>
+    </div>`).join('')}</div>
+    <div class="aitip card">${icon('spark')}<div><b>${t('dev.aiTitle')}</b><p>${t('dev.aiBody')}</p></div></div>
+  </div>`;
+}
+
+/* ---------- AI iteration log ---------- */
+function screenLog() {
+  const tone = { accepted: 'green', dismissed: 'red', pending: 'amber' };
+  return `${gheadBack('log.title')}
+  <div class="scroll flat">
+    <p class="muted log-intro">${t('log.intro')}</p>
+    <button class="btn-ghost exp-btn" data-action="toast-soon">${icon('chart')}${t('log.export')}</button>
+    <div class="list card">${AI_LOG.map(e => `<div class="logrow">
+      <span class="r-ico ${tone[e.resp]}">${icon('spark')}</span>
+      <div class="dev-b"><b>${t(e.key)}</b><small>${e.time}${e.zone === '—' ? '' : ' · ' + t('dev.zone') + ' ' + e.zone.replace('Z', '')}</small></div>
+      <span class="rtag ${e.resp}">${t('log.' + e.resp)}</span>
+    </div>`).join('')}</div>
+  </div>`;
+}
+
+/* ---------- messages (inbox + thread) ---------- */
+function threadLast(th) {
+  const a = S.threadMsgs[th.id] || [];
+  const last = a.length ? a[a.length - 1] : th.seed[th.seed.length - 1];
+  return last.text || t(last.key);
+}
+function screenMessages() {
+  return `${gheadBack('msg.title')}
+  <div class="scroll flat">
+    <div class="list card">${THREADS.map(th => `<button class="row inbox" data-action="open-thread" data-id="${th.id}">
+      <span class="prod-th" style="--hue:${th.hue}">${icon('user')}</span>
+      <div class="dev-b"><b>${th.name}</b><small>${threadLast(th)}</small></div>
+      <span class="role-tag">${t('msg.' + th.role)}</span>
+    </button>`).join('')}</div>
+  </div>`;
+}
+function screenThread() {
+  const th = THREADS.find(x => x.id === S.currentThreadId) || THREADS[0];
+  const msgs = th.seed.concat(S.threadMsgs[th.id] || []);
+  return `<header class="ghead detail"><div class="ghead-row">
+    <button class="bell" data-action="go" data-route="messages">${icon('back', flip())}</button>
+    <b class="center">${th.name}</b><span class="sp"></span></div></header>
+  <div class="scroll chatscroll msgscroll">
+    <div class="chat">${msgs.map(m => `<div class="msg ${m.role === 'me' ? 'user' : 'bot'}">${m.role !== 'me' ? '<span class="m-ava">' + icon('user') + '</span>' : ''}<div class="bubble">${m.text || t(m.key)}</div></div>`).join('')}</div>
+  </div>
+  <div class="composer">
+    <input id="msgInput" placeholder="${t('msg.placeholder')}" autocomplete="off">
+    <button class="ai-send" data-action="msg-send" aria-label="send">${icon('send')}</button>
+  </div>`;
+}
+function msgSend() {
+  const id = S.currentThreadId; const text = val('msgInput'); if (!id || !text) return;
+  S.threadMsgs[id] = S.threadMsgs[id] || [];
+  S.threadMsgs[id].push({ role: 'me', text });
+  S.threadMsgs[id].push({ role: 'them', key: 'msg.reply' });
+  save(); render();
+  const sc = document.querySelector('.msgscroll'); if (sc) sc.scrollTop = sc.scrollHeight;
+}
+
+/* ---------- contracts ---------- */
+function screenContracts() {
+  return `${gheadBack('ct.title')}
+  <div class="scroll flat">
+    <button class="btn-green sell-btn" data-action="toast-soon">${icon('plus')}${t('ct.new')}</button>
+    ${CONTRACTS.map(c => `<div class="contract card">
+      <div class="ct-top"><b>${c.party}</b><span class="rtag ${c.status}">${t('ct.' + c.status)}</span></div>
+      <div class="ct-mid">${t(c.cropKey)} · ${c.qty} kg · AED ${c.price}${t('ct.per')}</div>
+      ${c.status === 'pending' ? `<button class="mini-btn ghost" data-action="toast-soon">${t('ct.counter')}</button>` : ''}
+    </div>`).join('')}
+  </div>`;
+}
+
+/* ---------- toast ---------- */
+function toast(msg) {
+  const host = document.getElementById('app'); if (!host) return;
+  const d = document.createElement('div'); d.className = 'toast'; d.textContent = msg; host.appendChild(d);
+  setTimeout(() => d.classList.add('show'), 10);
+  setTimeout(() => { d.classList.remove('show'); setTimeout(() => d.remove(), 250); }, 2800);
+}
+
+/* ---------- bottom sheet (lang / location) ---------- */
+function renderSensorSheet() {
+  const z = S.monZones.find(x => x.id === sensorId) || S.monZones[0];
+  const low = z.moisture < 40, acidic = z.ph < 6;
+  const rec = low ? t('sen.recLow') : acidic ? t('sen.recAcidic') : t('sen.healthy');
+  const crops = ['crop.tomato', 'crop.dates', 'crop.wheat', 'crop.maize', 'crop.potato'];
+  const cell = (ic, lbl, id, val) => `<div class="sn-cell">${icon(ic)}<small>${lbl}</small><b id="${id}">${val}</b></div>`;
+  return `<div class="sheet-mask" data-action="closesheet"></div>
+  <div class="sheet sensor-sheet"><div class="grip"></div>
+    <div class="sn-head"><span class="sn-pin ${z.status}">${z.id}</span><div><b>${t(z.cropKey)}</b><small><i class="d-on"></i>${t('sen.live')}</small></div></div>
+    <div class="sn-grid">
+      ${cell('drop', t('mon.moisture'), 'sn-moist', Math.round(z.moisture) + '%')}
+      ${cell('temp', t('sen.temp'), 'sn-temp', z.temp.toFixed(0) + '°C')}
+      ${cell('humid', t('sen.humid'), 'sn-humid', z.humidity.toFixed(0) + '%')}
+      ${cell('flask', t('sen.ph'), 'sn-ph', z.ph.toFixed(1))}
+      ${cell('leaf', t('sen.npk'), 'sn-npk', z.n + '-' + z.p + '-' + z.k)}
+    </div>
+    <div class="zbar sn-bar-wrap"><div id="sn-bar" class="zfill ${low ? 'low' : ''}" style="width:${z.moisture}%"></div></div>
+    <div class="airec-body sn-rec"><span class="ai-bulb">${icon('spark')}</span><p>${rec}</p></div>
+    <label class="sn-lbl">${t('sen.crop')}</label>
+    <div class="filters">${crops.map(c => `<button class="fchip ${z.cropKey === c ? 'on' : ''}" data-action="sensor-crop" data-id="${z.id}" data-crop="${c}">${t(c)}</button>`).join('')}</div>
+    <button class="btn-green" data-action="zone-irrigate" data-id="${z.id}">${icon('drop')} ${t('mon.irrigate')}</button>
+  </div>`;
+}
+
+function renderSheet() {
+  if (sheet === 'sensor') return renderSensorSheet();
+  let title = '', rows = '';
+  if (sheet === 'lang') {
+    title = t('set.language');
+    rows = LANGS.map(l => `<button class="sheet-row ${l.code === CURRENT_LANG ? 'sel' : ''}" data-action="setlang" data-lang="${l.code}">
+      <span class="flag">${l.flag}</span><b>${l.native}</b><small>${l.name}</small>${l.code === CURRENT_LANG ? icon('check', 'c-green') : ''}</button>`).join('');
+  } else {
+    const list = sheet === 'country' ? COUNTRIES.map(c => c.name)
+      : sheet === 'state' ? (countryObj() ? countryObj().states.map(s => s.name) : [])
+      : (stateObj() ? stateObj().cities : []);
+    title = t('farm.' + sheet);
+    rows = list.length ? list.map(n => `<button class="sheet-row" data-action="pick" data-kind="${sheet}" data-val="${n}"><b>${n}</b></button>`).join('')
+      : `<p class="sheet-empty">—</p>`;
   }
+  return `<div class="sheet-mask" data-action="closesheet"></div>
+    <div class="sheet"><div class="grip"></div><h3>${title}</h3><div class="sheet-list">${rows}</div></div>`;
+}
+function countryObj() { return COUNTRIES.find(c => c.name === wizardData.country); }
+function stateObj() { const c = countryObj(); return c ? c.states.find(s => s.name === wizardData.state) : null; }
 
-  // ===== احتفال confetti نيون =====
-  function confettiBurst() {
-    const cv = document.createElement('canvas');
-    cv.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:80';
-    cv.width = window.innerWidth; cv.height = window.innerHeight;
-    document.body.appendChild(cv);
-    const ctx = cv.getContext('2d');
-    const colors = ['#00f5a0', '#00d4ff', '#ff2d8e', '#a855ff', '#ffd23f'];
-    const parts = [];
-    for (let i = 0; i < 110; i++) {
-      parts.push({
-        x: cv.width / 2, y: cv.height * 0.42,
-        vx: (Math.random() - 0.5) * 12, vy: (Math.random() * -1 - 0.4) * 11,
-        r: 3 + Math.random() * 4, c: colors[i % colors.length],
-        rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.5,
-      });
-    }
-    let f = 0;
-    (function anim() {
-      f++; ctx.clearRect(0, 0, cv.width, cv.height);
-      parts.forEach(p => {
-        p.vy += 0.4; p.x += p.vx; p.y += p.vy; p.rot += p.vr;
-        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
-        ctx.fillStyle = p.c; ctx.fillRect(-p.r, -p.r, p.r * 2, p.r * 2);
-        ctx.restore();
-      });
-      if (f < 95) requestAnimationFrame(anim); else cv.remove();
-    })();
+/* ---------- events ---------- */
+document.addEventListener('click', (e) => {
+  const el = e.target.closest('[data-action]'); if (!el) return;
+  const a = el.dataset.action, d = el.dataset;
+
+  const map = {
+    'openlang': () => { sheet = 'lang'; render(); },
+    'closesheet': () => { sheet = null; render(); },
+    'setlang': () => { setLang(d.lang); sheet = null; render(); },
+    'ob-next': () => { obIndex++; render(); },
+    'ob-skip': () => { obIndex = ONBOARDING.length - 1; render(); },
+    'ob-done': () => { S.onboarded = true; save(); render(); },
+    'to-signup': () => { authScreen = 'signup'; render(); },
+    'to-login': () => { authScreen = 'login'; render(); },
+    'go-forgot': () => { authScreen = 'forgotEmail'; render(); },
+    'auth-back': () => { authScreen = authScreen === 'reset' ? 'otp' : authScreen === 'otp' ? 'forgotEmail' : 'login'; render(); },
+    'do-login': () => { if (BK.enabled) return doAuthRemote('login'); S.user = { name: val('login_id') || 'Jacob Jones', email: (val('login_id') || 'jacob@falajae.com') }; S.farm = S.farm || demoFarm(); save(); render(); },
+    'do-signup': () => { if (BK.enabled) return doAuthRemote('signup'); S.user = { name: val('su_name') || 'Jacob Jones', email: val('su_email') || 'jacob@falajae.com' }; S.farm = null; wizardStep = 1; wizardData = {}; save(); render(); },
+    'send-code': () => { authScreen = 'otp'; render(); setTimeout(() => { const f = document.getElementById('otp0'); if (f) f.focus(); }, 30); },
+    'verify-otp': () => { authScreen = 'reset'; render(); },
+    'save-pass': () => { if (val('rs_pw') && val('rs_pw') !== val('rs_pw2')) { const e2 = document.getElementById('rsErr'); if (e2) e2.classList.remove('hidden'); return; } authScreen = 'login'; render(); },
+    'togglepw': () => togglePw(d.target, el),
+    'wiz-skip': () => { S.farm = demoFarm(); save(); render(); },
+    'wiz-next': () => { captureStep1(); wizardStep = 2; render(); },
+    'wiz-finish': () => { captureStep2(); finishWizard(); },
+    'wiz-clear': () => { wizardData = {}; render(); },
+    'wiz-field': () => { captureStep1(); wizardStep = 'field'; render(); },
+    'wiz-to1': () => { wizardStep = 1; render(); },
+    'wiz-savefield': () => { wizardData.field = true; wizardStep = 1; render(); },
+    'wiz-clearfield': () => { wizardData.field = false; render(); },
+    'opensel': () => { sheet = d.kind; render(); },
+    'pick': () => pickLoc(d.kind, d.val),
+    'go': () => { S.route = d.route; save(); render(); },
+    'open-field': () => { S.currentFieldId = d.id; S.route = 'fieldDetail'; save(); render(); },
+    'add-field': () => { wizardStep = 1; wizardData = {}; S.farm = null; save(); render(); },
+    'clear-notif': () => { S.notifEmpty = true; save(); render(); },
+    'ai-send': () => aiSend(),
+    'ai-suggest': () => aiSend(t(d.q)),
+    'zone-irrigate': () => { const z = S.monZones.find(x => x.id === d.id); if (z) { z.moisture = 78; z.status = 'ok'; } save(); render(); if (z) toast(t('toast.irrigated', { z: zoneLabel(z) })); },
+    'open-sensor': () => { sensorId = d.id; sheet = 'sensor'; render(); },
+    'sensor-crop': () => { const z = S.monZones.find(x => x.id === d.id); if (z) z.cropKey = d.crop; save(); render(); if (z) toast(t('toast.crop', { c: t(d.crop) })); },
+    'ai-why': () => { const w = worstZone(); toast(w && w.moisture < MOIST_MIN ? t('mon.whyDyn', { z: zoneLabel(w), n: Math.round(w.moisture) }) : t('mon.allHealthy')); },
+    'mkt-filter': () => { S.mktFilter = d.cat; save(); render(); },
+    'toast-soon': () => toast(t('common.soon')),
+    'open-thread': () => { S.currentThreadId = d.id; S.route = 'thread'; save(); render(); },
+    'msg-send': () => msgSend(),
+    'logout': () => { if (BK.enabled) BK.signOut(); S.user = null; S.farm = null; S.route = 'home'; authScreen = 'login'; save(); render(); },
+  };
+  if (map[a]) map[a]();
+});
+
+// live password rules + otp advance + confirm-match
+document.addEventListener('input', (e) => {
+  const el = e.target;
+  if (el.dataset && el.dataset.rules) updateRules(el.value);
+  if (el.classList && el.classList.contains('otp-box')) {
+    el.value = el.value.replace(/\D/g, '');
+    if (el.value) { const nx = document.getElementById('otp' + (Number(el.dataset.i) + 1)); if (nx) nx.focus(); }
   }
+});
 
-  // ===== المتجر =====
-  function bindShop() {
-    // تبويبات الفئات
-    const tabs = $('#shopTabs');
-    tabs.innerHTML = '';
-    SHOP_CATS.forEach(cat => {
-      const b = document.createElement('button');
-      b.className = 'shop-tab' + (cat.id === state.shopFilter ? ' active' : '');
-      b.textContent = I18N.loc(cat, 'name');
-      b.addEventListener('click', () => {
-        state.shopFilter = cat.id;
-        save();
-        renderShop();
-      });
-      tabs.appendChild(b);
-    });
-
-    $('#watchAdBtn').addEventListener('click', watchRewardVideo);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && e.target) {
+    if (e.target.id === 'aiInput') { e.preventDefault(); aiSend(); }
+    else if (e.target.id === 'msgInput') { e.preventDefault(); msgSend(); }
   }
+});
 
-  function renderShop() {
-    // تحديث حالة التبويبات النشطة
-    Array.from($('#shopTabs').children).forEach((b, i) => {
-      b.classList.toggle('active', SHOP_CATS[i].id === state.shopFilter);
-    });
-
-    const grid = $('#shopGrid');
-    grid.innerHTML = '';
-    SHOP.filter(i => i.cat === state.shopFilter).forEach(item => {
-      const owned = state.owned.includes(item.id);
-      const equipped = state.equipped[item.cat] === item.id;
-      const el = document.createElement('div');
-      el.className = 'shop-item';
-
-      let btnLabel, btnClass = 'si-btn', disabled = '';
-      if (equipped) { btnLabel = I18N.t('equipped'); btnClass += ' equipped'; disabled = 'disabled'; }
-      else if (owned) { btnLabel = I18N.t('equip'); btnClass += ' owned'; }
-      else { btnLabel = `${I18N.t('buy')} · ${item.price}`; btnClass += ' buy'; if (state.coins < item.price) disabled = 'disabled'; }
-
-      // لون التمثيل: فاتح؟ استخدم أيقونة داكنة، والعكس
-      const light = isLightColor(item.color);
-      const iconColor = light ? '#1c1c1e' : '#ffffff';
-
-      el.innerHTML = `
-        ${equipped ? `<span class="si-check">${ICON('check', { size: 14 })}</span>` : ''}
-        <div class="si-tile" style="background:${item.color}">${ICON(item.icon, { size: 30, color: iconColor })}</div>
-        <div class="si-name">${I18N.loc(item, 'name')}</div>
-        <div class="si-price">${item.price === 0 ? I18N.t('free') : `<span class="ico coin">${ICON('coin', { size: 14 })}</span> ${item.price}`}</div>
-        <button class="${btnClass}" ${disabled}>${btnLabel}</button>`;
-
-      const btn = el.querySelector('button');
-      if (!disabled) {
-        btn.addEventListener('click', () => {
-          if (owned) equip(item);
-          else buy(item);
-        });
-      }
-      grid.appendChild(el);
-    });
+function val(id) { const e = document.getElementById(id); return e ? e.value.trim() : ''; }
+function togglePw(id, btn) {
+  const e = document.getElementById(id); if (!e) return;
+  e.type = e.type === 'password' ? 'text' : 'password';
+  btn.innerHTML = icon(e.type === 'password' ? 'eye' : 'eyeoff');
+}
+function updateRules(v) {
+  const set = (k, ok) => { const el = document.getElementById('rule_' + k); if (el) el.classList.toggle('ok', ok); };
+  set('min', v.length >= 8);
+  set('case', /[a-z]/.test(v) && /[A-Z]/.test(v));
+  set('special', /[^A-Za-z0-9]/.test(v));
+}
+function captureStep1() { wizardData.name = val('w_name') || wizardData.name; wizardData.pincode = val('w_pin') || wizardData.pincode; }
+function captureStep2() { ['w_wu', 'w_wc', 'w_mr', 'w_ar', 'w_me', 'w_ae', 'w_oe', 'w_ct', 'w_d'].forEach(id => { const v = val(id); if (v) wizardData[id] = v; }); }
+function pickLoc(kind, v) {
+  if (kind === 'country') { wizardData.country = v; wizardData.state = null; wizardData.city = null; }
+  else if (kind === 'state') { wizardData.state = v; wizardData.city = null; }
+  else wizardData.city = v;
+  sheet = null; render();
+}
+function demoFarm() { return { name: 'Al Ain Grove', country: 'United Arab Emirates', state: 'Abu Dhabi', city: 'Al Ain' }; }
+function finishWizard() {
+  if (!S.farm) S.farm = { name: wizardData.name || 'My Farm', country: wizardData.country, state: wizardData.state, city: wizardData.city };
+  // create a field from wizard input so the user sees their farm
+  if (wizardData.name) {
+    const rev = Number((wizardData.w_mr || '').replace(/\D/g, '')) || 8000;
+    S.fields.unshift({ id: 'u' + Date.now(), name: wizardData.name, cropKey: 'crop.tomato',
+      water: 70, expense: Number((wizardData.w_me || '').replace(/\D/g, '')) || 3000, revenue: rev, revChange: 4,
+      health: 'good', planting: '01/06/2026', harvest: 3, consumption: 2400, workTime: 180, hectares: 60,
+      bars: [22, 26, 20, 28, 24, 30, 23], exp: { seeds: 38, fertilizer: 26, pesticide: 22, chemicals: 14 }, hue: 96 });
   }
+  S._addField = false; wizardStep = 1; wizardData = {}; S.route = 'home'; save(); render();
+}
 
-  function buy(item) {
-    if (state.coins < item.price) {
-      toast(I18N.t('toast_no_coins'));
-      return;
-    }
-    state.coins -= item.price;
-    state.owned.push(item.id);
-    state.equipped[item.cat] = item.id;
-    save();
-    renderTopbar();
-    renderShop();
-    renderHome();
-    toast(I18N.t('toast_bought', { name: I18N.loc(item, 'name') }));
-    checkAchievements();
-  }
+/* ---------- backend auth ---------- */
+function mapUser(u) {
+  const name = (u.user_metadata && u.user_metadata.name) || (u.email || '').split('@')[0];
+  return { name, email: u.email || '' };
+}
+async function doAuthRemote(mode) {
+  const email = mode === 'login' ? val('login_id') : val('su_email');
+  const pw = mode === 'login' ? val('login_pw') : val('su_pw');
+  if (!email || !pw) { toast(t('auth.' + (mode === 'login' ? 'login' : 'signup'))); return; }
+  const res = mode === 'login' ? await BK.signIn(email, pw) : await BK.signUp(email, pw, val('su_name'));
+  if (res.error) { toast(res.error); return; }
+  if (res.needsConfirm) { toast(t('auth.otpHint')); authScreen = 'login'; render(); return; }
+  S.user = mapUser(res.user || BK.user);
+  const remote = await BK.pull();
+  if (remote) { const u = S.user; Object.assign(S, remote); S.user = u; }
+  else if (mode === 'signup') { S.farm = null; wizardStep = 1; wizardData = {}; }
+  S.route = 'home'; save(); render();
+}
 
-  function equip(item) {
-    state.equipped[item.cat] = item.id;
-    save();
-    renderShop();
-    renderHome();
-    toast(`${ICON('check', { size: 16 })} ${I18N.t('toast_equipped', { name: I18N.loc(item, 'name') })}`);
+/* ---------- live sensor simulation ---------- */
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function setTxt(id, v) { const e = document.getElementById(id); if (e) e.textContent = v; }
+function sensorTick() {
+  if (!S || !S.monZones) return;
+  S.monZones.forEach(z => {
+    z.moisture = clamp(z.moisture + rnd(-1.0, 0.8), 6, 96);
+    z.temp = clamp(z.temp + rnd(-0.3, 0.3), 20, 45);
+    z.humidity = clamp(z.humidity + rnd(-1, 1), 20, 82);
+    z.ph = clamp(z.ph + rnd(-0.05, 0.05), 4.5, 8.5);
+  });
+  if (sheet === 'sensor') {
+    const z = S.monZones.find(x => x.id === sensorId); if (!z) return;
+    setTxt('sn-moist', Math.round(z.moisture) + '%');
+    setTxt('sn-temp', z.temp.toFixed(0) + '°C');
+    setTxt('sn-humid', z.humidity.toFixed(0) + '%');
+    setTxt('sn-ph', z.ph.toFixed(1));
+    const bar = document.getElementById('sn-bar'); if (bar) bar.style.width = z.moisture + '%';
   }
+}
 
-  // ===== فيديو المكافأة =====
-  function watchRewardVideo() {
-    const modal = $('#adModal');
-    const countEl = $('#adCount');
-    modal.classList.remove('hidden');
-    let n = 5;
-    countEl.textContent = n;
-    const iv = setInterval(() => {
-      n -= 1;
-      countEl.textContent = n;
-      if (n <= 0) {
-        clearInterval(iv);
-        modal.classList.add('hidden');
-        state.coins += REWARD_VIDEO_COINS;
-        save();
-        renderTopbar();
-        renderShop();
-        toast(`<span class="ico coin">${ICON('coin', { size: 16 })}</span> ${I18N.t('toast_reward', { n: REWARD_VIDEO_COINS })}`);
-      }
-    }, 1000);
-  }
-
-  // ===== التصنيف العالمي =====
-  function buildLeaderboard() {
-    const me = { name: state.name, country: 'الإمارات', country_en: 'UAE', points: state.points, me: true };
-    const bots = BOTS.map(b => ({ name: b.name, name_en: b.name_en, country: b.country, country_en: b.country_en, points: b.base, me: false }));
-    const all = bots.concat(me);
-    all.sort((a, b) => b.points - a.points);
-    return all;
-  }
-
-  function computeRank() {
-    const all = buildLeaderboard();
-    return all.findIndex(p => p.me) + 1;
-  }
-
-  function renderLeaderboard() {
-    const all = buildLeaderboard();
-    const list = $('#leaderboardList');
-    list.innerHTML = '';
-    all.forEach((p, i) => {
-      const rank = i + 1;
-      const row = document.createElement('div');
-      row.className = 'lb-row' + (p.me ? ' me' : '') + (rank <= 3 ? ' top' + rank : '');
-      const nm = I18N.loc(p, 'name');
-      row.innerHTML = `
-        <div class="lb-rank">${rank}</div>
-        <div class="lb-ava" style="background:${avatarColor(p.name)}">${initials(nm)}</div>
-        <div class="lb-info">
-          <div class="lb-name">${p.me ? nm + ' ' + I18N.t('you') : nm}</div>
-          <div class="lb-country">${I18N.loc(p, 'country')}</div>
-        </div>
-        <div class="lb-pts">${fmt(p.points)} <span class="ico star">${ICON('star', { size: 14 })}</span></div>`;
-      list.appendChild(row);
-    });
-  }
-
-  // ===== Toast =====
-  let toastTimer = null;
-  function toast(msg) {
-    const t = $('#toast');
-    t.innerHTML = msg;
-    t.classList.remove('hidden');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.add('hidden'), 2200);
-  }
-
-  // ===== أدوات الأيقونات/الألوان =====
-  function fillIcons(root) {
-    (root || document).querySelectorAll('[data-icon]').forEach(el => {
-      if (el.dataset.filled) return;
-      el.innerHTML = ICON(el.dataset.icon, { size: parseInt(el.dataset.iconSize || '24', 10) });
-      el.dataset.filled = '1';
-    });
-  }
-  function ringSVG(pct, opts) {
-    opts = opts || {};
-    const size = opts.size || 96, sw = opts.stroke || 10;
-    const r = (size - sw) / 2, cx = size / 2;
-    const c = 2 * Math.PI * r;
-    const off = c * (1 - Math.max(0, Math.min(1, pct / 100)));
-    const center = opts.center !== undefined ? opts.center : Math.round(pct) + '%';
-    return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" style="stroke:var(--surface-3)" stroke-width="${sw}"/>
-      <circle cx="${cx}" cy="${cx}" r="${r}" fill="none" stroke="url(#ringGrad)" stroke-width="${sw}"
-        stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${off.toFixed(1)}"
-        transform="rotate(-90 ${cx} ${cx})" filter="url(#ringGlow)"/>
-      ${center ? `<text x="${cx}" y="${cx}" text-anchor="middle" dominant-baseline="central" style="fill:var(--label)" font-size="${(size * 0.26).toFixed(0)}" font-weight="800">${center}</text>` : ''}
-    </svg>`;
-  }
-  function initials(name) {
-    const parts = String(name).trim().split(/\s+/);
-    const a = parts[0] ? parts[0][0] : '';
-    const b = parts[1] ? parts[1][0] : '';
-    return (a + b) || a || '؟';
-  }
-  const AVA_COLORS = ['#0a84ff', '#30d158', '#ff9f0a', '#ff375f', '#bf5af0', '#40c8e0', '#ff453a', '#5e5ce6'];
-  function avatarColor(name) {
-    let h = 0;
-    for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-    return AVA_COLORS[h % AVA_COLORS.length];
-  }
-  function isLightColor(hex) {
-    const c = hex.replace('#', '');
-    const r = parseInt(c.substr(0, 2), 16), g = parseInt(c.substr(2, 2), 16), b = parseInt(c.substr(4, 2), 16);
-    return (0.299 * r + 0.587 * g + 0.114 * b) > 150;
-  }
-
-  // ===== تشغيل =====
-  document.addEventListener('DOMContentLoaded', init);
-})();
+/* ---------- boot ---------- */
+loadState();
+setLang(CURRENT_LANG);
+if (BK.enabled) {
+  S.user = null;            // trust the backend session, not local cache
+  render();
+  BK.init().then(async (u) => {
+    if (u) { S.user = mapUser(u); const r = await BK.pull(); if (r) { const uu = S.user; Object.assign(S, r); S.user = uu; } }
+    render();
+  }).catch(() => render());
+} else {
+  render();
+}
+setInterval(sensorTick, 2500);
