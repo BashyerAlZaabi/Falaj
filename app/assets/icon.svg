@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="FALAJ">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1c2a56"/>
+      <stop offset="1" stop-color="#101830"/>
+    </linearGradient>
+    <linearGradient id="leaf" x1="0.15" y1="0.1" x2="0.85" y2="0.95">
+      <stop offset="0" stop-color="#63d182"/>
+      <stop offset="1" stop-color="#2f8f4e"/>
+    </linearGradient>
+    <linearGradient id="drop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fe3f5"/>
+      <stop offset="1" stop-color="#3aa6c2"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <!-- leaf, centred with maskable safe padding -->
+  <path d="M256 116c-86 24-138 82-138 158 0 62 44 108 104 116-30-60-30-118 10-176-34 66-30 122-2 168 78-6 132-62 132-150 0-78-52-136-106-116z" fill="url(#leaf)"/>
+  <path d="M232 396c-8-92 24-150 78-198" fill="none" stroke="#1c5236" stroke-width="12" stroke-linecap="round"/>
+  <!-- water droplet nestled on the leaf (falaj = irrigation) -->
+  <path d="M300 214c22 26 37 46 37 66a37 37 0 0 1-74 0c0-20 15-40 37-66z" fill="url(#drop)"/>
+  <path d="M289 268a14 14 0 0 0 9 12" fill="none" stroke="#eaf9ff" stroke-width="6" stroke-linecap="round" opacity="0.85"/>
+</svg>

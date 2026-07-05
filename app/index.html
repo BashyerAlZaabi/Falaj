@@ -9,6 +9,14 @@
   <meta http-equiv="Expires" content="0">
   <title>FALAJ — Smart Farming</title>
   <meta name="description" content="FALAJ — a smart IoT irrigation system that optimizes water usage in agriculture.">
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="FALAJ">
   <link rel="stylesheet" href="css/styles.css?v=20260624h">
 </head>
 <body>
@@ -20,5 +28,14 @@
   <script src="js/config.js?v=20260624h"></script>
   <script src="js/backend.js?v=20260624h"></script>
   <script src="js/app.js?v=20260624h"></script>
+
+  <script>
+    // Register the service worker for offline support (no-op on unsupported browsers).
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
 </body>
 </html>
