@@ -316,9 +316,10 @@ function renderApp() {
     case 'messages': body = screenMessages(); break;
     case 'thread': body = screenThread(); break;
     case 'contracts': body = screenContracts(); break;
+    case 'about': body = screenAbout(); break;
     default: body = screenHome();
   }
-  const showNav = S.route !== 'fieldDetail' && S.route !== 'notifications';
+  const showNav = S.route !== 'fieldDetail' && S.route !== 'notifications' && S.route !== 'about';
   return `<div class="app">${body}${showNav ? renderNav() : ''}</div>`;
 }
 function renderNav() {
@@ -487,6 +488,20 @@ function screenSettings() {
       <button class="row danger" data-action="logout"><span class="r-ico red">${icon('logout')}</span><span>${t('set.logout')}</span></button>
     </div>
     <div class="about-box card"><div class="ab-logo">${falajLogo('color', 26)}</div><p>${t('set.aboutBody')}</p></div>
+  </div>`;
+}
+
+/* ---------- about ---------- */
+function screenAbout() {
+  return `${gheadBack('set.about')}
+  <div class="scroll flat about-screen">
+    <div class="about-box card"><div class="ab-logo">${falajLogo('color', 40)}</div>
+      <p>${t('set.aboutBody')}</p></div>
+    <div class="list card">
+      ${ONBOARDING.map(s => `<div class="row static"><span class="r-ico green">${icon('leaf')}</span>
+        <div class="dev-b"><b>${t(s.titleKey)}</b><small>${t(s.bodyKey)}</small></div></div>`).join('')}
+    </div>
+    <p class="muted about-ver">FALAJ · v1.0 🇦🇪</p>
   </div>`;
 }
 
