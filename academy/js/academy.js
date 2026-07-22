@@ -20,9 +20,9 @@
   const AR = (n) => fmt(n).replace(/[0-9]/g, (d) => "٠١٢٣٤٥٦٧٨٩"[d]);
 
   /* resolve a `bg` token → CSS background layer(s) */
-  function bgFor(token) {
+  function bgFor(token, pos) {
     if (token.startsWith("img:"))
-      return `<div class="scene-photo hero-photo" style="background-image:url('${token.slice(4)}')"></div>`;
+      return `<div class="scene-photo hero-photo" style="background-image:url('${token.slice(4)}');background-position:${pos || "center"}"></div>`;
     if (token.startsWith("scene:")) {
       const fn = S[token.slice(6)];
       return fn ? `<div class="scene-layers">${fn()}</div>` : "";
@@ -38,7 +38,7 @@
         const soft = c.bg.startsWith("scene:") ? "soft" : "";
         return `<section class="scene chapter" data-scene>
           <div class="scene-sticky">
-            ${bgFor(c.bg)}
+            ${bgFor(c.bg, c.pos)}
             <div class="scene-veil ${soft}"></div>
             <div class="scene-content" data-scene-content>
               <span class="scene-kicker"><span class="dot"></span>${c.kicker}</span>
@@ -159,7 +159,7 @@
   /* ============================ WORKSHOP LIBRARY ============================ */
   function wsCard(w) {
     const cover = w.cover.startsWith("img:")
-      ? `<div class="ws-cover-art" style="background-image:url('${w.cover.slice(4)}')"></div>`
+      ? `<div class="ws-cover-art" style="background-image:url('${w.cover.slice(4)}');background-position:${w.coverPos || "center"}"></div>`
       : `<div class="ws-cover-art">${S[w.cover.slice(6)] ? S[w.cover.slice(6)]() : ""}</div>`;
     return `<article class="ws-card live reveal" data-open="${w.id}" tabindex="0" role="button" aria-label="ادخل ورشة ${w.title}">
       <div class="ws-cover">
@@ -241,7 +241,7 @@
 
   function coverArt(w) {
     return w.cover.startsWith("img:")
-      ? `<div class="wsh-art" style="background-image:url('${w.cover.slice(4)}')"></div>`
+      ? `<div class="wsh-art" style="background-image:url('${w.cover.slice(4)}');background-position:${w.coverPos || "center"}"></div>`
       : `<div class="wsh-art">${S[w.cover.slice(6)] ? S[w.cover.slice(6)]() : ""}</div>`;
   }
 
@@ -270,7 +270,7 @@
     // tips
     const tips = w.tips
       .map(
-        (t) => `<div class="amb"><div class="amb-av" style="background-image:url('academy/assets/farm-team.png')"></div>
+        (t) => `<div class="amb"><div class="amb-av" style="background-image:url('academy/assets/zayed-youth.jpg');background-position:82% 22%"></div>
         <div class="amb-body"><h4>${Icon("star")} نصيحة السفير</h4><div class="who">${t.who}</div><p>${t.text}</p></div></div>`
       )
       .join("");

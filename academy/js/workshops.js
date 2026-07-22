@@ -35,7 +35,8 @@
       category: "المهارات الزراعية",
       title: "ركّب الغصن… وكثّر الثمر",
       subtitle: "ورشة تطعيم وتقليم الأشجار",
-      cover: "scene:graft",
+      cover: "img:academy/assets/zayed-garden.jpg",
+      coverPos: "center 30%",
       icon: "scissors",
       duration: "٢٥ دقيقة",
       level: "مبتدئ",
@@ -216,7 +217,8 @@
       category: "ريادة الأعمال الزراعية",
       title: "ازرع واحسب",
       subtitle: "ورشة حساب الربح من كل نبتة وكل نوع",
-      cover: "img:academy/assets/farm-team.png",
+      cover: "img:academy/assets/zayed-youth.jpg",
+      coverPos: "center 35%",
       icon: "calc",
       duration: "٢٠ دقيقة",
       level: "مبتدئ",
@@ -358,15 +360,15 @@
 
   /* Cinematic flow chapters for the homepage story */
   const chapters = [
-    { id: "heritage", kicker: "التراث", title: "من قلب الأرض الإماراتية", sub: "حيث يجري الفلج وتمتدّ النخيل، بدأت الحكاية.", bg: "img:academy/assets/farm-hero.png", flow: "heritage", icon: "flag" },
-    { id: "trees",    kicker: "الأشجار", title: "النخلة… أمّ الشجر", sub: "رمز العطاء والصبر في أرضنا.", bg: "scene:palms", flow: "trees", icon: "palm" },
-    { id: "knowledge",kicker: "المعرفة", title: "نتعلّم لنزرع", sub: "المعرفة هي البذرة الأولى لكلّ حصاد.", bg: "scene:greenhouse", flow: "knowledge", icon: "book" },
-    { id: "skills",   kicker: "المهارات", title: "بأيدينا نُكثِّر الثمر", sub: "التطعيم والتقليم فنٌّ نتقنه معاً.", bg: "scene:graft", flow: "skills", icon: "scissors" },
-    { id: "production",kicker:"الإنتاج", title: "ثمارٌ وفيرة", sub: "من العناية الصحيحة يولد الحصاد الغزير.", bg: "scene:orchard", flow: "production", icon: "sprout" },
-    { id: "economics",kicker: "الاقتصاد", title: "من الغصن للربح", sub: "نحوّل الزراعة إلى مشروع يزدهر.", bg: "scene:economy", flow: "economics", icon: "chart" },
-    { id: "security", kicker: "الأمن الغذائي", title: "غذاؤنا من أرضنا", sub: "كلّ حبّة قمح خطوة نحو أمننا الغذائي.", bg: "img:academy/assets/farm-team.png", flow: "security", icon: "shield" },
-    { id: "innovation",kicker:"الابتكار", title: "زراعة ذكية", sub: "نستعين بالتقنية لنزرع أكثر بماء أقل.", bg: "scene:smart", flow: "innovation", icon: "cpu" },
-    { id: "future",   kicker: "المستقبل", title: "جيلٌ يزرع الغد", sub: "سفراء الزراعة… يصنعون مستقبلاً أخضر.", bg: "scene:future", flow: "future", icon: "sun" },
+    { id: "heritage", kicker: "التراث", title: "من قلب الأرض الإماراتية", sub: "حيث يقف الأجداد بين السنابل، بدأت الحكاية.", bg: "img:academy/assets/zayed-wheat.jpg", pos: "center 26%", flow: "heritage", icon: "flag" },
+    { id: "trees",    kicker: "الأشجار", title: "النخلة… أمّ الشجر", sub: "رمز العطاء والصبر في أرضنا.", bg: "img:academy/assets/zayed-palms.jpg", pos: "center 30%", flow: "trees", icon: "palm" },
+    { id: "knowledge",kicker: "المعرفة", title: "نتعلّم لنزرع", sub: "المعرفة تُورَّث كما تُورَّث الأرض.", bg: "img:academy/assets/zayed-youth.jpg", pos: "center 40%", flow: "knowledge", icon: "book" },
+    { id: "skills",   kicker: "المهارات", title: "بأيدينا نُكثِّر الثمر", sub: "التطعيم والتقليم فنٌّ نتقنه معاً.", bg: "img:academy/assets/zayed-garden.jpg", pos: "center 32%", flow: "skills", icon: "scissors" },
+    { id: "production",kicker:"الإنتاج", title: "ثمارٌ وفيرة", sub: "من العناية الصحيحة يولد الحصاد الغزير.", bg: "img:academy/assets/zayed-palms.jpg", pos: "center 18%", flow: "production", icon: "sprout" },
+    { id: "economics",kicker: "الاقتصاد", title: "من الغصن للربح", sub: "نحوّل الزراعة إلى مشروع يزدهر.", bg: "img:academy/assets/zayed-garden.jpg", pos: "center 48%", flow: "economics", icon: "chart" },
+    { id: "security", kicker: "الأمن الغذائي", title: "غذاؤنا من أرضنا", sub: "كلّ حبّة قمح خطوة نحو أمننا الغذائي.", bg: "img:academy/assets/zayed-wheat.jpg", pos: "center 46%", flow: "security", icon: "shield" },
+    { id: "innovation",kicker:"الابتكار", title: "زراعة ذكية", sub: "نستعين بالتقنية لنزرع أكثر بماء أقل.", bg: "img:academy/assets/zayed-youth.jpg", pos: "center 30%", flow: "innovation", icon: "cpu" },
+    { id: "future",   kicker: "المستقبل", title: "جيلٌ يزرع الغد", sub: "سفراء الزراعة… يصنعون مستقبلاً أخضر.", bg: "img:academy/assets/zayed-fields.jpg", pos: "center 55%", flow: "future", icon: "sun" },
   ];
 
   window.AcademyData = { workshops, comingSoon, categories, chapters };
