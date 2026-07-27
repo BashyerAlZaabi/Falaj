@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   الهوية — منقولة حرفياً من مواصفات PROMPT §3
+   القيم تعيش هنا كـ CSS variables، وtailwind.config.ts يشير إليها.
+   ============================================================ */
+:root {
+  /* الأسطح */
+  --nacre: #eef0e4;
+  --nacre-2: #f7f8f0;
+  --white: #fdfdf8;
+
+  /* الداكن */
+  --abyss: #242b10;
+  --abyss-2: #36401a;
+
+  /* الحبر ودرجاته 70 / 45 / 24 */
+  --ink: #1e240f;
+  --ink-70: rgba(30, 36, 15, 0.7);
+  --ink-45: rgba(30, 36, 15, 0.45);
+  --ink-24: rgba(30, 36, 15, 0.24);
+
+  /* الأساسي */
+  --falaj: #586a28;
+  --falaj-d: #3f4c1c;
+  --falaj-l: #8fa82e;
+
+  /* التمييز */
+  --brass: #6f8524; /* على الفاتح */
+  --brass-l: #a9c93c; /* على الداكن */
+
+  /* الرملي */
+  --sand: #c9de7c;
+  --sand-l: #e4edbe;
+
+  /* الخطأ */
+  --rust: #8c3a12;
+
+  /* الانحناء: 20 / 14 / 11 فقط */
+  --r-lg: 20px;
+  --r-md: 14px;
+  --r-sm: 11px;
+
+  /* المنحنيات */
+  --e: cubic-bezier(0.16, 1, 0.3, 1);
+  --e2: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* الطبقة المادية — حبيبات feTurbulence كـ data-URI */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ============================================================
+   الأساس — عربي RTL بالكامل، أرقام لاتينية جدولية
+   ============================================================ */
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--nacre);
+  color: var(--ink);
+  font-family: var(--font-plex), system-ui, sans-serif;
+  /* أرقام لاتينية جدولية في كل مكان */
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+}
+
+/* الوصف الثانوي بوزن خفيف */
+.subtle {
+  font-weight: 300;
+  color: var(--ink-70);
+}
+
+/* عناوين الواجهة بخط Reem Kufi */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-reem), system-ui, sans-serif;
+  font-weight: 600;
+}
+
+/* العنوان الكبير (شاشتا الدخول واسم المرحلة) بخط Aref Ruqaa */
+.display {
+  font-family: var(--font-aref), serif;
+  font-weight: 700;
+}
+
+/* ============================================================
+   الطبقة المادية — سطح داكن مُحبَّب يفرق عن مستطيل أسود
+   grain بشفافية .06 و mix-blend-mode:overlay + تدرّج شعاعي من الزاوية العليا
+   ============================================================ */
+.surface-dark {
+  position: relative;
+  background:
+    radial-gradient(120% 90% at 85% -10%, rgba(169, 201, 60, 0.14), transparent 55%),
+    linear-gradient(155deg, var(--abyss-2), var(--abyss));
+  color: var(--nacre);
+  isolation: isolate;
+}
+.surface-dark::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--grain);
+  opacity: 0.06;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* ============================================================
+   احترام prefers-reduced-motion في كل حركة
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

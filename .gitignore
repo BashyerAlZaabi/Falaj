@@ -1,3 +1,29 @@
-.DS_Store
+# dependencies
+/node_modules
 node_modules/
+/.pnp
+.pnp.*
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# production
+/build
+
+# misc
+.DS_Store
 *.log
+*.pem
+
+# env
+.env
+.env.*
+!.env.example
+
+# typescript
+*.tsbuildinfo
+
+# vercel
+.vercel
