@@ -5,21 +5,32 @@ import {
   FARM_SECTIONS,
   isFarmSection,
   visibleFarmSections,
+  type FarmSection,
 } from "@/lib/domain/nav";
 import { computeBadges } from "@/lib/badges";
 import { PageTitle } from "@/components/page-title";
 import { SubNav } from "@/components/nav/sub-nav";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  CropsSection,
+  DocsSection,
+  MoneySection,
+  PlotsSection,
+  SensorsSection,
+  StockSection,
+  TasksSection,
+} from "@/components/farm/sections";
+import { LandSection } from "@/components/farm/land";
 
-const HINTS: Record<string, string> = {
-  land: "ارسم حدود أرضك على الخريطة وقسّمها — يكتمل في مرحلة الأرض",
-  plots: "قطع أرضك تظهر هنا بعد التقسيم",
-  crops: "دورات المحاصيل على كل قطعة",
-  tasks: "مهامك اليومية والمتأخرة",
-  stock: "مخزونك من البذور والسماد والمستلزمات",
-  sensors: "اربط حساسات الري وتابع قراءاتها هنا",
-  money: "الإيراد والمصاريف وصافي الربح",
-  docs: "تراخيصك وتواريخ انتهائها",
+const SECTIONS: Partial<Record<FarmSection, React.ComponentType>> = {
+  land: LandSection,
+  plots: PlotsSection,
+  crops: CropsSection,
+  tasks: TasksSection,
+  stock: StockSection,
+  sensors: SensorsSection,
+  money: MoneySection,
+  docs: DocsSection,
 };
 
 export default async function FarmSectionPage({
@@ -50,6 +61,7 @@ export default async function FarmSectionPage({
 
   const current = FARM_SECTIONS.find((s) => s.key === section)!;
   const badges = await computeBadges(supabase, user.id);
+  const Body = SECTIONS[current.key];
 
   return (
     <div>
@@ -64,10 +76,7 @@ export default async function FarmSectionPage({
       </div>
 
       <section className="mt-4">
-        <EmptyState
-          title={`لا شيء في ${current.label} بعد`}
-          hint={HINTS[current.key]}
-        />
+        {Body ? <Body /> : <EmptyState title={`لا شيء في ${current.label} بعد`} />}
       </section>
     </div>
   );

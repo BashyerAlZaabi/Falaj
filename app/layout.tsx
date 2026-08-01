@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Noto_Kufi_Arabic, Noto_Sans_Arabic } from "next/font/google";
+import "leaflet/dist/leaflet.css";
 import "./globals.css";
 
 /* هوية «تم»: Noto Kufi Arabic للعناوين وNoto Sans Arabic للمتن —
