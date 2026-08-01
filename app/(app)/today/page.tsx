@@ -1,38 +1,40 @@
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageTitle } from "@/components/page-title";
-import { EmptyState } from "@/components/ui/empty-state";
+import { TodayCards } from "@/components/today/today-cards";
 
-/**
- * «اليوم» — الصفحة الرئيسية. في المرحلة ٤ تكتمل:
- * قراءة الوكيل ثم بطاقات الفعل مرتبة بالإلحاح (PROMPT §6).
- */
+/** «اليوم» — الرئيسية: تحية، قراءة الوكيل، ثم بطاقات الفعل بالإلحاح. */
 export default async function TodayPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  let name = "صديقي";
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("name")
-      .eq("id", user.id)
-      .maybeSingle();
-    name = profile?.name?.trim() || user.email?.split("@")[0] || name;
-  }
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("name, activity, emirate, answers")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profile?.activity || !profile?.emirate) redirect("/onboarding");
+
+  const answers = (profile.answers ?? {}) as { stage?: string };
+  const name = profile.name?.trim() || user.email?.split("@")[0] || "صديقي";
 
   return (
     <div>
       <PageTitle>هلا، {name}</PageTitle>
       <p className="subtle mt-1 text-sm">هذا يومك في لمحة</p>
 
-      <hr className="my-5 border-ink-24/60" />
-
-      <section aria-label="بطاقات اليوم" className="space-y-3">
-        <EmptyState
-          title="ما في شي عالق"
-          hint="بطاقات المهام والتراخيص والمخزون تظهر هنا أول ما تكتمل بيانات مزرعتك"
+      <section aria-label="بطاقات اليوم" className="mt-5">
+        <TodayCards
+          profile={{
+            name: profile.name,
+            activity: profile.activity,
+            emirate: profile.emirate,
+            stage: answers.stage,
+          }}
         />
       </section>
     </div>

@@ -49,7 +49,7 @@ export default async function FarmSectionPage({
   if (!sections.some((s) => s.key === section)) redirect("/farm/tasks");
 
   const current = FARM_SECTIONS.find((s) => s.key === section)!;
-  const badges = await computeBadges(user.id);
+  const badges = await computeBadges(supabase, user.id);
 
   return (
     <div>

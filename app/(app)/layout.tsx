@@ -17,7 +17,7 @@ export default async function AppLayout({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const badges = await computeBadges(user.id);
+  const badges = await computeBadges(supabase, user.id);
 
   return (
     <ToastProvider>

@@ -29,7 +29,7 @@ export default async function PathSectionPage({
   if (!user) redirect("/login");
 
   const current = PATH_SECTIONS.find((s) => s.key === section)!;
-  const badges = await computeBadges(user.id);
+  const badges = await computeBadges(supabase, user.id);
 
   return (
     <div>
