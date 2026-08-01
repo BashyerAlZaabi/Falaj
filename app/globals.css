@@ -117,6 +117,21 @@ h6 {
 }
 
 /* ============================================================
+   حركة «مجرى الفلج» — انسياب بطيء للخط المائي
+   ============================================================ */
+@keyframes falaj-flow {
+  to {
+    stroke-dashoffset: -64;
+  }
+}
+.falaj-flow {
+  animation: falaj-flow 6s linear infinite;
+}
+.falaj-flow-slow {
+  animation: falaj-flow 11s linear infinite;
+}
+
+/* ============================================================
    احترام prefers-reduced-motion في كل حركة
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
