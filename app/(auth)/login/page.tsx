@@ -43,7 +43,6 @@ export default function LoginPage() {
           setError(translateError(err.message));
           return;
         }
-        // إن كان تأكيد البريد مفعّلاً لا تُرجَع جلسة.
         if (!data.session) {
           setNotice("أرسلنا رابط تأكيد إلى بريدك. فعّل حسابك ثم سجّل الدخول.");
           setMode("signin");
@@ -74,23 +73,21 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="surface-dark flex min-h-dvh flex-col items-center justify-center px-6 py-12">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-nacre px-6 py-12">
       <div className="w-full max-w-sm">
-        <header className="mb-8 text-center">
-          <p className="mb-3 font-head text-xs tracking-wide text-brass-l">
+        <header className="mb-9 text-center">
+          <p className="mb-2 text-xs font-medium text-ink-45">
             برنامج سفراء الزراعة الشبابية
           </p>
-          <h1 className="display text-4xl leading-tight text-nacre">
-            الأمن الغذائي
-          </h1>
-          <p className="subtle mt-3 text-sm text-nacre/70">
+          <h1 className="display text-4xl text-ink">الأمن الغذائي</h1>
+          <p className="subtle mt-2 text-[15px]">
             {mode === "signin" ? "سجّل دخولك للمتابعة" : "أنشئ حسابك للبدء"}
           </p>
         </header>
 
-        {/* مبدّل الوضع — aria-pressed لا inline style */}
+        {/* مبدّل مقطعي بأسلوب آبل — الحالة عبر aria-pressed */}
         <div
-          className="mb-6 flex rounded-md bg-white/5 p-1"
+          className="mb-6 flex rounded-md bg-black/5 p-0.5"
           role="group"
           aria-label="اختيار الدخول أو التسجيل"
         >
@@ -101,7 +98,7 @@ export default function LoginPage() {
               setMode("signin");
               setError(null);
             }}
-            className="flex-1 rounded-sm py-2 font-head text-sm transition-colors duration-200 ease-e aria-pressed:bg-falaj-l aria-pressed:text-abyss text-nacre/70"
+            className="flex-1 rounded-sm py-2 text-sm font-medium text-ink-45 transition-colors duration-200 ease-e aria-pressed:bg-white aria-pressed:text-ink aria-pressed:shadow-sm"
           >
             دخول
           </button>
@@ -112,7 +109,7 @@ export default function LoginPage() {
               setMode("signup");
               setError(null);
             }}
-            className="flex-1 rounded-sm py-2 font-head text-sm transition-colors duration-200 ease-e aria-pressed:bg-falaj-l aria-pressed:text-abyss text-nacre/70"
+            className="flex-1 rounded-sm py-2 text-sm font-medium text-ink-45 transition-colors duration-200 ease-e aria-pressed:bg-white aria-pressed:text-ink aria-pressed:shadow-sm"
           >
             حساب جديد
           </button>
@@ -150,18 +147,16 @@ export default function LoginPage() {
 
         <div aria-live="polite" className="min-h-[1.25rem]">
           {error && (
-            <p className="mt-3 text-sm font-medium text-[#e08a5f]">{error}</p>
+            <p className="mt-3 text-sm font-medium text-rust">{error}</p>
           )}
-          {notice && (
-            <p className="mt-3 text-sm text-sand-l">{notice}</p>
-          )}
+          {notice && <p className="mt-3 text-sm text-falaj-d">{notice}</p>}
         </div>
 
         <button
           type="button"
           onClick={submit}
           disabled={busy}
-          className="mt-4 w-full rounded-md bg-falaj-l py-3.5 font-head text-base font-semibold text-abyss transition-transform duration-200 ease-e active:scale-[.98] disabled:opacity-60"
+          className="mt-4 w-full rounded-full bg-falaj py-3.5 text-base font-medium text-white transition-all duration-200 ease-e hover:bg-falaj-d active:scale-[.98] disabled:opacity-60"
         >
           {busy
             ? "لحظة…"
@@ -193,7 +188,7 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="mb-1.5 block font-head text-xs text-nacre/60">
+      <span className="mb-1.5 block text-xs font-medium text-ink-45">
         {label}
       </span>
       <input
@@ -204,7 +199,7 @@ function Field({
         autoComplete={autoComplete}
         inputMode={inputMode}
         dir="auto"
-        className="w-full rounded-sm border border-white/10 bg-white/5 px-3.5 py-3 text-nacre outline-none transition-colors duration-200 ease-e placeholder:text-nacre/30 focus:border-falaj-l focus:bg-white/10"
+        className="w-full rounded-md border border-ink-24 bg-white px-3.5 py-3 text-ink outline-none transition-colors duration-200 ease-e placeholder:text-ink-24 focus:border-falaj focus:ring-2 focus:ring-falaj/20"
       />
     </label>
   );

@@ -41,7 +41,7 @@ export function MainNav({ badges }: { badges: Badges }) {
   return (
     <nav
       aria-label="التنقل الرئيسي"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-24 bg-paper/95 backdrop-blur"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-24/60 bg-white/80 backdrop-blur-xl"
     >
       <ul className="mx-auto flex max-w-md items-stretch">
         {MAIN_TABS.map((tab) => {
@@ -55,7 +55,7 @@ export function MainNav({ badges }: { badges: Badges }) {
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className="relative flex flex-col items-center gap-0.5 py-2.5 font-head text-[0.7rem] text-ink-45 transition-colors duration-200 ease-e aria-[current=page]:text-falaj-d"
+                className="relative flex flex-col items-center gap-0.5 py-2.5 text-[0.7rem] font-medium text-ink-45 transition-colors duration-200 ease-e aria-[current=page]:text-falaj"
               >
                 <span className="relative">
                   {ICONS[tab.key]}
@@ -66,10 +66,6 @@ export function MainNav({ badges }: { badges: Badges }) {
                   )}
                 </span>
                 {tab.label}
-                <span
-                  aria-hidden="true"
-                  className={`mt-0.5 h-1 w-6 rounded-full transition-colors duration-200 ease-e ${active ? "bg-falaj-l" : "bg-transparent"}`}
-                />
               </Link>
             </li>
           );

@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageTitle } from "@/components/page-title";
 import { EmptyState } from "@/components/ui/empty-state";
-import { FalajStream } from "@/components/signature/falaj-stream";
 
 /**
  * «اليوم» — الصفحة الرئيسية. في المرحلة ٤ تكتمل:
@@ -28,7 +27,7 @@ export default async function TodayPage() {
       <PageTitle>هلا، {name}</PageTitle>
       <p className="subtle mt-1 text-sm">هذا يومك في لمحة</p>
 
-      <FalajStream className="my-5" />
+      <hr className="my-5 border-ink-24/60" />
 
       <section aria-label="بطاقات اليوم" className="space-y-3">
         <EmptyState

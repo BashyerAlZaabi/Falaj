@@ -1,9 +1,9 @@
 import type { Config } from "tailwindcss";
 
 /**
- * هوية «برنامج سفراء الزراعة الشبابية» — منقولة حرفياً من مواصفات PROMPT §3.
- * كل رمز هنا يشير إلى متغيّر CSS مُعرّف في app/globals.css :root،
- * فالقيم الفعلية تعيش في مكان واحد وتبقى متاحة كـ CSS variables أيضاً.
+ * الهوية البصرية — أسلوب آبل (قرار المالكة، يتجاوز هوية PROMPT §3 الزيتونية).
+ * كل رمز يشير إلى متغيّر CSS في app/globals.css :root — القيم هناك حصراً،
+ * وأسماء الرموز التاريخية أُبقيت حتى لا تتغيّر ملفات المكوّنات.
  */
 const config: Config = {
   content: [
@@ -48,25 +48,21 @@ const config: Config = {
         rust: "var(--rust)",
       },
       borderRadius: {
-        // الانحناء: 20 / 14 / 11 فقط
-        lg: "20px",
-        md: "14px",
-        sm: "11px",
+        // الانحناء: 18 / 12 / 8 — منظومة آبل
+        lg: "18px",
+        md: "12px",
+        sm: "8px",
       },
       transitionTimingFunction: {
-        e: "cubic-bezier(.16,1,.3,1)",
+        e: "cubic-bezier(.28,0,.63,1)",
         e2: "cubic-bezier(.4,0,.2,1)",
       },
       fontFamily: {
-        // Aref Ruqaa — العنوان الكبير في شاشتين فقط (الدخول واسم المرحلة)
-        title: ["var(--font-aref)", "serif"],
-        // Reem Kufi — كل عناوين الواجهة
-        head: ["var(--font-reem)", "sans-serif"],
-        // IBM Plex Sans Arabic — المتن
-        body: ["var(--font-plex)", "sans-serif"],
-      },
-      backgroundImage: {
-        grain: "var(--grain)",
+        // هوية آبل: خط النظام للجميع (SF على أجهزة آبل) — الأسماء الثلاثة
+        // أُبقيت حتى لا تتغيّر ملفات المكوّنات
+        title: ["-apple-system", "BlinkMacSystemFont", "SF Pro Display", "Segoe UI", "Roboto", "system-ui", "sans-serif"],
+        head: ["-apple-system", "BlinkMacSystemFont", "SF Pro Text", "Segoe UI", "Roboto", "system-ui", "sans-serif"],
+        body: ["-apple-system", "BlinkMacSystemFont", "SF Pro Text", "Segoe UI", "Roboto", "system-ui", "sans-serif"],
       },
     },
   },
