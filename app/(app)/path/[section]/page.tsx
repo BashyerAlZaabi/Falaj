@@ -4,15 +4,13 @@ import { PATH_SECTIONS, isPathSection } from "@/lib/domain/nav";
 import { computeBadges } from "@/lib/badges";
 import { PageTitle } from "@/components/page-title";
 import { SubNav } from "@/components/nav/sub-nav";
-import { EmptyState } from "@/components/ui/empty-state";
-
-const HINTS: Record<string, string> = {
-  roadmap: "مراحل مشروعك الأربع وخطواتها حسب إمارتك ونشاطك",
-  funds: "صناديق التمويل والمنح والحاضنات المناسبة لك",
-  partners: "عروض الشراكة المفتوحة من أصحاب المشاريع",
-  entities: "الجهات الاتحادية والمحلية المعنيّة بمشروعك",
-  rewards: "نقاطك ومكافآتك كسفير زراعة شبابي",
-};
+import {
+  EntitiesSection,
+  FundsSection,
+  PartnersSection,
+  RewardsSection,
+  RoadmapSection,
+} from "@/components/path/sections";
 
 export default async function PathSectionPage({
   params,
@@ -28,6 +26,13 @@ export default async function PathSectionPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: p } = await supabase
+    .from("profiles")
+    .select("activity, emirate")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const profile = { emirate: p?.emirate ?? null, activity: p?.activity ?? null };
   const current = PATH_SECTIONS.find((s) => s.key === section)!;
   const badges = await computeBadges(supabase, user.id);
 
@@ -44,10 +49,11 @@ export default async function PathSectionPage({
       </div>
 
       <section className="mt-4">
-        <EmptyState
-          title={`لا شيء في ${current.label} بعد`}
-          hint={HINTS[current.key]}
-        />
+        {current.key === "roadmap" && <RoadmapSection profile={profile} />}
+        {current.key === "funds" && <FundsSection />}
+        {current.key === "partners" && <PartnersSection profile={profile} />}
+        {current.key === "entities" && <EntitiesSection profile={profile} />}
+        {current.key === "rewards" && <RewardsSection />}
       </section>
     </div>
   );

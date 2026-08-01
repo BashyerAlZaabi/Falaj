@@ -43,6 +43,8 @@ export type FarmData = {
   sales: Sale[];
   costs: Cost[];
   docs: FarmDoc[];
+  /** معرفات خطوات خارطة الطريق المنجزة */
+  roadmap_done: string[];
 };
 
 export function emptyFarm(): FarmData {
@@ -56,6 +58,7 @@ export function emptyFarm(): FarmData {
     sales: [],
     costs: [],
     docs: [],
+    roadmap_done: [],
   };
 }
 
@@ -73,6 +76,7 @@ export function normalizeFarm(data: unknown): FarmData {
     sales: Array.isArray(d.sales) ? d.sales : base.sales,
     costs: Array.isArray(d.costs) ? d.costs : base.costs,
     docs: Array.isArray(d.docs) ? d.docs : base.docs,
+    roadmap_done: Array.isArray(d.roadmap_done) ? d.roadmap_done : base.roadmap_done,
   };
 }
 
