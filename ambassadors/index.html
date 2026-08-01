@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0a0a0c" />
+  <title>سفراء فلج — مدير مشروع السفراء</title>
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+  <!-- ===== الترويسة ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">🌴</div>
+      <div>
+        <h1>سفراء فلج</h1>
+        <p>مدير مشروع السفراء</p>
+      </div>
+    </div>
+    <button class="btn btn-ghost" id="btnReset" title="إعادة تعيين البيانات">↺ إعادة تعيين</button>
+  </header>
+
+  <!-- ===== التبويبات ===== -->
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="dashboard">اللوحة</button>
+    <button class="tab" data-tab="ambassadors">السفراء</button>
+    <button class="tab" data-tab="tasks">المهام</button>
+    <button class="tab" data-tab="events">الفعاليات</button>
+    <button class="tab" data-tab="leaderboard">لوحة الشرف</button>
+  </nav>
+
+  <main>
+
+    <!-- ===== لوحة التحكم ===== -->
+    <section class="screen" id="screen-dashboard">
+      <div class="kpi-grid" id="kpiGrid"></div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>تقدّم المهام</h2>
+          <span class="muted" id="taskProgressLabel"></span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" id="taskProgressBar"></div></div>
+        <div class="legend" id="taskLegend"></div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-head"><h2>مهام تقترب مواعيدها</h2></div>
+          <ul class="mini-list" id="dueSoonList"></ul>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h2>أحدث النشاطات</h2></div>
+          <ul class="mini-list" id="activityList"></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== السفراء ===== -->
+    <section class="screen hidden" id="screen-ambassadors">
+      <div class="screen-head">
+        <h2>سجل السفراء</h2>
+        <button class="btn btn-primary" id="btnAddAmbassador">+ سفير جديد</button>
+      </div>
+      <div class="cards-grid" id="ambassadorGrid"></div>
+    </section>
+
+    <!-- ===== المهام ===== -->
+    <section class="screen hidden" id="screen-tasks">
+      <div class="screen-head">
+        <h2>لوحة المهام</h2>
+        <button class="btn btn-primary" id="btnAddTask">+ مهمة جديدة</button>
+      </div>
+      <div class="kanban" id="kanban"></div>
+    </section>
+
+    <!-- ===== الفعاليات ===== -->
+    <section class="screen hidden" id="screen-events">
+      <div class="screen-head">
+        <h2>الفعاليات</h2>
+        <button class="btn btn-primary" id="btnAddEvent">+ فعالية جديدة</button>
+      </div>
+      <div class="events-list" id="eventsList"></div>
+    </section>
+
+    <!-- ===== لوحة الشرف ===== -->
+    <section class="screen hidden" id="screen-leaderboard">
+      <div class="screen-head"><h2>لوحة الشرف 🏆</h2></div>
+      <div class="panel">
+        <ol class="board" id="board"></ol>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== نافذة منبثقة عامة ===== -->
+  <div class="modal-scrim hidden" id="modalScrim">
+    <div class="modal" role="dialog" aria-modal="true">
+      <div class="modal-head">
+        <h3 id="modalTitle"></h3>
+        <button class="btn-x" id="modalClose">✕</button>
+      </div>
+      <form id="modalForm"></form>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
