@@ -23,7 +23,7 @@ export default async function AppLayout({
     <ToastProvider>
       <div className="mx-auto min-h-dvh max-w-md">
         <header className="flex items-center justify-between gap-3 px-5 pb-2 pt-5">
-          <p className="font-head text-xs text-brass">
+          <p className="font-head text-xs text-ink-45">
             سفراء الزراعة الشبابية
           </p>
           <LogoutButton />

@@ -55,7 +55,7 @@ export function MainNav({ badges }: { badges: Badges }) {
               <Link
                 href={tab.href}
                 aria-current={active ? "page" : undefined}
-                className="relative flex flex-col items-center gap-0.5 py-2.5 text-[0.7rem] font-medium text-ink-45 transition-colors duration-200 ease-e aria-[current=page]:text-falaj"
+                className="relative flex flex-col items-center gap-0.5 py-2.5 text-[0.7rem] font-medium text-ink-45 transition-colors duration-200 ease-e aria-[current=page]:text-ink"
               >
                 <span className="relative">
                   {ICONS[tab.key]}
@@ -66,6 +66,10 @@ export function MainNav({ badges }: { badges: Badges }) {
                   )}
                 </span>
                 {tab.label}
+                <span
+                  aria-hidden="true"
+                  className={`mt-0.5 h-1 w-6 rounded-full transition-colors duration-200 ease-e ${active ? "bg-falaj" : "bg-transparent"}`}
+                />
               </Link>
             </li>
           );

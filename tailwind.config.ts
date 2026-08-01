@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 /**
- * الهوية البصرية — أسلوب آبل (قرار المالكة، يتجاوز هوية PROMPT §3 الزيتونية).
+ * الهوية البصرية — أسلوب «تم» TAMM (قرار المالكة).
  * كل رمز يشير إلى متغيّر CSS في app/globals.css :root — القيم هناك حصراً،
  * وأسماء الرموز التاريخية أُبقيت حتى لا تتغيّر ملفات المكوّنات.
  */
@@ -44,25 +44,25 @@ const config: Config = {
           DEFAULT: "var(--sand)",
           l: "var(--sand-l)",
         },
-        // الخطأ
+        // الخطأ والنجاح
         rust: "var(--rust)",
+        ok: "var(--ok)",
       },
       borderRadius: {
-        // الانحناء: 18 / 12 / 8 — منظومة آبل
-        lg: "18px",
-        md: "12px",
-        sm: "8px",
+        lg: "16px",
+        md: "10px",
+        sm: "6px",
       },
       transitionTimingFunction: {
         e: "cubic-bezier(.28,0,.63,1)",
         e2: "cubic-bezier(.4,0,.2,1)",
       },
       fontFamily: {
-        // هوية آبل: خط النظام للجميع (SF على أجهزة آبل) — الأسماء الثلاثة
-        // أُبقيت حتى لا تتغيّر ملفات المكوّنات
-        title: ["-apple-system", "BlinkMacSystemFont", "SF Pro Display", "Segoe UI", "Roboto", "system-ui", "sans-serif"],
-        head: ["-apple-system", "BlinkMacSystemFont", "SF Pro Text", "Segoe UI", "Roboto", "system-ui", "sans-serif"],
-        body: ["-apple-system", "BlinkMacSystemFont", "SF Pro Text", "Segoe UI", "Roboto", "system-ui", "sans-serif"],
+        // هوية تم: Noto Kufi Arabic للعناوين وNoto Sans Arabic للمتن
+        // (بديل مجاني مطابق لطابع خط تم المرخّص)
+        title: ["var(--font-head)", "Noto Kufi Arabic", "system-ui", "sans-serif"],
+        head: ["var(--font-head)", "Noto Kufi Arabic", "system-ui", "sans-serif"],
+        body: ["var(--font-body)", "Noto Sans Arabic", "system-ui", "sans-serif"],
       },
     },
   },

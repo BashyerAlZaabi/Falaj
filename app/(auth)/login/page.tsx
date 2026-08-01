@@ -149,14 +149,14 @@ export default function LoginPage() {
           {error && (
             <p className="mt-3 text-sm font-medium text-rust">{error}</p>
           )}
-          {notice && <p className="mt-3 text-sm text-falaj-d">{notice}</p>}
+          {notice && <p className="mt-3 text-sm text-ink-70">{notice}</p>}
         </div>
 
         <button
           type="button"
           onClick={submit}
           disabled={busy}
-          className="mt-4 w-full rounded-full bg-falaj py-3.5 text-base font-medium text-white transition-all duration-200 ease-e hover:bg-falaj-d active:scale-[.98] disabled:opacity-60"
+          className="mt-4 w-full rounded-full bg-falaj py-3.5 text-base font-semibold text-ink transition-all duration-200 ease-e hover:bg-falaj-d active:scale-[.98] disabled:opacity-60"
         >
           {busy
             ? "لحظة…"

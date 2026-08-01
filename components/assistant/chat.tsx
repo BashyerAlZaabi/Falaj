@@ -157,7 +157,7 @@ export function Chat() {
           if (m.kind === "user")
             return (
               <div key={i} className="flex justify-start">
-                <div className="max-w-[85%] rounded-lg rounded-bl-sm bg-falaj px-4 py-2.5 text-sm text-white">
+                <div className="max-w-[85%] rounded-lg rounded-bl-sm bg-falaj px-4 py-2.5 text-sm font-medium text-ink">
                   {m.text}
                 </div>
               </div>
@@ -174,7 +174,7 @@ export function Chat() {
             return (
               <div key={i} className="flex justify-end">
                 <p
-                  className={`text-xs font-medium ${m.ok ? "text-falaj-d" : "text-rust"}`}
+                  className={`text-xs font-medium ${m.ok ? "text-ok" : "text-rust"}`}
                 >
                   {m.text}
                 </p>
@@ -214,7 +214,7 @@ export function Chat() {
           type="button"
           onClick={send}
           disabled={busy || !input.trim()}
-          className="rounded-full bg-falaj px-5 py-2.5 text-sm font-medium text-white transition-colors duration-200 ease-e hover:bg-falaj-d disabled:opacity-50"
+          className="rounded-full bg-falaj px-5 py-2.5 text-sm font-semibold text-ink transition-colors duration-200 ease-e hover:bg-falaj-d disabled:opacity-50"
         >
           إرسال
         </button>
