@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PageTitle } from "@/components/page-title";
 import { TodayCards } from "@/components/today/today-cards";
+import { DataActions } from "@/components/today/data-actions";
 
 /** «اليوم» — الرئيسية: تحية، قراءة الوكيل، ثم بطاقات الفعل بالإلحاح. */
 export default async function TodayPage() {
@@ -37,6 +38,8 @@ export default async function TodayPage() {
           }}
         />
       </section>
+
+      <DataActions />
     </div>
   );
 }

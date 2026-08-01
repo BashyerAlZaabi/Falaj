@@ -4,6 +4,7 @@ import { computeBadges } from "@/lib/badges";
 import { MainNav } from "@/components/nav/main-nav";
 import { ToastProvider } from "@/components/ui/toast";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { PrintReport } from "@/components/print-report";
 
 /** قشرة التطبيق: الشريط العلوي + التنقل الرباعي (PROMPT §5). */
 export default async function AppLayout({
@@ -30,6 +31,7 @@ export default async function AppLayout({
         </header>
 
         <main className="px-5 pb-28 pt-2">{children}</main>
+        <PrintReport />
       </div>
       <MainNav badges={badges} />
     </ToastProvider>

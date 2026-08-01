@@ -120,6 +120,30 @@ h6 {
 }
 
 /* ============================================================
+   الطباعة — تخفي كل شيء عدا #printArea (PROMPT §11)
+   ============================================================ */
+#printArea {
+  display: none;
+}
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printArea,
+  #printArea * {
+    visibility: visible;
+  }
+  #printArea {
+    display: block;
+    position: absolute;
+    inset: 0;
+    padding: 16px;
+    background: #fff;
+    color: #000;
+  }
+}
+
+/* ============================================================
    احترام prefers-reduced-motion في كل حركة
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {
