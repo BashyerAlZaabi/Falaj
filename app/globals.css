@@ -1,0 +1,158 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   الهوية البصرية — أسلوب «تم» TAMM (قرار المالكة)
+   القيم منقولة من ملف التوكنز الرسمي المنشور على tamm.abudhabi
+   (colors-dynamic.css). أسماء المتغيّرات التاريخية محفوظة
+   حتى لا تتغيّر ملفات المكوّنات.
+   ============================================================ */
+:root {
+  /* الأسطح — رمادي تم الفاتح (gray-50/100) والبطاقات البيضاء */
+  --nacre: #f6f6f6;
+  --nacre-2: #ededed;
+  --white: #ffffff;
+
+  /* الداكن — كحلي تم العميق (indigo) */
+  --abyss: #12121b;
+  --abyss-2: #161038;
+
+  /* الحبر — كحلي للعناوين، ورمادي تم للنصوص */
+  --ink: #161038;
+  --ink-70: #3f3e45;
+  --ink-45: #89888c;
+  --ink-24: #e0e0e1;
+
+  /* الأساسي — كهرماني تم (yellow-500 / hover yellow-700 / yellow-400) */
+  --falaj: #faa317;
+  --falaj-d: #f99111;
+  --falaj-l: #fbb13a;
+
+  /* التمييز — كهرماني على الفاتح وعلى الداكن */
+  --brass: #f99111;
+  --brass-l: #fbb13a;
+
+  /* التظليل — كهرماني فاتح (yellow-100 / yellow-50) */
+  --sand: #fee3b9;
+  --sand-l: #fef4e3;
+
+  /* الخطأ — أحمر تم (red-500) */
+  --rust: #fc532e;
+
+  /* النجاح — أخضر تم (green-500) */
+  --ok: #51b53f;
+
+  /* الانحناء */
+  --r-lg: 16px;
+  --r-md: 10px;
+  --r-sm: 6px;
+
+  /* المنحنيات */
+  --e: cubic-bezier(0.28, 0, 0.63, 1);
+  --e2: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================
+   الأساس — عربي RTL، خط النظام (SF على أجهزة آبل)، أرقام جدولية
+   ============================================================ */
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--nacre);
+  color: var(--ink-70);
+  font-family: var(--font-body), "Noto Sans Arabic", system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100dvh;
+}
+
+/* الوصف الثانوي */
+.subtle {
+  font-weight: 400;
+  color: var(--ink-45);
+}
+
+/* العناوين — نفس خط النظام بوزن أثقل وتقارب أحرف طفيف */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-head), "Noto Kufi Arabic", system-ui, sans-serif;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* العنوان الكبير (الدخول واسم المرحلة) */
+.display {
+  font-family: var(--font-head), "Noto Kufi Arabic", system-ui, sans-serif;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+/* ============================================================
+   القسم الداكن — كحلي تم العميق
+   ============================================================ */
+.surface-dark {
+  background: linear-gradient(180deg, var(--abyss-2), var(--abyss));
+  color: var(--white);
+}
+
+/* ============================================================
+   حركة «مجرى الفلج» — أُبقيت للتوافق، غير مستخدمة في هوية آبل
+   ============================================================ */
+@keyframes falaj-flow {
+  to {
+    stroke-dashoffset: -64;
+  }
+}
+.falaj-flow {
+  animation: falaj-flow 6s linear infinite;
+}
+.falaj-flow-slow {
+  animation: falaj-flow 11s linear infinite;
+}
+
+/* ============================================================
+   الطباعة — تخفي كل شيء عدا #printArea (PROMPT §11)
+   ============================================================ */
+#printArea {
+  display: none;
+}
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printArea,
+  #printArea * {
+    visibility: visible;
+  }
+  #printArea {
+    display: block;
+    position: absolute;
+    inset: 0;
+    padding: 16px;
+    background: #fff;
+    color: #000;
+  }
+}
+
+/* ============================================================
+   احترام prefers-reduced-motion في كل حركة
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
