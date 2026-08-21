@@ -1,0 +1,353 @@
+/* =============================================================================
+   سفراء الزراعة الشباب  ·  Young Agriculture Ambassadors
+   ========================================================================== */
+
+:root{
+  --sand:#F4ECDD; --paper:#FFFFFF;
+  --ink:#17203C; --ink-2:#4E5878; --ink-3:#8A93AE;
+  --line:#E6DECE; --line-2:#F1EADC;
+  --indigo:#5171FF; --leaf:#2FA36B; --sprout:#8FC46B;
+  --gold:#E9B44C; --clay:#C96F4A; --water:#35A0C4; --night:#101731;
+  --accent:#E9B44C;
+  --r:20px; --r-lg:30px;
+  --f-ar:"Cairo","Noto Sans Arabic",system-ui,sans-serif;
+  --f-en:"Manrope","Cairo",system-ui,-apple-system,sans-serif;
+  --font:var(--f-ar);
+  --sh:0 18px 50px rgba(23,32,60,.14);
+  --sh-sm:0 6px 20px rgba(23,32,60,.09);
+}
+html[lang="en"]{ --font:var(--f-en); }
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto} }
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--font); color:var(--ink); background:var(--sand);
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+svg{display:block}
+img{max-width:100%}
+a{color:inherit}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+:focus-visible{outline:3px solid var(--indigo);outline-offset:3px;border-radius:8px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ===== الشريط العلوي · top chrome ======================================== */
+.chrome{
+  position:fixed;inset-block-start:0;inset-inline:0;z-index:60;
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:14px clamp(14px,3vw,30px);
+  background:linear-gradient(to bottom,rgba(15,20,40,.34),rgba(15,20,40,0));
+  pointer-events:none;
+}
+.chrome > *{pointer-events:auto}
+.chrome--solid{
+  background:rgba(244,236,221,.88);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border-block-end:1px solid var(--line);
+}
+.chrome--solid .mark{color:var(--ink);text-shadow:none}
+.chrome--solid .pill{background:rgba(23,32,60,.06);color:var(--ink);border-color:rgba(23,32,60,.12)}
+.chrome--solid .pill:hover{background:rgba(23,32,60,.11)}
+.chrome--solid .pill--solid{background:var(--indigo);color:#fff;border-color:transparent}
+.chrome--solid .pill--solid:hover{background:#3f5cf0}
+.mark{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;
+  text-shadow:0 2px 14px rgba(10,16,36,.4)}
+.mark__leaf{width:34px;height:34px;flex:none;filter:drop-shadow(0 4px 10px rgba(10,16,36,.3))}
+.mark__txt{display:flex;flex-direction:column;line-height:1.15}
+.mark__txt b{font-size:15px;font-weight:800;letter-spacing:-.01em}
+.mark__txt i{font-size:10.5px;font-style:normal;opacity:.78;font-weight:600}
+.chrome__right{display:flex;align-items:center;gap:8px}
+.pill{
+  display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 15px;border-radius:30px;
+  background:rgba(255,255,255,.16);color:#fff;font-size:13px;font-weight:700;
+  border:1px solid rgba(255,255,255,.28);backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);text-decoration:none;transition:.18s;white-space:nowrap;
+}
+.pill:hover{background:rgba(255,255,255,.28)}
+.pill--solid{background:var(--indigo);border-color:transparent;box-shadow:0 8px 24px rgba(81,113,255,.4)}
+.pill--solid:hover{background:#3f5cf0}
+.pill .sm{display:none}
+@media (max-width:620px){
+  .chrome{padding:10px 12px}
+  .mark__leaf{width:28px;height:28px}
+  .mark__txt i{display:none}
+  .mark__txt b{font-size:13px}
+  .pill{height:34px;padding:0 13px;font-size:12.5px}
+  .pill .lg{display:none} .pill .sm{display:inline}
+}
+
+/* ===== الطيران · the flight ============================================== */
+.wf-root{position:relative;--accent:#E9B44C}
+.wf-defs{position:absolute;width:0;height:0;overflow:hidden}
+.wf-spacer{width:100%}
+
+.wf-stage{
+  position:sticky;inset-block-start:0;height:100dvh;width:100%;overflow:hidden;
+  background:linear-gradient(to bottom,var(--wf-sky-a,#8FB6E8),var(--wf-sky-b,#F3BE86));
+  transition:background .25s linear;
+}
+.wf-fit{
+  position:absolute;left:50%;top:50%;
+  width:1600px;height:900px;
+  perspective:820px;perspective-origin:50% 50%;
+  transform:translate(-50%,-50%);
+}
+.wf-rig{position:absolute;inset:0;transform-style:preserve-3d}
+.wf-layer{
+  position:absolute;top:0;left:0;width:1600px;height:900px;
+  will-change:transform,opacity;backface-visibility:hidden;
+  /* حوافّ متلاشية: لا طبقة تُظهر حافّة مستطيلة أمام السماء
+     Feathered edges — no layer ever shows a hard rectangle against the sky. */
+  -webkit-mask-image:radial-gradient(114% 76% at 50% 44%,#000 54%,rgba(0,0,0,.5) 81%,transparent 99%);
+  mask-image:radial-gradient(114% 76% at 50% 44%,#000 54%,rgba(0,0,0,.5) 81%,transparent 99%);
+}
+/* الطبقات الخلفية تذوب في السماء بدل أن تنتهي بحافّة مستقيمة
+   Background layers melt into the sky instead of ending on a straight edge. */
+.wf-layer.bg{
+  -webkit-mask-image:radial-gradient(104% 68% at 50% 44%,#000 44%,rgba(0,0,0,.55) 76%,transparent 97%);
+  mask-image:radial-gradient(104% 68% at 50% 44%,#000 44%,rgba(0,0,0,.55) 76%,transparent 97%);
+}
+.wf-layer svg{width:1600px;height:900px}
+.wf-grain{
+  position:absolute;inset:0;pointer-events:none;opacity:.5;mix-blend-mode:soft-light;
+  background-image:radial-gradient(rgba(255,255,255,.5) .5px,transparent .5px);
+  background-size:4px 4px;
+}
+
+/* --- بطاقة النص · the copy card --- */
+.wf-copy{position:absolute;inset:0;display:block;pointer-events:none;z-index:5}
+/* ستارة خفيفة خلف النص لضمان وضوح القراءة فوق الرسم
+   A soft scrim behind the copy so it stays readable over the artwork. */
+.wf-copy::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:var(--scrim,0);
+  background:linear-gradient(to left,rgba(255,255,255,.5),rgba(255,255,255,.18) 32%,transparent 56%);
+}
+html[dir="ltr"] .wf-copy::before{
+  background:linear-gradient(to right,rgba(255,255,255,.5),rgba(255,255,255,.18) 32%,transparent 56%);
+}
+.wf-root[data-theme="dark"] .wf-copy::before{
+  background:linear-gradient(to left,rgba(10,15,34,.62),rgba(10,15,34,.26) 32%,transparent 56%);
+}
+html[dir="ltr"] .wf-root[data-theme="dark"] .wf-copy::before{
+  background:linear-gradient(to right,rgba(10,15,34,.62),rgba(10,15,34,.26) 32%,transparent 56%);
+}
+.wf-card{
+  position:absolute;inset-block-start:50%;inset-inline-start:clamp(20px,6vw,90px);
+  transform:translateY(-50%);width:min(470px,calc(100vw - 40px));
+  will-change:opacity,transform;
+}
+.wf-eyebrow{
+  margin:0 0 12px;font-size:12px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;
+  color:#fff;display:inline-flex;align-items:center;gap:8px;
+  background:var(--accent);padding:7px 14px;border-radius:30px;
+  box-shadow:0 8px 22px rgba(23,32,60,.22);
+}
+html[dir="rtl"] .wf-eyebrow{letter-spacing:0;text-transform:none;font-size:12.5px}
+.wf-title{
+  margin:0 0 14px;font-size:clamp(30px,4.4vw,54px);line-height:1.14;font-weight:800;
+  letter-spacing:-.02em;color:var(--ink);
+  text-shadow:0 2px 26px rgba(255,255,255,.55);
+}
+html[dir="rtl"] .wf-title{letter-spacing:0;line-height:1.32}
+.wf-body{
+  margin:0;font-size:clamp(15px,1.35vw,18px);line-height:1.75;color:var(--ink-2);font-weight:500;
+  background:rgba(255,255,255,.62);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px);
+  padding:14px 18px;border-radius:var(--r);border:1px solid rgba(255,255,255,.7);
+  box-shadow:var(--sh-sm);
+}
+.wf-tags{display:flex;flex-wrap:wrap;gap:8px;list-style:none;margin:14px 0 0;padding:0}
+.wf-tags li{
+  font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:30px;color:var(--ink);
+  background:rgba(255,255,255,.78);border:1px solid rgba(23,32,60,.09);
+}
+.wf-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.wf-btn{
+  display:inline-flex;align-items:center;height:50px;padding:0 24px;border-radius:14px;
+  background:var(--accent);color:#fff;font-weight:800;font-size:15px;text-decoration:none;
+  box-shadow:0 12px 30px rgba(23,32,60,.28);transition:.18s;
+}
+.wf-btn:hover{transform:translateY(-2px)}
+.wf-btn.ghost{background:rgba(255,255,255,.9);color:var(--ink);box-shadow:var(--sh-sm)}
+
+.wf-root[data-theme="dark"] .wf-title{color:#F6F8FF;text-shadow:0 2px 30px rgba(8,12,30,.7)}
+.wf-root[data-theme="dark"] .wf-body{
+  color:#D5DCF2;background:rgba(16,23,49,.55);border-color:rgba(255,255,255,.14);
+}
+.wf-root[data-theme="dark"] .wf-tags li{background:rgba(16,23,49,.6);color:#E6EBFB;border-color:rgba(255,255,255,.16)}
+.wf-root[data-theme="dark"] .wf-btn.ghost{background:rgba(255,255,255,.92);color:var(--night)}
+
+/* --- التقدّم والتنقّل · progress + nav --- */
+.wf-bar{position:absolute;inset-block-start:0;inset-inline:0;height:3px;background:rgba(23,32,60,.12);z-index:20}
+.wf-bar span{display:block;height:100%;background:var(--accent);transform-origin:left center;transform:scaleX(0);
+  transition:background .3s}
+html[dir="rtl"] .wf-bar span{transform-origin:right center}
+
+.wf-nav{
+  position:absolute;inset-inline-end:clamp(12px,2.2vw,26px);inset-block-start:50%;
+  transform:translateY(-50%);display:flex;flex-direction:column;gap:12px;z-index:20;
+}
+.wf-dot{display:flex;align-items:center;gap:9px;flex-direction:row-reverse}
+html[dir="rtl"] .wf-dot{flex-direction:row}
+.wf-dot i{
+  width:9px;height:9px;border-radius:50%;background:rgba(23,32,60,.26);flex:none;
+  transition:.25s;box-shadow:0 0 0 0 var(--accent);
+}
+.wf-dot span{
+  font-size:12px;font-weight:700;color:var(--ink-2);opacity:0;transform:translateX(6px);
+  transition:.25s;white-space:nowrap;
+}
+.wf-dot:hover span,.wf-dot.on span{opacity:1;transform:none}
+.wf-dot.on i{background:var(--accent);width:11px;height:11px;box-shadow:0 0 0 5px rgba(255,255,255,.4)}
+.wf-root[data-theme="dark"] .wf-dot i{background:rgba(255,255,255,.34)}
+.wf-root[data-theme="dark"] .wf-dot span{color:#DCE3FA}
+
+.wf-hint{
+  position:absolute;bottom:26px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:8px;z-index:20;pointer-events:none;
+  font-size:12.5px;font-weight:700;color:var(--ink-2);
+}
+.wf-hint i{
+  width:22px;height:34px;border-radius:12px;border:2px solid currentColor;position:relative;opacity:.7;
+}
+.wf-hint i::after{
+  content:"";position:absolute;left:50%;top:7px;width:3px;height:7px;
+  border-radius:2px;background:currentColor;transform:translateX(-50%);
+  animation:wheel 1.7s ease-in-out infinite;
+}
+@keyframes wheel{0%,100%{transform:translate(-50%,0);opacity:1}55%{transform:translate(-50%,10px);opacity:.25}}
+.wf-root[data-theme="dark"] .wf-hint{color:#CBD4F0}
+
+/* --- الهاتف الرأسي · portrait phones --- */
+.wf-root.is-portrait .wf-card{
+  inset-block-start:auto;inset-block-end:clamp(18px,5vh,54px);
+  inset-inline:clamp(14px,5vw,24px);width:auto;transform:none;
+}
+.wf-root.is-portrait .wf-title{font-size:clamp(25px,7.4vw,34px)}
+.wf-root.is-portrait .wf-body{font-size:14.5px;line-height:1.7;padding:12px 15px}
+.wf-root.is-portrait .wf-nav{
+  flex-direction:row;top:62px;bottom:auto;inset-inline-end:auto;
+  left:50%;transform:translateX(-50%);gap:10px;
+}
+.wf-root.is-portrait .wf-dot span{display:none}
+.wf-root.is-portrait .wf-hint{bottom:14px;top:auto}
+/* رأسياً: المشهد شريط في الأعلى، فنُذيب حافّتيه العليا والسفلى في السماء
+   Portrait: the scene is a band up top, so melt its top and bottom into the sky. */
+.wf-root.is-portrait .wf-layer{
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 15%,#000 71%,transparent 100%);
+  mask-image:linear-gradient(to bottom,transparent 0,#000 15%,#000 71%,transparent 100%);
+}
+.wf-root.is-portrait .wf-layer.bg{
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 22%,#000 64%,transparent 95%);
+  mask-image:linear-gradient(to bottom,transparent 0,#000 22%,#000 64%,transparent 95%);
+}
+
+/* --- بديل تقليل الحركة · reduced-motion fallback --- */
+.wf-root.is-static .wf-still{
+  display:grid;gap:clamp(20px,4vw,44px);align-items:center;
+  grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);
+  padding:clamp(34px,6vw,80px) clamp(18px,5vw,64px);border-block-end:1px solid var(--line);
+}
+.wf-root.is-static .wf-still__art{border-radius:var(--r-lg);overflow:hidden;box-shadow:var(--sh)}
+.wf-root.is-static .wf-still__art svg{width:100%;height:auto}
+.wf-root.is-static .wf-card{position:static;transform:none;opacity:1!important;width:auto}
+.wf-root.is-static .wf-title{text-shadow:none}
+.wf-root.is-static .wf-body{background:none;border:0;box-shadow:none;padding:0;backdrop-filter:none}
+@media (max-width:820px){ .wf-root.is-static .wf-still{grid-template-columns:1fr} }
+
+/* ===== الصفحة تحت الرحلة · the grounded page ============================= */
+.page{position:relative;z-index:2;background:var(--sand)}
+.wrap{width:min(1160px,calc(100% - clamp(28px,7vw,80px)));margin-inline:auto}
+.sec{padding-block:clamp(60px,9vw,120px)}
+.sec--alt{background:var(--paper)}
+.sec__head{max-width:720px;margin-block-end:clamp(28px,4vw,52px)}
+.kicker{
+  display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--leaf);margin:0 0 12px;
+}
+html[dir="rtl"] .kicker{letter-spacing:0;text-transform:none;font-size:13px}
+.sec h2{margin:0 0 12px;font-size:clamp(26px,3.6vw,42px);line-height:1.2;font-weight:800;letter-spacing:-.02em}
+html[dir="rtl"] .sec h2{letter-spacing:0;line-height:1.4}
+.sec p.lede{margin:0;font-size:clamp(15px,1.3vw,17.5px);line-height:1.8;color:var(--ink-2)}
+
+.grid-3{display:grid;gap:clamp(14px,2vw,22px);grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
+.card{
+  background:var(--paper);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:clamp(22px,2.6vw,32px);box-shadow:var(--sh-sm);
+  transition:transform .22s ease,box-shadow .22s ease;
+}
+.sec--alt .card{background:var(--sand);border-color:var(--line-2)}
+.card:hover{transform:translateY(-4px);box-shadow:var(--sh)}
+.card__ico{
+  width:52px;height:52px;border-radius:16px;display:grid;place-items:center;margin-block-end:18px;
+  background:color-mix(in srgb,var(--c) 16%,transparent);color:var(--c);
+}
+.card__ico svg{width:26px;height:26px}
+.card h3{margin:0 0 9px;font-size:19px;font-weight:800}
+.card p{margin:0;font-size:14.5px;line-height:1.8;color:var(--ink-2)}
+
+/* المراحل · phases */
+.steps{display:grid;gap:clamp(14px,2vw,20px);grid-template-columns:repeat(auto-fit,minmax(232px,1fr))}
+.step{
+  position:relative;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);
+  padding:26px 22px 24px;
+}
+.sec--alt .step{background:var(--sand);border-color:var(--line-2)}
+.step b.n{
+  display:inline-grid;place-items:center;width:42px;height:42px;border-radius:13px;
+  background:var(--night);color:#fff;font-size:14px;font-weight:800;margin-block-end:16px;
+}
+.step h3{margin:0 0 5px;font-size:17px;font-weight:800}
+.step .when{display:block;font-size:12.5px;font-weight:800;color:var(--leaf);margin-block-end:10px}
+.step p{margin:0;font-size:14px;line-height:1.75;color:var(--ink-2)}
+
+/* الأهداف · targets */
+.targets{
+  background:var(--night);color:#fff;border-radius:var(--r-lg);
+  padding:clamp(30px,4.4vw,58px);box-shadow:var(--sh);
+}
+.targets h2{color:#fff}
+.targets .kicker{color:var(--sprout)}
+.targets .lede{color:rgba(255,255,255,.68)}
+.nums{display:grid;gap:clamp(16px,2.4vw,26px);grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+  margin-block-start:clamp(24px,3vw,38px)}
+.num b{display:block;font-size:clamp(34px,4.4vw,52px);font-weight:800;line-height:1;
+  color:var(--sprout);letter-spacing:-.02em}
+.num span{display:block;margin-block-start:10px;font-size:13.5px;line-height:1.6;color:rgba(255,255,255,.7)}
+.note{
+  margin-block-start:clamp(22px,3vw,34px);font-size:12.5px;line-height:1.7;
+  color:rgba(255,255,255,.55);border-inline-start:3px solid var(--gold);padding-inline-start:14px;
+}
+
+/* التسجيل · apply */
+.apply{display:grid;gap:clamp(24px,4vw,56px);grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);align-items:start}
+@media (max-width:860px){ .apply{grid-template-columns:1fr} }
+.form{
+  background:var(--paper);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:clamp(22px,3vw,34px);box-shadow:var(--sh-sm);
+}
+.field{margin-block-end:16px}
+.field label{display:block;font-size:13px;font-weight:800;margin-block-end:7px;color:var(--ink-2)}
+.field input,.field select{
+  width:100%;height:52px;padding-inline:15px;border-radius:14px;border:1.5px solid var(--line);
+  background:var(--sand);font:inherit;font-size:15px;color:var(--ink);transition:.16s;
+}
+.field input:focus,.field select:focus{outline:none;border-color:var(--indigo);background:#fff}
+.row2{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+.submit{
+  width:100%;height:54px;border-radius:14px;background:var(--indigo);color:#fff;font-weight:800;font-size:15.5px;
+  box-shadow:0 12px 30px rgba(81,113,255,.32);transition:.18s;
+}
+.submit:hover{background:#3f5cf0;transform:translateY(-2px)}
+.done{
+  margin-block-start:14px;font-size:13.5px;line-height:1.7;color:var(--leaf);font-weight:700;
+  background:color-mix(in srgb,var(--leaf) 10%,transparent);border-radius:12px;padding:12px 14px;
+}
+.done[hidden]{display:none}
+
+/* التذييل · footer */
+.foot{background:var(--night);color:rgba(255,255,255,.62);padding-block:clamp(34px,4.5vw,56px);font-size:13.5px}
+.foot .wrap{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+.foot a{color:#fff;text-decoration:none;font-weight:700}
+.foot a:hover{text-decoration:underline}
+.foot .disc{font-size:12px;color:rgba(255,255,255,.4);max-width:520px;line-height:1.7}

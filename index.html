@@ -2,265 +2,118 @@
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0a0a0c" />
-  <meta name="description" content="active — fitness game with a 3D character, global leaderboard, and rewards." />
-  <title>active</title>
-  <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="apple-touch-icon" href="assets/icon-192.png" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#101731" />
+  <title>سفراء الزراعة الشباب</title>
+  <meta name="description" content="برنامج يأخذ الشباب من الفصل إلى الحقل: تدريب على الزراعة الذكية، ومشروع ميداني حقيقي، وشبكة تبقى معهم." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='9' fill='%23101731'/%3E%3Cpath d='M20 34V20' stroke='%238FC46B' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M19 21C11 20 6 15 6 7c9-1 14 4 14 13z' fill='%232FA36B'/%3E%3Cpath d='M21 18c1-8 6-12 14-11-.5 7-5 11-12 11z' fill='%238FC46B'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/world.css" />
 </head>
-<body>
-  <!-- تعريفات الحلقات -->
-  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-    <linearGradient id="ringGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#00f5a0"/><stop offset="1" stop-color="#00d4ff"/>
-    </linearGradient>
-    <filter id="ringGlow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="2.2" result="b"/>
-      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
-    </filter>
-  </defs></svg>
+<body id="top">
 
-  <!-- ===== التهيئة ===== -->
-  <div id="onboarding" class="onboarding">
-    <div class="onboarding-card">
-      <div class="lang-switch" id="langSwitch">
-        <button data-lang="ar">العربية</button>
-        <button data-lang="en">English</button>
-      </div>
-      <div class="brand">
-        <div class="brand-mark" data-icon="figure" data-icon-size="34"></div>
-        <h1 class="brand-title">active</h1>
-        <p class="brand-sub" data-i18n="tagline"></p>
-      </div>
-
-      <label class="field-label" data-i18n="name_label"></label>
-      <input id="nameInput" class="text-input" type="text" maxlength="16" data-i18n-ph="name_ph" />
-
-      <label class="field-label" data-i18n="choose_char"></label>
-      <div class="gender-pick">
-        <button class="gender-btn" data-gender="male">
-          <span class="gender-ico" data-icon="personMale" data-icon-size="40"></span>
-          <span class="gender-name" data-i18n="male"></span>
-          <small data-i18n="male_sub"></small>
-        </button>
-        <button class="gender-btn" data-gender="female">
-          <span class="gender-ico" data-icon="personFemale" data-icon-size="40"></span>
-          <span class="gender-name" data-i18n="female"></span>
-          <small data-i18n="female_sub"></small>
-        </button>
-      </div>
-
-      <button id="startBtn" class="btn-primary big" disabled data-i18n="start"></button>
+  <!-- ===== الشريط العلوي · top chrome ===== -->
+  <header class="chrome">
+    <a class="mark" href="#top">
+      <span class="mark__leaf" id="markLeaf"></span>
+      <span class="mark__txt">
+        <b data-t="BRAND.name">سفراء الزراعة الشباب</b>
+        <i data-t="BRAND.parent">بالشراكة مع فلج للزراعة الذكية</i>
+      </span>
+    </a>
+    <div class="chrome__right">
+      <button type="button" class="pill" id="langBtn">English</button>
+      <a class="pill pill--solid" href="#apply"><span class="lg" data-t="UI.applyTitle">سجّل في الدفعة القادمة</span><span class="sm" data-t="UI.applyShort">سجّل</span></a>
     </div>
-  </div>
+  </header>
 
-  <!-- ===== التطبيق ===== -->
-  <div id="app" class="app hidden">
-    <header class="topbar">
-      <div class="top-stat">
-        <span class="ico star" data-icon="star" data-icon-size="17"></span>
-        <span id="topPoints">0</span>
+  <!-- ===== الرحلة: التمرير يقود الكاميرا · the flight ===== -->
+  <div id="world"></div>
+
+  <!-- ===== الصفحة الأرضية · the grounded page ===== -->
+  <main class="page">
+
+    <section class="sec sec--alt" id="tracks">
+      <div class="wrap">
+        <div class="sec__head">
+          <p class="kicker" data-t="UI.tracksKicker">المسارات</p>
+          <h2 data-t="UI.tracksTitle">ثلاثة مسارات، يختار السفير واحداً</h2>
+          <p class="lede" data-t="UI.tracksLede">كل سفير يتدرّب على الأساسيات كاملة، ثم يتعمّق في مسارٍ واحد.</p>
+        </div>
+        <div class="grid-3" id="tracksGrid"></div>
       </div>
-      <div class="top-title">active</div>
-      <div class="top-right">
-        <div class="top-stat">
-          <span class="ico coin" data-icon="coin" data-icon-size="17"></span>
-          <span id="topCoins">0</span>
+    </section>
+
+    <section class="sec" id="phases">
+      <div class="wrap">
+        <div class="sec__head">
+          <p class="kicker" data-t="UI.phasesKicker">المراحل</p>
+          <h2 data-t="UI.phasesTitle">الرحلة في أربع مراحل</h2>
         </div>
-        <button id="langBtn" class="lang-btn">EN</button>
+        <div class="steps" id="phaseGrid"></div>
       </div>
-    </header>
+    </section>
 
-    <main id="screens">
-      <!-- الرئيسية -->
-      <section class="screen active" data-screen="home">
-        <div class="hero">
-          <div class="rank-chip">
-            <span data-i18n="rank_label"></span>
-            <strong id="homeRank">#—</strong>
-          </div>
-          <div id="avatarStage" class="avatar-stage"></div>
-          <div class="hero-name" id="homeName">—</div>
+    <section class="sec sec--alt">
+      <div class="wrap">
+        <div class="targets">
+          <p class="kicker" data-t="UI.targetsKicker">أهدافنا</p>
+          <h2 data-t="UI.targetsTitle">أهدافنا للدفعة الأولى</h2>
+          <div class="nums" id="numGrid"></div>
+          <p class="note" data-t="UI.targetsNote">هذه أهداف معلنة للبرنامج، وليست نتائج محقّقة بعد.</p>
         </div>
-
-        <div class="metric-card">
-          <div id="levelRing" class="ring-wrap"></div>
-          <div class="metric-info">
-            <span class="metric-label" data-i18n="level"></span>
-            <strong class="metric-value" id="levelNum">1</strong>
-            <span class="metric-sub" id="levelHint"></span>
-          </div>
-        </div>
-
-        <button class="daily-card" id="dailyCard">
-          <span class="dc-ico" data-icon="bolt" data-icon-size="24"></span>
-          <span class="dc-body">
-            <span class="dc-label" data-i18n="daily_challenge"></span>
-            <span class="dc-name" id="dailyName">—</span>
-          </span>
-          <span class="dc-reward" id="dailyReward"></span>
-        </button>
-
-        <div class="quick-grid">
-          <div class="quick-card">
-            <span class="qc-ico c-pink" data-icon="flame" data-icon-size="22"></span>
-            <strong id="streakDays">0</strong>
-            <small data-i18n="streak"></small>
-          </div>
-          <div class="quick-card">
-            <span class="qc-ico c-green" data-icon="dumbbell" data-icon-size="22"></span>
-            <strong id="totalWorkouts">0</strong>
-            <small data-i18n="workouts_done"></small>
-          </div>
-          <div class="quick-card">
-            <span class="qc-ico c-blue" data-icon="tshirt" data-icon-size="22"></span>
-            <strong id="ownedCount">0</strong>
-            <small data-i18n="owned"></small>
-          </div>
-        </div>
-
-        <button class="btn-primary big" data-goto="workout" data-i18n="start_workout"></button>
-      </section>
-
-      <!-- التمارين -->
-      <section class="screen" data-screen="workout">
-        <h2 class="screen-title" data-i18n="workouts_title"></h2>
-        <p class="screen-sub" data-i18n="workouts_sub"></p>
-        <div id="workoutList" class="workout-list"></div>
-      </section>
-
-      <!-- المتجر -->
-      <section class="screen" data-screen="shop">
-        <h2 class="screen-title" data-i18n="shop_title"></h2>
-        <p class="screen-sub" data-i18n="shop_sub"></p>
-        <button id="watchAdBtn" class="btn-watch">
-          <span data-icon="play" data-icon-size="20"></span>
-          <span data-i18n="watch_video"></span>
-          <span class="ico coin" data-icon="coin" data-icon-size="18"></span>
-        </button>
-        <div class="shop-tabs" id="shopTabs"></div>
-        <div id="shopGrid" class="shop-grid"></div>
-      </section>
-
-      <!-- المتصدرون -->
-      <section class="screen" data-screen="leaderboard">
-        <h2 class="screen-title" data-i18n="lb_title"></h2>
-        <p class="screen-sub" data-i18n="lb_sub"></p>
-        <div id="leaderboardList" class="lb-list"></div>
-      </section>
-
-      <!-- الملف الشخصي -->
-      <section class="screen" data-screen="profile">
-        <h2 class="screen-title" data-i18n="profile_title"></h2>
-        <div class="profile-head">
-          <div class="profile-ava" id="profileAva"></div>
-          <div class="profile-meta">
-            <div class="profile-name" id="profileName">—</div>
-            <div class="profile-rank"><span data-i18n="rank_label"></span> #<span id="profileRank">—</span></div>
-          </div>
-        </div>
-        <div class="stat-rows" id="profileStats"></div>
-        <div class="section-head">
-          <h3 class="section-h" data-i18n="achievements"></h3>
-          <span class="ach-prog" id="achProgress"></span>
-        </div>
-        <div class="ach-grid" id="achGrid"></div>
-
-        <div class="section-head"><h3 class="section-h" data-i18n="settings"></h3></div>
-        <div class="stat-rows">
-          <button class="stat-row setting-row" id="themeBtn">
-            <span class="sr-ico" id="themeIco"></span>
-            <span class="sr-label" data-i18n="theme"></span>
-            <span class="sr-val" id="themeVal"></span>
-          </button>
-          <button class="stat-row setting-row" id="langRow">
-            <span class="sr-ico" data-icon="globe"></span>
-            <span class="sr-label" data-i18n="language"></span>
-            <span class="sr-val" id="langVal"></span>
-          </button>
-        </div>
-      </section>
-    </main>
-
-    <nav class="bottom-nav">
-      <button class="nav-btn active" data-goto="home">
-        <span class="nav-ico" data-icon="house"></span><small data-i18n="nav_home"></small>
-      </button>
-      <button class="nav-btn" data-goto="workout">
-        <span class="nav-ico" data-icon="dumbbell"></span><small data-i18n="nav_workouts"></small>
-      </button>
-      <button class="nav-btn" data-goto="shop">
-        <span class="nav-ico" data-icon="bag"></span><small data-i18n="nav_shop"></small>
-      </button>
-      <button class="nav-btn" data-goto="leaderboard">
-        <span class="nav-ico" data-icon="trophy"></span><small data-i18n="nav_rank"></small>
-      </button>
-      <button class="nav-btn" data-goto="profile">
-        <span class="nav-ico" data-icon="person"></span><small data-i18n="nav_profile"></small>
-      </button>
-    </nav>
-  </div>
-
-  <!-- ===== نوافذ ===== -->
-  <div id="workoutModal" class="modal hidden">
-    <div class="modal-card workout-modal">
-      <div class="wm-icon" id="wmIcon"></div>
-      <h3 id="wmName">—</h3>
-      <p id="wmGoal" class="wm-goal"></p>
-      <div id="wmRing" class="wm-ring"></div>
-      <p id="wmHint" class="wm-hint"></p>
-      <div id="wmAction" class="wm-action"></div>
-      <div class="wm-rewards">
-        <span><span class="ico star" data-icon="star" data-icon-size="16"></span> <b id="wmPts">0</b></span>
-        <span><span class="ico coin" data-icon="coin" data-icon-size="16"></span> <b id="wmCoins">0</b></span>
       </div>
-      <button id="wmCancel" class="btn-ghost" data-i18n="cancel"></button>
+    </section>
+
+    <section class="sec" id="apply">
+      <div class="wrap apply">
+        <div class="sec__head" style="margin:0">
+          <p class="kicker" data-t="UI.applyKicker">التسجيل</p>
+          <h2 data-t="UI.applyTitle">سجّل في الدفعة القادمة</h2>
+          <p class="lede" data-t="UI.applyBody">اترك بياناتك وسنراسلك عند فتح باب التسجيل. لا نطلب خبرةً سابقة.</p>
+        </div>
+
+        <form class="form" id="applyForm" novalidate>
+          <div class="field">
+            <label for="fName" data-t="UI.fName">الاسم الكامل</label>
+            <input id="fName" name="name" autocomplete="name" required />
+          </div>
+          <div class="field">
+            <label for="fEmail" data-t="UI.fEmail">البريد الإلكتروني</label>
+            <input id="fEmail" name="email" type="email" autocomplete="email" required />
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="fAge" data-t="UI.fAge">العمر</label>
+              <input id="fAge" name="age" type="number" min="15" max="24" inputmode="numeric" />
+            </div>
+            <div class="field">
+              <label for="fTrack" data-t="UI.fTrack">المسار المفضّل</label>
+              <select id="fTrack" name="track"></select>
+            </div>
+          </div>
+          <button class="submit" type="submit" data-t="UI.fSubmit">أرسل الطلب</button>
+          <p class="done" id="applyDone" hidden data-t="UI.fDone">وصلنا طلبك — هذا نموذج تجريبي.</p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <div>
+        <a href="#top" data-t="BRAND.name">سفراء الزراعة الشباب</a>
+        <p class="disc" data-t="UI.footNote">نموذج أوّلي. النصوص والأرقام مقترحة للتعديل.</p>
+      </div>
+      <a href="#top" data-t="UI.backToTop">إلى الأعلى</a>
     </div>
-  </div>
+  </footer>
 
-  <div id="adModal" class="modal hidden">
-    <div class="modal-card ad-modal">
-      <div class="ad-screen">
-        <div class="ad-spinner"></div>
-        <div class="ad-badge" data-i18n="ad_label"></div>
-        <p data-i18n="ad_playing"></p>
-        <div class="ad-count" id="adCount">5</div>
-      </div>
-    </div>
-  </div>
-
-  <div id="levelModal" class="modal hidden">
-    <div class="modal-card levelup-card">
-      <div class="lu-badge" id="luBadge"></div>
-      <h3 data-i18n="levelup_title"></h3>
-      <p id="luSub" class="wm-goal"></p>
-      <div class="lu-reward" id="luReward"></div>
-      <button id="luClose" class="btn-primary" data-i18n="awesome"></button>
-    </div>
-  </div>
-
-  <div id="toast" class="toast hidden"></div>
-
-  <script type="importmap">
-  { "imports": { "three": "./js/vendor/three.module.js" } }
-  </script>
-  <script src="js/i18n.js"></script>
-  <script src="js/icons.js"></script>
-  <script src="js/data.js"></script>
-  <script src="js/avatar.js"></script>
-  <script src="js/app.js"></script>
-  <script type="module" src="js/avatar3d.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
-    }
-  </script>
+  <script src="js/world-content.js"></script>
+  <script src="js/world-scenes.js"></script>
+  <script src="js/world-flight.js"></script>
+  <script src="js/world-page.js"></script>
 </body>
 </html>
