@@ -81,6 +81,20 @@ python3 -m http.server 8000
 # تطبيق اللياقة:          http://localhost:8000/fitness/
 ```
 
+## 📦 نسخة الملف الواحد · Single-file build
+
+لمشاركة الموقع أو رفعه على أي استضافة ثابتة بلا مجلدات:
+
+```bash
+node tools/bundle.js          # → dist/index.html  (ملف واحد يُفتح مباشرة)
+node tools/bundle.js --body   # → dist/body.html   (بلا وسوم html/head/body،
+                              #    لمنصّات تُغلّف المحتوى بنفسها)
+```
+
+السكربت يدمج `css/world.css` وملفات `js/world-*.js` داخل `index.html`، ويفشل عمداً إن
+بقي أي أصلٍ محلي غير مدموج. المجلد `dist/` مولَّد ولا يُتتبَّع في git — أعد توليده بعد كل
+تعديل على النصوص.
+
 ## ✏️ التعديل · Editing
 
 - **النصوص والأرقام** — `js/world-content.js` فقط. كل نص كائن `{ ar, en }`، وتبديل اللغة
