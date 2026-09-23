@@ -3,7 +3,9 @@
      POST /api/chat    { message, history?: [{role:'user'|'assistant', text}], lang?, app? }
                        → { reply, tools: [{name, is_error}] }
      GET  /api/health  → model + connected MCP servers and their tools
-     GET  /*           → static files from the repo root (so /app/ works on the same origin) */
+     GET  /chat/       → built-in chat page (assistant/web)
+     GET  /*           → static files from the repo root (so /app/ works on the same origin)
+   Pick the assistant with MCP_CONFIG, e.g. MCP_CONFIG=mcp.audit.json for the audit-firm profile. */
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -20,7 +22,7 @@ const ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map((s) => s.tri
 const RATE_PER_MIN = Number(process.env.RATE_LIMIT_PER_MIN || 20);
 const MAX_HISTORY = 20;
 
-const hub = await McpHub.fromConfig(process.env.MCP_CONFIG || path.join(ROOT, 'mcp.config.json'));
+const hub = await McpHub.fromConfig(process.argv[2] || process.env.MCP_CONFIG || path.join(ROOT, 'mcp.config.json'));
 const agent = new FalajAgent(hub);
 
 // Tiny per-IP rate limiter so a public deployment can't burn the API key.
@@ -86,12 +88,16 @@ async function handleChat(req, res) {
 }
 
 const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.png': 'image/png', '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.ico': 'image/x-icon' };
+const WEB_ROOT = path.join(ROOT, 'web');
 function serveStatic(req, res) {
   let rel = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  if (rel === '/chat') { res.writeHead(301, { Location: '/chat/' }).end(); return; }
+  let base = STATIC_ROOT;
+  if (rel.startsWith('/chat/')) { base = WEB_ROOT; rel = rel.slice('/chat'.length); }
   if (rel.endsWith('/')) rel += 'index.html';
-  const file = path.resolve(STATIC_ROOT, '.' + rel);
-  const inside = path.relative(STATIC_ROOT, file);
-  if (inside.startsWith('..') || path.isAbsolute(inside) || inside.split(path.sep).some((p) => p.startsWith('.') || p === 'node_modules') || inside.split(path.sep)[0] === 'assistant') {
+  const file = path.resolve(base, '.' + rel);
+  const inside = path.relative(base, file);
+  if (inside.startsWith('..') || path.isAbsolute(inside) || inside.split(path.sep).some((p) => p.startsWith('.') || p === 'node_modules') || (base === STATIC_ROOT && inside.split(path.sep)[0] === 'assistant')) {
     res.writeHead(404).end(); return;
   }
   fs.readFile(file, (err, data) => {
@@ -112,7 +118,7 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.error(`FALAJ assistant on http://localhost:${PORT}  (app: http://localhost:${PORT}/app/)`);
+  console.error(`Assistant "${hub.name}" on http://localhost:${PORT}  (chat: http://localhost:${PORT}/chat/, FALAJ app: /app/)`);
 });
 
 const shutdown = async () => { server.close(); await hub.close(); process.exit(0); };

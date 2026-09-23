@@ -1,8 +1,19 @@
 {
+  "assistant": {
+    "name": "FALAJ",
+    "profile": "profiles/falaj.md",
+    "suggestions": [
+      "أي منطقة تحتاج ريّ الآن؟",
+      "كم سعر الطماطم اليوم؟",
+      "Which sensors are offline?"
+    ]
+  },
   "mcpServers": {
     "falaj": {
       "command": "node",
-      "args": ["mcp/falaj-server.js"]
+      "args": [
+        "mcp/falaj-server.js"
+      ]
     }
   }
 }

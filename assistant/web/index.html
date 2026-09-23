@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>المساعد الذكي</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap">
+<style>
+  :root {
+    --bg: #f4f5f7; --panel: #ffffff; --ink: #16181d; --ink-2: #4a505c; --ink-3: #7b8190;
+    --line: #e3e5ea; --accent: #1f5f8b; --accent-ink: #ffffff; --accent-soft: #e6eef5;
+    --user: #1f5f8b; --user-ink: #fff; --ok: #1d7a4c; --err: #b3261e; --chip: #eef0f3;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1115; --panel: #171a20; --ink: #e8eaee; --ink-2: #b4b9c4; --ink-3: #868c99;
+      --line: #262a33; --accent: #5aa3d6; --accent-ink: #0b1620; --accent-soft: #16263a;
+      --user: #2c6f9f; --user-ink: #fff; --ok: #4cc38a; --err: #f2867f; --chip: #20242c;
+      --shadow: none;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1115; --panel: #171a20; --ink: #e8eaee; --ink-2: #b4b9c4; --ink-3: #868c99;
+    --line: #262a33; --accent: #5aa3d6; --accent-ink: #0b1620; --accent-soft: #16263a;
+    --user: #2c6f9f; --user-ink: #fff; --ok: #4cc38a; --err: #f2867f; --chip: #20242c; --shadow: none;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--ink); font: 15px/1.6 "IBM Plex Sans Arabic", system-ui, sans-serif; display: flex; flex-direction: column; }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 12px 16px; }
+  .bar { max-width: 880px; margin: 0 auto; display: flex; align-items: center; gap: 12px; }
+  .logo { width: 36px; height: 36px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; flex: none; }
+  .title { flex: 1; min-width: 0; }
+  .title b { display: block; font-size: 16px; }
+  .apps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+  .app { font-size: 12px; color: var(--ink-2); background: var(--chip); border-radius: 999px; padding: 1px 9px; display: inline-flex; align-items: center; gap: 5px; }
+  .app i { width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+  .app.bad i { background: var(--err); }
+  .lang { border: 1px solid var(--line); background: transparent; color: var(--ink-2); border-radius: 8px; padding: 6px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  main { flex: 1; overflow-y: auto; padding: 20px 16px; }
+  .thread { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .empty { text-align: center; color: var(--ink-3); padding: 40px 8px 8px; }
+  .empty h1 { color: var(--ink); font-size: 22px; margin: 0 0 6px; }
+  .sugg { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
+  .sugg button { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 10px; padding: 9px 13px; font: inherit; font-size: 14px; cursor: pointer; box-shadow: var(--shadow); text-align: start; }
+  .sugg button:hover { border-color: var(--accent); }
+  .msg { max-width: 92%; }
+  .msg.user { align-self: flex-end; background: var(--user); color: var(--user-ink); padding: 10px 14px; border-radius: 14px; border-end-end-radius: 4px; white-space: pre-wrap; }
+  .msg.bot { align-self: flex-start; background: var(--panel); border: 1px solid var(--line); padding: 12px 16px; border-radius: 14px; border-end-start-radius: 4px; box-shadow: var(--shadow); }
+  .msg.bot.err { border-color: var(--err); color: var(--err); }
+  .msg p { margin: 0 0 8px; } .msg p:last-child { margin: 0; }
+  .msg ul, .msg ol { margin: 4px 0 8px; padding-inline-start: 20px; }
+  .msg h3 { font-size: 15px; margin: 10px 0 4px; }
+  .msg code { background: var(--chip); border-radius: 4px; padding: 0 4px; font-size: 13px; }
+  .tbl { overflow-x: auto; margin: 6px 0 10px; }
+  table { border-collapse: collapse; font-size: 13.5px; min-width: 100%; }
+  th, td { border: 1px solid var(--line); padding: 5px 9px; text-align: start; white-space: nowrap; }
+  th { background: var(--chip); font-weight: 600; }
+  .used { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--line); }
+  .used span { font-size: 12px; color: var(--ink-2); background: var(--accent-soft); border-radius: 6px; padding: 1px 7px; direction: ltr; }
+  .used span.e { color: var(--err); }
+  .typing { display: inline-flex; gap: 5px; padding: 4px 0; }
+  .typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); opacity: .3; animation: d 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+  @keyframes d { 40% { opacity: 1; } }
+  footer { background: var(--panel); border-top: 1px solid var(--line); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); }
+  form { max-width: 880px; margin: 0 auto; display: flex; gap: 10px; align-items: flex-end; }
+  textarea { flex: 1; resize: none; max-height: 160px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 12px; padding: 11px 14px; font: inherit; outline: none; }
+  textarea:focus { border-color: var(--accent); }
+  .send { width: 44px; height: 44px; border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; cursor: pointer; flex: none; }
+  .send:disabled { opacity: .5; cursor: default; }
+  .note { max-width: 880px; margin: 6px auto 0; font-size: 12px; color: var(--ink-3); text-align: center; }
+  [dir="rtl"] .send svg { transform: scaleX(-1); }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="logo" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h9"/></svg>
+    </div>
+    <div class="title"><b id="name">…</b><div class="apps" id="apps"></div></div>
+    <button class="lang" id="lang" type="button">EN</button>
+  </div>
+</header>
+<main id="scroll"><div class="thread" id="thread"></div></main>
+<footer>
+  <form id="form">
+    <textarea id="input" rows="1" dir="auto"></textarea>
+    <button class="send" id="send" type="submit" aria-label="send">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+    </button>
+  </form>
+  <div class="note" id="note"></div>
+</footer>
+<script>
+const T = {
+  ar: { dir: 'rtl', other: 'EN', hello: 'كيف أقدر أساعدك اليوم؟', sub: 'أسأل تطبيقات الشركة المتصلة وأجمع لك الجواب.', ph: 'اكتب سؤالك…', note: 'المساعد يدعم حكمك المهني ولا يحلّ محلّه — راجع النتائج قبل الاعتماد عليها.', err: 'تعذّر الوصول للمساعد', apps: 'تطبيقات متصلة' },
+  en: { dir: 'ltr', other: 'ع', hello: 'How can I help today?', sub: 'I query the connected firm apps and pull the answer together.', ph: 'Ask anything…', note: 'The assistant supports, not replaces, professional judgement — review results before relying on them.', err: 'Could not reach the assistant', apps: 'connected apps' },
+};
+let lang = 'ar';
+try { lang = localStorage.getItem('assistant_lang') || 'ar'; } catch (e) {}
+let info = { name: 'Assistant', servers: [], errors: {}, suggestions: [] };
+const history = [];
+let busy = false;
+const $ = (id) => document.getElementById(id);
+
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const inline = (s) => s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+)`/g, '<code>$1</code>');
+// Safe Markdown subset: everything is escaped first, then headings, lists, tables, bold, code.
+function md(text) {
+  const lines = esc(text).split('\n'); const out = []; let i = 0;
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^\s*\|.*\|\s*$/.test(l)) {
+      const rows = []; while (i < lines.length && /^\s*\|.*\|\s*$/.test(lines[i])) rows.push(lines[i++]);
+      const cells = (r) => r.trim().slice(1, -1).split('|').map((c) => inline(c.trim()));
+      const body = rows.filter((r) => !/^\s*\|[\s:|-]+\|\s*$/.test(r));
+      out.push('<div class="tbl"><table><tr>' + cells(body[0]).map((c) => `<th>${c}</th>`).join('') + '</tr>' +
+        body.slice(1).map((r) => '<tr>' + cells(r).map((c) => `<td>${c}</td>`).join('') + '</tr>').join('') + '</table></div>');
+      continue;
+    }
+    if (/^\s*([-*•])\s+/.test(l) || /^\s*\d+[.)]\s+/.test(l)) {
+      const ordered = /^\s*\d/.test(l); const items = [];
+      while (i < lines.length && (ordered ? /^\s*\d+[.)]\s+/ : /^\s*([-*•])\s+/).test(lines[i])) items.push(lines[i++].replace(/^\s*([-*•]|\d+[.)])\s+/, ''));
+      out.push(`<${ordered ? 'ol' : 'ul'}>` + items.map((x) => `<li>${inline(x)}</li>`).join('') + `</${ordered ? 'ol' : 'ul'}>`);
+      continue;
+    }
+    const h = l.match(/^#{1,4}\s+(.*)/);
+    if (h) { out.push(`<h3>${inline(h[1])}</h3>`); i++; continue; }
+    if (!l.trim()) { i++; continue; }
+    const para = []; while (i < lines.length && lines[i].trim() && !/^\s*(\||[-*•]\s|\d+[.)]\s|#)/.test(lines[i])) para.push(lines[i++]);
+    if (!para.length) { para.push(lines[i++]); }
+    out.push('<p>' + para.map(inline).join('<br>') + '</p>');
+  }
+  return out.join('');
+}
+
+function applyLang() {
+  const t = T[lang];
+  document.documentElement.lang = lang; document.documentElement.dir = t.dir;
+  $('lang').textContent = t.other; $('input').placeholder = t.ph; $('note').textContent = t.note;
+  render();
+}
+
+function render() {
+  const t = T[lang];
+  $('name').textContent = info.name; document.title = info.name;
+  $('apps').innerHTML = info.servers.map((s) => `<span class="app" title="${esc(s.tools.join(', '))}"><i></i>${esc(s.name)} · ${s.tools.length}</span>`).join('') +
+    Object.keys(info.errors || {}).map((n) => `<span class="app bad" title="${esc(info.errors[n])}"><i></i>${esc(n)}</span>`).join('');
+  const th = $('thread');
+  if (!history.length && !busy) {
+    th.innerHTML = `<div class="empty"><h1>${t.hello}</h1><div>${t.sub}</div><div class="sugg">${info.suggestions.map((s) => `<button type="button" dir="auto">${esc(s)}</button>`).join('')}</div></div>`;
+    th.querySelectorAll('.sugg button').forEach((b) => b.onclick = () => ask(b.textContent));
+    return;
+  }
+  th.innerHTML = history.map((m) => m.role === 'user'
+    ? `<div class="msg user" dir="auto">${esc(m.text)}</div>`
+    : `<div class="msg bot ${m.error ? 'err' : ''}" dir="auto">${m.error ? esc(m.text) : md(m.text)}${m.tools && m.tools.length
+        ? `<div class="used">${m.tools.map((x) => `<span class="${x.is_error ? 'e' : ''}">${esc(x.name.replace('__', ' › '))}</span>`).join('')}</div>` : ''}</div>`).join('') +
+    (busy ? '<div class="msg bot"><span class="typing"><i></i><i></i><i></i></span></div>' : '');
+  $('scroll').scrollTop = $('scroll').scrollHeight;
+}
+
+async function ask(text) {
+  text = (text || '').trim();
+  if (!text || busy) return;
+  const prior = history.filter((m) => !m.error).map((m) => ({ role: m.role, text: m.text }));
+  history.push({ role: 'user', text });
+  busy = true; $('send').disabled = true; render();
+  try {
+    const res = await fetch('../api/chat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: text, history: prior, lang }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.reply) throw new Error(data.error || 'HTTP ' + res.status);
+    history.push({ role: 'assistant', text: data.reply, tools: data.tools });
+  } catch (e) {
+    history.push({ role: 'assistant', text: `${T[lang].err}: ${e.message}`, error: true });
+  }
+  busy = false; $('send').disabled = false; render();
+}
+
+$('form').onsubmit = (e) => { e.preventDefault(); const v = $('input').value; $('input').value = ''; autosize(); ask(v); };
+$('input').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('form').requestSubmit(); } });
+const autosize = () => { const el = $('input'); el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 160) + 'px'; };
+$('input').addEventListener('input', autosize);
+$('lang').onclick = () => { lang = lang === 'ar' ? 'en' : 'ar'; try { localStorage.setItem('assistant_lang', lang); } catch (e) {} applyLang(); };
+
+fetch('../api/health').then((r) => r.json()).then((h) => { info = { ...info, ...h.mcp }; render(); }).catch(() => {});
+applyLang();
+</script>
+</body>
+</html>

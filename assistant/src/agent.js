@@ -1,4 +1,5 @@
-/* ===== FALAJ assistant — Claude + MCP tools agent loop ===== */
+/* ===== Assistant — Claude + MCP tools agent loop =====
+   The system prompt comes from the profile named in the MCP config ("assistant.profile"). */
 import Anthropic from '@anthropic-ai/sdk';
 
 const MODEL = process.env.FALAJ_MODEL || 'claude-opus-5';
@@ -7,23 +8,15 @@ const MAX_STEPS = Number(process.env.FALAJ_MAX_STEPS || 12);
 // Server-side refusal fallback (Claude API only). Set FALAJ_FALLBACKS=off on Bedrock/Vertex/Foundry.
 const FALLBACKS = process.env.FALAJ_FALLBACKS !== 'off';
 
-const LANG_NAMES = { en: 'English', ar: 'Arabic (Gulf/Emirati-friendly Modern Standard Arabic)', ur: 'Urdu', hi: 'Hindi' };
+const LANG_NAMES = { en: 'English', ar: 'Arabic', ur: 'Urdu', hi: 'Hindi' };
 
-const SYSTEM_PROMPT = `You are the FALAJ smart-farming assistant (مساعد فلج الذكي). FALAJ is a UAE IoT smart-irrigation system that helps farmers save water.
-
-You help farmers with irrigation, soil moisture, crop health, pests, fertilizer, weather, market prices and harvest timing.
-You are connected to tools over MCP. Tool names look like "<server>__<tool>"; tools from the "falaj" server read the farm's live sensors and control irrigation. Other servers may add more capabilities — use whatever fits the question.
-
-How to work:
-- For anything about this farm (zones, moisture, devices, fields, prices, weather), look it up with the tools instead of guessing. Quote the real numbers.
-- Tools that change the farm (for example start_irrigation) run only when the farmer clearly asks for that action. If they just ask whether to water, recommend and offer to start it.
-- Reply in the farmer's language. Keep answers short and practical: a direct answer first, then at most a few bullet points. Use AED and metric units.
-- If a tool fails or data is missing, say so plainly and give the best general advice.`;
+const DEFAULT_PROMPT = 'You are a helpful assistant connected to tools over MCP. Tool names look like "<server>__<tool>". Use the tools to look facts up instead of guessing, and reply in the user\'s language.';
 
 export class FalajAgent {
-  constructor(hub, { client } = {}) {
+  constructor(hub, { client, systemPrompt } = {}) {
     this.hub = hub;
     this.client = client || new Anthropic();
+    this.systemPrompt = systemPrompt || hub.profilePrompt || DEFAULT_PROMPT;
   }
 
   /**
@@ -36,7 +29,7 @@ export class FalajAgent {
   async chat(history, userText, ctx = {}, onEvent = () => {}) {
     const messages = [...history, { role: 'user', content: userText }];
     const tools = this.hub.claudeTools();
-    const system = [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }];
+    const system = [{ type: 'text', text: this.systemPrompt, cache_control: { type: 'ephemeral' } }];
     const ctxText = contextText(ctx);
     if (ctxText) system.push({ type: 'text', text: ctxText });
 
@@ -64,10 +57,10 @@ export class FalajAgent {
       const results = await Promise.all(calls.map(async (c) => {
         onEvent({ type: 'tool', name: c.name, input: c.input });
         const r = await this.hub.call(c.name, c.input);
-        used.push({ name: c.name, input: c.input, is_error: r.is_error });
         onEvent({ type: 'tool_result', name: c.name, is_error: r.is_error });
         return { type: 'tool_result', tool_use_id: c.id, content: r.content, ...(r.is_error ? { is_error: true } : {}) };
       }));
+      calls.forEach((c, i) => used.push({ name: c.name, input: c.input, is_error: !!results[i].is_error }));
       messages.push({ role: 'user', content: results });
     }
 
@@ -81,8 +74,8 @@ export class FalajAgent {
 
 function contextText({ lang, app } = {}) {
   const parts = [];
-  if (lang && LANG_NAMES[lang]) parts.push(`The farmer's app language is ${LANG_NAMES[lang]} — answer in it unless they write in another language.`);
-  if (app && typeof app === 'object') parts.push(`What the farmer currently sees in the FALAJ app (may be newer than tool data):\n${JSON.stringify(app).slice(0, 6000)}`);
+  if (lang && LANG_NAMES[lang]) parts.push(`The user's app language is ${LANG_NAMES[lang]} — answer in it unless they write in another language.`);
+  if (app && typeof app === 'object') parts.push(`What the user currently sees in the app (may be newer than tool data):\n${JSON.stringify(app).slice(0, 6000)}`);
   return parts.join('\n\n');
 }
 

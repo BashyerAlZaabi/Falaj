@@ -1,12 +1,14 @@
 {
   "name": "falaj-assistant",
   "version": "1.0.0",
-  "description": "FALAJ smart-farming assistant (Claude + MCP)",
+  "description": "Claude + MCP assistant: connects to any MCP servers (audit-firm apps, FALAJ farm)",
   "scripts": {
     "start": "node --env-file-if-exists=.env src/server.js",
     "chat": "node --env-file-if-exists=.env src/cli.js",
     "mcp": "node mcp/falaj-server.js",
-    "mcp:http": "node mcp/falaj-server.js --http"
+    "mcp:http": "node mcp/falaj-server.js --http",
+    "start:audit": "node --env-file-if-exists=.env src/server.js mcp.audit.json",
+    "chat:audit": "node --env-file-if-exists=.env src/cli.js mcp.audit.json"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

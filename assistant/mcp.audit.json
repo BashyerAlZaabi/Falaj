@@ -1,0 +1,18 @@
+{
+  "assistant": {
+    "name": "Audit Assistant",
+    "profile": "profiles/audit.md",
+    "suggestions": [
+      "أعطني ملخص حالة كل المهام وأقرب موعد تسليم",
+      "شغّل اختبارات القيود اليومية على ENG-001 ولخّص أخطر النتائج",
+      "هل يوجد تعارض استقلالية في فرق المهام؟",
+      "Which PBC items are overdue for Gulf Trading and who owns them?",
+      "Compare open misstatements on ENG-001 with materiality"
+    ]
+  },
+  "mcpServers": {
+    "engagements": { "command": "node", "args": ["mcp/audit/engagement-server.js"] },
+    "analytics":   { "command": "node", "args": ["mcp/audit/analytics-server.js"] },
+    "people":      { "command": "node", "args": ["mcp/audit/people-server.js"] }
+  }
+}

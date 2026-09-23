@@ -8,15 +8,10 @@
      node mcp/falaj-server.js --http       → Streamable HTTP on :3334/mcp
      MCP_PORT=8080 node mcp/falaj-server.js --http
 */
-import http from 'node:http';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { z } from 'zod';
 import * as farm from './farm-data.js';
-
-const json = (data) => ({ content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] });
-const fail = (msg) => ({ content: [{ type: 'text', text: msg }], isError: true });
+import { json, fail, run } from './lib/serve.js';
 const zoneId = z.string().describe('Zone id, e.g. "Z1"');
 
 function buildServer() {
@@ -96,33 +91,4 @@ function buildServer() {
   return server;
 }
 
-async function main() {
-  if (!process.argv.includes('--http')) {
-    await buildServer().connect(new StdioServerTransport());
-    console.error('FALAJ MCP server running on stdio');
-    return;
-  }
-
-  const port = Number(process.env.MCP_PORT || 3334);
-  const token = process.env.MCP_AUTH_TOKEN || '';
-  http.createServer(async (req, res) => {
-    if (!req.url.startsWith('/mcp')) { res.writeHead(404).end(); return; }
-    if (token && req.headers.authorization !== `Bearer ${token}`) { res.writeHead(401).end('unauthorized'); return; }
-    if (req.method !== 'POST') { res.writeHead(405, { Allow: 'POST' }).end(); return; }
-    // Stateless mode: a fresh server + transport per request.
-    const server = buildServer();
-    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-    res.on('close', () => { transport.close(); server.close(); });
-    let body = '';
-    for await (const chunk of req) body += chunk;
-    try {
-      await server.connect(transport);
-      await transport.handleRequest(req, res, body ? JSON.parse(body) : undefined);
-    } catch (e) {
-      console.error(e);
-      if (!res.headersSent) res.writeHead(400, { 'Content-Type': 'application/json' }).end(JSON.stringify({ error: String(e.message || e) }));
-    }
-  }).listen(port, () => console.error(`FALAJ MCP server on http://localhost:${port}/mcp`));
-}
-
-main().catch((e) => { console.error(e); process.exit(1); });
+run(buildServer, { name: 'FALAJ', defaultPort: 3334 });

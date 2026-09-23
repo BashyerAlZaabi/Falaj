@@ -4,6 +4,7 @@
          "falaj":  { "command": "node", "args": ["mcp/falaj-server.js"] },        ← local (stdio)
          "remote": { "url": "https://host/mcp", "headers": { "Authorization": "Bearer ${TOKEN}" } } ← remote (HTTP)
      } }
+   Optional "assistant": { "profile": "profiles/x.md" } sets the assistant's system prompt.
    "${VAR}" inside any string is replaced with the environment variable VAR.
    Each MCP tool is exposed to Claude as "<server>__<tool>". */
 import fs from 'node:fs';
@@ -35,6 +36,9 @@ export class McpHub {
     const hub = new McpHub();
     const raw = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     const baseDir = path.dirname(path.resolve(configPath));
+    hub.name = raw.assistant?.name || path.basename(configPath, '.json');
+    hub.suggestions = raw.assistant?.suggestions || [];
+    if (raw.assistant?.profile) hub.profilePrompt = fs.readFileSync(path.resolve(baseDir, raw.assistant.profile), 'utf8').trim();
     const entries = Object.entries(raw.mcpServers || {}).filter(([, c]) => !c.disabled);
     await Promise.all(entries.map(([name, cfg]) => hub.connect(name, expandEnv(cfg), baseDir)));
     return hub;
@@ -86,17 +90,32 @@ export class McpHub {
   /** Run a tool and return { content, is_error } ready for a Claude tool_result block. */
   async call(claudeName, input) {
     const route = this.routes.get(claudeName);
-    if (!route) return { content: `Unknown tool ${claudeName}`, is_error: true };
-    try {
-      const res = await this.servers.get(route.server).client.callTool({ name: route.tool, arguments: input || {} });
-      return { content: toClaudeContent(res), is_error: !!res.isError };
-    } catch (e) {
-      return { content: `Tool ${claudeName} failed: ${e.message || e}`, is_error: true };
+    let out;
+    if (!route) out = { content: `Unknown tool ${claudeName}`, is_error: true };
+    else {
+      try {
+        const res = await this.servers.get(route.server).client.callTool({ name: route.tool, arguments: input || {} });
+        out = { content: toClaudeContent(res), is_error: !!res.isError };
+      } catch (e) {
+        out = { content: `Tool ${claudeName} failed: ${e.message || e}`, is_error: true };
+      }
     }
+    this.trail({ tool: claudeName, input, is_error: out.is_error });
+    return out;
+  }
+
+  /** Append-only audit trail of every tool call (TOOL_LOG_FILE), without tool outputs. */
+  trail(entry) {
+    const file = process.env.TOOL_LOG_FILE;
+    if (!file) return;
+    try { fs.appendFileSync(file, JSON.stringify({ at: new Date().toISOString(), ...entry }) + '\n'); }
+    catch (e) { console.error(`[mcp] could not write ${file}: ${e.message}`); }
   }
 
   summary() {
     return {
+      name: this.name,
+      suggestions: this.suggestions,
       servers: [...this.servers].map(([name, s]) => ({ name, tools: s.tools.map((t) => t.name) })),
       errors: this.errors,
     };
