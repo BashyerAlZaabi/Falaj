@@ -23,36 +23,60 @@
 ```bash
 cd assistant
 npm install
-cp .env.example .env        # ضع ANTHROPIC_API_KEY
+cp .env.example .env        # ضع ANTHROPIC_API_KEY (وباقي المفاتيح اختيارية)
 npm run start:audit         # افتح http://localhost:8787/chat/
 ```
 
-أسئلة يقدر يجاوبها بجمع أكثر من تطبيق:
-- «أعطني ملخص حالة ENG-001»: يجمع مواعيد التسليم وطلبات PBC المتأخرة والملاحظات المفتوحة والساعات المستخدمة وفحص الاستقلالية.
-- «شغّل اختبارات القيود اليومية ولخّص أخطرها» (ISA 240): مبالغ مدوّرة، أو أقل بقليل من حدّ الاعتماد، أو نهاية الفترة، أو عطلة نهاية الأسبوع، أو قيود يدوية من الإدارة العليا، أو مستخدم غير متوقع، أو مدين للإيرادات.
-- «قارن الأخطاء غير المعدّلة بالأهمية النسبية» (ISA 450 / 320).
-- «هل يوجد تعارض استقلالية في فرق المهام؟»
-- «سجّل ٦ ساعات لفاطمة على ENG-001» أو «علّم PBC-103 كمستلم»: هذه كتابة، ولا تتم إلا بطلب صريح.
+يشتغل فوراً ببيانات تجريبية لكل التطبيقات، وكل تطبيق تضيف مفاتيحه يتحوّل للنظام الحقيقي.
 
-### أدوات تطبيقات التدقيق (16 أداة)
+### التطبيقات المتصلة (6 خوادم MCP، 40 أداة)
 
-| الخادم | يمثّل | الأدوات |
-|---|---|---|
-| `engagements` | منصة إدارة المهام | `list_engagements` · `get_engagement` · `list_pbc_requests` · `update_pbc_request` ✍️ · `list_findings` · `log_finding` ✍️ · `misstatements_vs_materiality` |
-| `analytics` | منصة تحليل البيانات | `get_trial_balance` · `analytical_review` · `journal_entry_testing` · `calculate_materiality` · `select_sample` |
-| `people` | الموارد البشرية / الوقت والفوترة / الاستقلالية | `list_staff` · `engagement_hours` · `log_time` ✍️ · `independence_check` |
+| الخادم | التطبيق | الأدوات | الوضع الحقيقي |
+|---|---|---|---|
+| `m365` | **Outlook + التقويم + SharePoint/OneDrive** | `search_emails` · `read_email` · `read_attachment` · `save_attachment_for_import` ✍️ · `draft_email` ✍️ · `list_events` · `create_event` ✍️ · `search_files` · `list_folder` · `read_file` · `save_file` ✍️ | Microsoft Graph (متغيّرات `M365_*`) |
+| `erp` | **أنظمة ERP للعملاء** | `erp_status` · `test_erp_connection` · `pull_from_erp` ✍️ · `import_extract` ✍️ · `reconcile_je_to_tb` · `search_gl` | Odoo و Dynamics 365 Business Central مباشرة، وأي ERP آخر (SAP، Oracle، Tally، QuickBooks، Zoho…) عبر ملفات CSV/XLSX |
+| `billing` | **الوقت والفوترة** | `engagement_hours` · `log_time` ✍️ · `get_wip` · `list_invoices` · `fee_debtors` · `engagement_economics` · `draft_invoice` ✍️ · `import_timesheet` ✍️ | استيراد CSV/XLSX من أي نظام timesheet |
+| `engagements` | منصة إدارة المهام | `list_engagements` · `get_engagement` · `list_pbc_requests` · `update_pbc_request` ✍️ · `list_findings` · `log_finding` ✍️ · `misstatements_vs_materiality` | — |
+| `analytics` | تحليل البيانات | `get_trial_balance` · `analytical_review` · `journal_entry_testing` · `calculate_materiality` · `select_sample` | يحلّل ما يُستورد من ERP |
+| `people` | الموارد البشرية والاستقلالية | `list_staff` · `independence_check` | — |
 
-✍️ = أداة تكتب في أنظمة الشركة.
+✍️ = أداة تكتب أو تغيّر شيئاً، ولا يستخدمها المساعد إلا بطلب صريح. الإيميلات **مسودّات فقط** ولا تُرسل أبداً.
 
-البيانات حالياً **تجريبية ولعملاء وهميين** (`mcp/audit/data.js`). لربط أنظمة شركتك الحقيقية:
-1. استبدل الدوال في `mcp/audit/*-server.js` باستدعاءات لواجهات أنظمتكم (API أو قاعدة بيانات أو ملفات ERP المستخرجة)، مع الإبقاء على أسماء الأدوات ومدخلاتها.
-2. أو أضف خوادم MCP جاهزة للأنظمة التي عندكم (البريد، والمستندات، والتقويم، وإدارة المهام) في `mcp.audit.json`.
+كل الخوادم تشترك في مخزن واحد (`data/audit-store.json`). يعني الوقت المسجّل يظهر في الفوترة، وبيانات ERP المستوردة تحلّلها التحليلات، ولا شيء يضيع عند إعادة التشغيل.
+
+### أمثلة على أسئلة تجمع أكثر من تطبيق
+- «هل أرسل العميل ميزان المراجعة بالإيميل؟ حمّله وشغّل اختبارات القيود» ← Outlook ← حفظ المرفق ← استيراد ERP (تجربة أولاً) ← مطابقة القيود مع الميزان ← اختبارات ISA 240
+- «هل يوجد ما يهدد الاستقلالية؟» ← سجل الاستقلالية + أتعاب غير مدفوعة من السنة السابقة + إيميل العميل عنها
+- «جهّز لي اجتماعات الأسبوع» ← التقويم + حالة كل مهمة + الطلبات المتأخرة
+- «اكتب تذكير لـ Gulf Trading بالطلبات المتأخرة» ← PBC ← مسودّة في Outlook
+- «كم الأتعاب غير المفوترة؟ جهّز فاتورة ENG-001» ← WIP ← فاتورة مسودّة
+
+### ربط الأنظمة الحقيقية
+
+**Microsoft 365:** سجّل تطبيقاً في Microsoft Entra ID وامنحه صلاحيات Application التالية: `Mail.ReadWrite` و`Calendars.ReadWrite` و`Files.ReadWrite.All` (أو `Sites.Selected` لموقع واحد). بعدها ضع في `.env`:
+```
+M365_TENANT_ID=…  M365_CLIENT_ID=…  M365_CLIENT_SECRET=…
+M365_MAILBOX=audit.manager@yourfirm.com
+M365_SHAREPOINT_SITE=yourfirm.sharepoint.com:/sites/Audit
+```
+قيّد الوصول لصناديق البريد المطلوبة فقط عبر Application Access Policy أو RBAC for Applications في Exchange. وللتجربة السريعة يكفي `M365_ACCESS_TOKEN` من Graph Explorer.
+
+**ERP العملاء:** انسخ `erp.connections.example.json` إلى `erp.connections.json`، واربط كل مهمة بنظام عميلها، وضع الأسرار في `.env`:
+- **Odoo 16–18:** `url` و`db` و`username` و`apiKey` (مستخدم بصلاحية قراءة للمحاسبة).
+- **Business Central:** تطبيق Entra ID مضاف في BC › Microsoft Entra Applications بصلاحية قراءة.
+- **أي نظام آخر:** ضع ملف CSV/XLSX في `data/imports/` (أو يحفظه المساعد من إيميل العميل)، ثم استخدم `import_extract`. أسماء الأعمدة تُتعرّف تلقائياً، وقبل الحفظ يُفحص توازن الميزان والقيود.
+
+**الوقت والفوترة:** صدّر الـ timesheet من نظامكم كـ CSV/XLSX (أعمدة: staff و engagement و hours و date)، وضعه في `data/imports/`، ثم استخدم `import_timesheet`. للربط المباشر بنظامكم: استبدل `load()/update()` في `mcp/audit/store.js` بقاعدة بياناتكم.
+
+> ⚠️ موصلات Odoo و Business Central و Microsoft Graph مكتوبة حسب التوثيق الرسمي ومختبرة على خوادم محاكاة، لكنها لم تُجرَّب بعد على نظام حقيقي. جرّب `test_erp_connection` و`m365_status` أولاً.
 
 ### 🔐 الأمان والامتثال
-- **سجل تدقيق:** ضع `TOOL_LOG_FILE=./tool-calls.jsonl` ليُسجَّل كل استدعاء أداة بوقته ومدخلاته (من دون المخرجات).
-- مفتاح Claude وأسرار الأنظمة تبقى على الخادم وفي `.env`، ولا تصل للمتصفح.
-- أدوات الكتابة لا تعمل إلا بطلب صريح من المستخدم، والمساعد لا يعطي رأياً تدقيقياً ولا يوقّع على شيء.
-- قبل التشغيل على بيانات عملاء حقيقية: أضف تسجيل دخول (SSO) أمام الخادم، وقيّد `ALLOWED_ORIGINS`، وراجع سياسة الشركة في مشاركة البيانات مع مزوّدي الذكاء الاصطناعي.
+- **سجل تدقيق:** مع `TOOL_LOG_FILE=./tool-calls.jsonl` يُسجَّل كل استدعاء أداة بوقته ومدخلاته.
+- **الأسرار** (مفاتيح Claude و Graph و ERP) تبقى في `.env` على الخادم، ولا يُعرض أي سر في مخرجات الأدوات.
+- **الملفات:** الاستيراد محصور في مجلد `imports`، والإيميلات مسودّات فقط، و`save_file` لا يكتب فوق ملف موجود.
+- **محتوى الإيميلات والمستندات** يُعامل كبيانات وليس كتعليمات، للحماية من حقن الأوامر.
+- **المساعد لا يعطي رأياً تدقيقياً** ولا يوقّع على شيء.
+- **قبل التشغيل على بيانات عملاء حقيقية:** ضع تسجيل دخول الشركة (SSO) أمام الخادم، وقيّد `ALLOWED_ORIGINS`، وراجع سياسة الشركة في مشاركة البيانات مع مزوّدي الذكاء الاصطناعي.
 
 ---
 
@@ -132,7 +156,7 @@ ASSISTANT_URL: 'http://localhost:8787',
 
 ### ربط الخوادم بـ Claude Desktop / Claude Code
 
-كل الخوادم في `mcp/` تعمل بنفس الطريقة: stdio افتراضياً، أو `--http` (خوادم التدقيق على المنافذ 3401 و3402 و3403). مثال لخادم فلج:
+كل الخوادم في `mcp/` تعمل بنفس الطريقة: stdio افتراضياً، أو `--http` (خوادم التدقيق على المنافذ 3401–3406). مثال لخادم فلج:
 
 **Claude Desktop** — أضف في `claude_desktop_config.json`:
 
@@ -165,6 +189,9 @@ MCP_PORT=3334 MCP_AUTH_TOKEN=كلمة-سر npm run mcp:http     # → http://loc
 | `RATE_LIMIT_PER_MIN` | `20` | حدّ الطلبات لكل IP في الدقيقة |
 | `MCP_CONFIG` | `./mcp.config.json` | مسار ملف خوادم MCP (أو مرّره كوسيط: `node src/server.js mcp.audit.json`) |
 | `TOOL_LOG_FILE` | — | سجل تدقيق JSONL لكل استدعاء أداة |
+| `AUDIT_DATA_DIR` | `./data` | مخزن التدقيق المشترك ومجلد `imports` |
+| `AUDIT_ERP_CONNECTIONS` | `./erp.connections.json` | اتصالات ERP لكل مهمة |
+| `M365_*` | — | اتصال Microsoft 365 (انظر `.env.example`) |
 | `AUDIT_TODAY` | تاريخ اليوم | تثبيت «اليوم» لبيانات التدقيق التجريبية |
 
 ## 🌐 النشر
@@ -187,9 +214,15 @@ assistant/
   src/cli.js          ← محادثة من الطرفية
   web/index.html      ← صفحة المحادثة (عربي/إنجليزي، فاتح/داكن)
   profiles/*.md       ← تعليمات المساعد لكل ملف تعريف
-  mcp/audit/          ← خوادم MCP لتطبيقات شركة التدقيق + بيانات تجريبية
+  mcp/audit/          ← خوادم MCP لتطبيقات شركة التدقيق:
+      m365-server.js      Outlook / التقويم / SharePoint  (m365/graph.js حقيقي، m365/demo.js تجريبي)
+      erp-server.js       ERP العملاء  (erp/odoo.js، erp/businesscentral.js، erp/normalize.js)
+      billing-server.js   الوقت والفوترة
+      engagement-server.js · analytics-server.js · people-server.js
+      store.js            المخزن المشترك  ·  data.js البيانات الأولية  ·  tables.js قراءة CSV/XLSX
   mcp/falaj-server.js ← خادم MCP لمزرعة فلج
   mcp/lib/serve.js    ← تشغيل أي خادم عبر stdio أو HTTP
   mcp.audit.json      ← ملف تعريف شركة التدقيق
+  erp.connections.example.json ← مثال اتصالات ERP
   mcp.config.json     ← ملف تعريف فلج (الافتراضي)
 ```

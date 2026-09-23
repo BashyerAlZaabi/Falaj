@@ -3,16 +3,49 @@
     "name": "Audit Assistant",
     "profile": "profiles/audit.md",
     "suggestions": [
-      "أعطني ملخص حالة كل المهام وأقرب موعد تسليم",
-      "شغّل اختبارات القيود اليومية على ENG-001 ولخّص أخطر النتائج",
-      "هل يوجد تعارض استقلالية في فرق المهام؟",
-      "Which PBC items are overdue for Gulf Trading and who owns them?",
-      "Compare open misstatements on ENG-001 with materiality"
+      "أعطني ملخص حالة ENG-001 من كل التطبيقات",
+      "هل أرسل العميل ميزان المراجعة بالإيميل؟ حمّله وشغّل اختبارات القيود",
+      "هل يوجد ما يهدد الاستقلالية؟ افحص الفرق والأتعاب غير المدفوعة",
+      "What's on my calendar this week and what should I prepare?",
+      "Draft a reminder to Gulf Trading for the overdue PBC items"
     ]
   },
   "mcpServers": {
-    "engagements": { "command": "node", "args": ["mcp/audit/engagement-server.js"] },
-    "analytics":   { "command": "node", "args": ["mcp/audit/analytics-server.js"] },
-    "people":      { "command": "node", "args": ["mcp/audit/people-server.js"] }
+    "engagements": {
+      "command": "node",
+      "args": [
+        "mcp/audit/engagement-server.js"
+      ]
+    },
+    "analytics": {
+      "command": "node",
+      "args": [
+        "mcp/audit/analytics-server.js"
+      ]
+    },
+    "erp": {
+      "command": "node",
+      "args": [
+        "mcp/audit/erp-server.js"
+      ]
+    },
+    "billing": {
+      "command": "node",
+      "args": [
+        "mcp/audit/billing-server.js"
+      ]
+    },
+    "people": {
+      "command": "node",
+      "args": [
+        "mcp/audit/people-server.js"
+      ]
+    },
+    "m365": {
+      "command": "node",
+      "args": [
+        "mcp/audit/m365-server.js"
+      ]
+    }
   }
 }

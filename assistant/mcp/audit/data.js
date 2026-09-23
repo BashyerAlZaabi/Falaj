@@ -1,11 +1,9 @@
-/* ===== Demo data for the audit-firm MCP servers =====
-   Fictional clients, staff and numbers (AED). Everything lives in memory, so
-   changes made through tools last while the server process runs. Replace the
-   functions in engagement-server.js / analytics-server.js / people-server.js
-   with calls to the firm's real systems (engagement platform, ERP extracts,
-   time & billing, independence register). */
-
-export const TODAY = process.env.AUDIT_TODAY || new Date().toISOString().slice(0, 10);
+/* ===== Seed data for the audit-firm MCP servers =====
+   Fictional clients, staff and numbers (AED). On first run store.js copies this
+   into data/audit-store.json; from then on all servers read and write that file,
+   so a time entry logged in one app shows up in billing, an ERP extract imported
+   by the ERP server feeds analytics, and nothing is lost on restart.
+   Delete data/audit-store.json to reset to this seed. */
 
 export const engagements = [
   {
@@ -107,18 +105,32 @@ export const declarations = [
   { staff: 'S07', client: 'Desert Logistics PJSC', type: 'financial interest', detail: 'Holds shares in the client (listed)', declared: '2025-11-20' },
 ];
 
+// billed: already included on an invoice. Unbilled entries are work in progress (WIP).
 export const timeEntries = [
-  { staff: 'S01', engagement: 'ENG-001', hours: 42, date: '2026-09-15' },
-  { staff: 'S02', engagement: 'ENG-001', hours: 160, date: '2026-09-15' },
-  { staff: 'S03', engagement: 'ENG-001', hours: 390, date: '2026-09-15' },
-  { staff: 'S04', engagement: 'ENG-001', hours: 210, date: '2026-09-15' },
-  { staff: 'S05', engagement: 'ENG-001', hours: 330, date: '2026-09-15' },
-  { staff: 'S06', engagement: 'ENG-002', hours: 60, date: '2026-09-15' },
-  { staff: 'S02', engagement: 'ENG-003', hours: 140, date: '2026-09-15' },
-  { staff: 'S05', engagement: 'ENG-003', hours: 380, date: '2026-09-15' },
-  { staff: 'S07', engagement: 'ENG-003', hours: 420, date: '2026-09-15' },
-  { staff: 'S08', engagement: 'ENG-003', hours: 38, date: '2026-09-15' },
+  { staff: 'S01', engagement: 'ENG-001', hours: 18, date: '2026-07-20', billed: true },
+  { staff: 'S02', engagement: 'ENG-001', hours: 70, date: '2026-07-31', billed: true },
+  { staff: 'S03', engagement: 'ENG-001', hours: 180, date: '2026-08-15', billed: true },
+  { staff: 'S01', engagement: 'ENG-001', hours: 24, date: '2026-09-15', billed: false },
+  { staff: 'S02', engagement: 'ENG-001', hours: 90, date: '2026-09-15', billed: false },
+  { staff: 'S03', engagement: 'ENG-001', hours: 210, date: '2026-09-15', billed: false },
+  { staff: 'S04', engagement: 'ENG-001', hours: 210, date: '2026-09-15', billed: false },
+  { staff: 'S05', engagement: 'ENG-001', hours: 330, date: '2026-09-15', billed: false },
+  { staff: 'S06', engagement: 'ENG-002', hours: 60, date: '2026-09-15', billed: false },
+  { staff: 'S02', engagement: 'ENG-003', hours: 140, date: '2026-06-30', billed: true },
+  { staff: 'S05', engagement: 'ENG-003', hours: 380, date: '2026-06-30', billed: true },
+  { staff: 'S07', engagement: 'ENG-003', hours: 420, date: '2026-08-31', billed: false },
+  { staff: 'S08', engagement: 'ENG-003', hours: 38, date: '2026-09-10', billed: false },
 ];
 
-export const findEngagement = (id) => engagements.find((e) => e.id.toLowerCase() === String(id).toLowerCase());
-export const findStaff = (idOrName) => staff.find((s) => s.id.toLowerCase() === String(idOrName).toLowerCase() || s.name.toLowerCase() === String(idOrName).toLowerCase());
+// Agreed audit fees (engagement letter) and fee invoices.
+export const fees = { 'ENG-001': 520_000, 'ENG-002': 900_000, 'ENG-003': 350_000 };
+
+export const invoices = [
+  { id: 'INV-2025-044', engagement: 'ENG-003', description: 'FY2025 audit — final fee', amount: 180_000, issued: '2025-09-10', dueDays: 30, status: 'unpaid' },
+  { id: 'INV-2026-021', engagement: 'ENG-001', description: 'FY2026 audit — interim', amount: 150_000, issued: '2026-07-15', dueDays: 30, status: 'paid', paid: '2026-08-10' },
+  { id: 'INV-2026-028', engagement: 'ENG-001', description: 'FY2026 audit — progress billing', amount: 120_000, issued: '2026-08-31', dueDays: 30, status: 'unpaid' },
+  { id: 'INV-2026-029', engagement: 'ENG-003', description: 'FY2026 audit — fieldwork', amount: 170_000, issued: '2026-07-05', dueDays: 30, status: 'paid', paid: '2026-08-02' },
+  { id: 'INV-2026-030', engagement: 'ENG-002', description: 'FY2026 group audit — planning', amount: 60_000, issued: '2026-09-10', dueDays: 30, status: 'unpaid' },
+];
+
+export const SEED = { engagements, pbcRequests, findings, trialBalances, journalEntries, staff, declarations, timeEntries, fees, invoices };

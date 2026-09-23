@@ -5,16 +5,17 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { json, fail, run } from '../lib/serve.js';
-import { engagements, pbcRequests, findings, findEngagement, findStaff, TODAY } from './data.js';
+import { load, update, findEngagement, findStaff, today } from './store.js';
 
 const engId = z.string().describe('Engagement id, e.g. "ENG-001"');
 const readOnly = { readOnlyHint: true };
 const daysBetween = (a, b) => Math.round((new Date(b) - new Date(a)) / 86_400_000);
-const staffName = (id) => findStaff(id)?.name || id;
+const staffName = (s, id) => findStaff(s, id)?.name || id;
 
 function pbcView(r) {
-  const overdue = r.status !== 'received' && r.due < TODAY;
-  return { ...r, overdue, daysOverdue: overdue ? daysBetween(r.due, TODAY) : 0 };
+  const t = today();
+  const overdue = r.status !== 'received' && r.due < t;
+  return { ...r, overdue, daysOverdue: overdue ? daysBetween(r.due, t) : 0 };
 }
 
 function buildServer() {
@@ -25,9 +26,12 @@ function buildServer() {
     description: 'All audit engagements with client, phase, year end, report due date and days left.',
     inputSchema: { phase: z.enum(['planning', 'fieldwork', 'completion']).optional() },
     annotations: readOnly,
-  }, async ({ phase }) => json(engagements
-    .filter((e) => !phase || e.phase === phase)
-    .map((e) => ({ id: e.id, client: e.client, type: e.type, phase: e.phase, yearEnd: e.yearEnd, reportDue: e.reportDue, daysToReport: daysBetween(TODAY, e.reportDue), partner: staffName(e.partner), manager: staffName(e.manager) }))));
+  }, async ({ phase }) => {
+    const s = load();
+    return json(s.engagements
+      .filter((e) => !phase || e.phase === phase)
+      .map((e) => ({ id: e.id, client: e.client, type: e.type, phase: e.phase, yearEnd: e.yearEnd, reportDue: e.reportDue, daysToReport: daysBetween(today(), e.reportDue), partner: staffName(s, e.partner), manager: staffName(s, e.manager) })));
+  });
 
   server.registerTool('get_engagement', {
     title: 'Engagement details',
@@ -35,9 +39,10 @@ function buildServer() {
     inputSchema: { engagement_id: engId },
     annotations: readOnly,
   }, async ({ engagement_id }) => {
-    const e = findEngagement(engagement_id);
+    const s = load();
+    const e = findEngagement(s, engagement_id);
     if (!e) return fail(`Unknown engagement "${engagement_id}".`);
-    return json({ ...e, today: TODAY, daysToReport: daysBetween(TODAY, e.reportDue), partner: staffName(e.partner), manager: staffName(e.manager), team: e.team.map((id) => ({ id, name: staffName(id) })) });
+    return json({ ...e, today: today(), daysToReport: daysBetween(today(), e.reportDue), partner: staffName(s, e.partner), manager: staffName(s, e.manager), team: e.team.map((id) => ({ id, name: staffName(s, id) })) });
   });
 
   server.registerTool('list_pbc_requests', {
@@ -49,7 +54,7 @@ function buildServer() {
       overdue_only: z.boolean().optional(),
     },
     annotations: readOnly,
-  }, async ({ engagement_id, status, overdue_only }) => json(pbcRequests
+  }, async ({ engagement_id, status, overdue_only }) => json(load().pbcRequests
     .filter((r) => r.engagement.toLowerCase() === engagement_id.toLowerCase())
     .map(pbcView)
     .filter((r) => (!status || r.status === status) && (!overdue_only || r.overdue))));
@@ -64,12 +69,12 @@ function buildServer() {
     },
     annotations: { readOnlyHint: false, destructiveHint: false },
   }, async ({ request_id, status, note }) => {
-    const r = pbcRequests.find((x) => x.id.toLowerCase() === request_id.toLowerCase());
-    if (!r) return fail(`Unknown request "${request_id}".`);
-    r.status = status;
-    if (note) r.note = note;
-    r.updated = TODAY;
-    return json(pbcView(r));
+    const r = update((s) => {
+      const x = s.pbcRequests.find((y) => y.id.toLowerCase() === request_id.toLowerCase());
+      if (x) Object.assign(x, { status, updated: today() }, note ? { note } : {});
+      return x;
+    });
+    return r ? json(pbcView(r)) : fail(`Unknown request "${request_id}".`);
   });
 
   server.registerTool('list_findings', {
@@ -77,7 +82,7 @@ function buildServer() {
     description: 'Audit findings (misstatements, control deficiencies, judgement issues) with severity and status.',
     inputSchema: { engagement_id: engId.optional(), status: z.enum(['open', 'resolved']).optional() },
     annotations: readOnly,
-  }, async ({ engagement_id, status }) => json(findings.filter((f) =>
+  }, async ({ engagement_id, status }) => json(load().findings.filter((f) =>
     (!engagement_id || f.engagement.toLowerCase() === engagement_id.toLowerCase()) && (!status || f.status === status))));
 
   server.registerTool('log_finding', {
@@ -93,11 +98,14 @@ function buildServer() {
     },
     annotations: { readOnlyHint: false, destructiveHint: false },
   }, async ({ engagement_id, area, title, severity, type, amount }) => {
-    const e = findEngagement(engagement_id);
-    if (!e) return fail(`Unknown engagement "${engagement_id}".`);
-    const f = { id: `F-${String(findings.length + 1).padStart(2, '0')}`, engagement: e.id, area, title, severity, status: 'open', type, amount: amount ?? null, logged: TODAY };
-    findings.push(f);
-    return json(f);
+    const f = update((s) => {
+      const e = findEngagement(s, engagement_id);
+      if (!e) return null;
+      const x = { id: `F-${String(s.findings.length + 1).padStart(2, '0')}`, engagement: e.id, area, title, severity, status: 'open', type, amount: amount ?? null, logged: today() };
+      s.findings.push(x);
+      return x;
+    });
+    return f ? json(f) : fail(`Unknown engagement "${engagement_id}".`);
   });
 
   server.registerTool('misstatements_vs_materiality', {
@@ -106,10 +114,11 @@ function buildServer() {
     inputSchema: { engagement_id: engId },
     annotations: readOnly,
   }, async ({ engagement_id }) => {
-    const e = findEngagement(engagement_id);
+    const s = load();
+    const e = findEngagement(s, engagement_id);
     if (!e) return fail(`Unknown engagement "${engagement_id}".`);
     if (!e.materiality) return fail(`Materiality has not been set for ${e.id} yet (phase: ${e.phase}).`);
-    const open = findings.filter((f) => f.engagement === e.id && f.status === 'open' && f.type === 'misstatement' && f.amount);
+    const open = s.findings.filter((f) => f.engagement === e.id && f.status === 'open' && f.type === 'misstatement' && f.amount);
     const total = open.reduce((s, f) => s + Math.abs(f.amount), 0);
     const m = e.materiality;
     return json({

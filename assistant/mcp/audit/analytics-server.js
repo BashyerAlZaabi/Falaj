@@ -5,7 +5,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { json, fail, run } from '../lib/serve.js';
-import { trialBalances, journalEntries, findEngagement } from './data.js';
+import { load, findEngagement } from './store.js';
 
 const engId = z.string().describe('Engagement id, e.g. "ENG-001"');
 const readOnly = { readOnlyHint: true };
@@ -23,12 +23,15 @@ const JE_TESTS = {
   revenue_debit: { label: 'Manual debit to revenue', test: (j, _e, tb) => j.source === 'manual' && j.amount > 0 && tb.find((a) => a.account === j.account)?.type === 'income' },
 };
 
+// Trial balance and journals come from the shared store — seeded demo data, or whatever the
+// ERP server last imported for the engagement (file extract or live ERP pull).
 function data(id) {
-  const e = findEngagement(id);
+  const s = load();
+  const e = findEngagement(s, id);
   if (!e) return { error: `Unknown engagement "${id}".` };
-  const tb = trialBalances[e.id];
-  if (!tb) return { error: `No ERP extract loaded for ${e.id} (${e.client}) yet.` };
-  return { e, tb, jes: journalEntries[e.id] || [] };
+  const tb = s.trialBalances[e.id];
+  if (!tb) return { error: `No ERP data loaded for ${e.id} (${e.client}) yet — import an extract or pull it with the erp tools.` };
+  return { e, tb, jes: s.journalEntries[e.id] || [], source: s.extracts?.[e.id] || { source: 'demo seed' } };
 }
 
 // Deterministic PRNG so the same seed gives the same sample (re-performable).
@@ -44,7 +47,7 @@ function buildServer() {
     annotations: readOnly,
   }, async ({ engagement_id }) => {
     const d = data(engagement_id);
-    return d.error ? fail(d.error) : json({ engagement: d.e.id, client: d.e.client, yearEnd: d.e.yearEnd, accounts: d.tb });
+    return d.error ? fail(d.error) : json({ engagement: d.e.id, client: d.e.client, yearEnd: d.e.yearEnd, dataSource: d.source, accounts: d.tb });
   });
 
   server.registerTool('analytical_review', {
@@ -81,14 +84,21 @@ function buildServer() {
     const d = data(engagement_id);
     if (d.error) return fail(d.error);
     const run = tests?.length ? tests : Object.keys(JE_TESTS);
-    const flagged = [];
+    // Test every line, then report per journal entry (a double-entry journal has several lines).
+    const entries = new Map();
     for (const j of d.jes) {
-      const hits = run.filter((t) => JE_TESTS[t].test(j, d.e, d.tb));
-      if (hits.length) flagged.push({ ...j, flags: hits, riskScore: hits.length });
+      const x = entries.get(j.je) || { je: j.je, date: j.date, user: j.user, source: j.source, desc: j.desc, amount: 0, lines: [], flags: new Set() };
+      x.lines.push({ account: j.account, amount: j.amount });
+      if (Math.abs(j.amount) > Math.abs(x.amount)) x.amount = j.amount;
+      for (const t of run) if (JE_TESTS[t].test(j, d.e, d.tb)) x.flags.add(t);
+      entries.set(j.je, x);
     }
-    flagged.sort((a, b) => b.riskScore - a.riskScore || Math.abs(b.amount) - Math.abs(a.amount));
+    const flagged = [...entries.values()].filter((x) => x.flags.size)
+      .map((x) => ({ ...x, flags: [...x.flags], riskScore: x.flags.size }))
+      .sort((a, b) => b.riskScore - a.riskScore || Math.abs(b.amount) - Math.abs(a.amount));
     return json({
-      engagement: d.e.id, population: d.jes.length, testsRun: run.map((t) => ({ test: t, description: JE_TESTS[t].label, hits: flagged.filter((f) => f.flags.includes(t)).length })),
+      engagement: d.e.id, dataSource: d.source, populationEntries: entries.size, populationLines: d.jes.length,
+      testsRun: run.map((t) => ({ test: t, description: JE_TESTS[t].label, entriesHit: flagged.filter((f) => f.flags.includes(t)).length })),
       flagged,
     });
   });

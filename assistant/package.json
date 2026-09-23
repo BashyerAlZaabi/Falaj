@@ -13,6 +13,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
     "@modelcontextprotocol/sdk": "^1.30.0",
+    "csv-parse": "^7.0.2",
+    "exceljs": "^4.4.0",
+    "mammoth": "^1.12.3",
     "zod": "^4.6.5"
   },
   "type": "module",

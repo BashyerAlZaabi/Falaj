@@ -1,0 +1,17 @@
+{
+  "ENG-001": {
+    "type": "odoo",
+    "url": "https://gulf-trading.odoo.com",
+    "db": "gulf-trading",
+    "username": "auditor@yourfirm.com",
+    "apiKey": "${GULF_TRADING_ODOO_KEY}"
+  },
+  "ENG-002": {
+    "type": "businesscentral",
+    "tenantId": "${ALNOOR_TENANT_ID}",
+    "clientId": "${ALNOOR_BC_CLIENT_ID}",
+    "clientSecret": "${ALNOOR_BC_CLIENT_SECRET}",
+    "environment": "Production",
+    "companyName": "Al Noor Healthcare Group"
+  }
+}
