@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "falaj": {
+      "command": "node",
+      "args": ["mcp/falaj-server.js"]
+    }
+  }
+}

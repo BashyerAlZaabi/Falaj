@@ -276,6 +276,12 @@ input{font-family:inherit}
 .bubble{padding:11px 14px;border-radius:16px;font-size:14px;line-height:1.5}
 .msg.bot .bubble{background:#fff;box-shadow:var(--sh-sm);border-end-start-radius:5px}
 .msg.user .bubble{background:var(--green);color:#fff;border-end-end-radius:5px}
+.bubble p{margin:0}.bubble p+p,.bubble p+ul,.bubble ul+p{margin-top:8px}
+.bubble ul{margin:0;padding-inline-start:18px}.bubble li+li{margin-top:3px}
+.bubble.typing{display:flex;gap:5px;align-items:center;padding:14px 16px}
+.bubble.typing i{width:7px;height:7px;border-radius:50%;background:var(--green);opacity:.35;animation:aiDot 1.2s infinite}
+.bubble.typing i:nth-child(2){animation-delay:.2s}.bubble.typing i:nth-child(3){animation-delay:.4s}
+@keyframes aiDot{0%,80%,100%{opacity:.35;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
 .suggests{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .chip{padding:9px 14px;border-radius:20px;background:#fff;border:1.5px solid var(--line);font-size:13px;font-weight:600;color:var(--ink-2);box-shadow:var(--sh-sm)}
 .chip:active{background:var(--bg)}

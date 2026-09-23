@@ -438,7 +438,8 @@ function screenSupport() {
   return `<header class="ghead"><div class="ghead-row">
     <div class="ai-head"><span class="ai-ava">${icon('spark')}</span><div><b>${t('ai.title')}</b><small><i class="d-on"></i>${t('ai.online')}</small></div></div>${bell()}</div></header>
   <div class="scroll chatscroll">
-    <div class="chat">${msgs.map(m => `<div class="msg ${m.role}">${m.role === 'bot' ? '<span class="m-ava">' + icon('spark') + '</span>' : ''}<div class="bubble">${m.text}</div></div>`).join('')}</div>
+    <div class="chat">${msgs.map(m => `<div class="msg ${m.role}">${m.role === 'bot' ? '<span class="m-ava">' + icon('spark') + '</span>' : ''}<div class="bubble" dir="auto">${m.ai ? fmtAI(m.text) : m.role === 'user' ? escHtml(m.text) : m.text}</div></div>`).join('')}
+      ${aiBusy ? `<div class="msg bot"><span class="m-ava">${icon('spark')}</span><div class="bubble typing"><i></i><i></i><i></i></div></div>` : ''}</div>
     ${fresh ? `<div class="suggests">${['ai.s1', 'ai.s2', 'ai.s3', 'ai.s4'].map(k => `<button class="chip" data-action="ai-suggest" data-q="${k}">${t(k)}</button>`).join('')}</div>` : ''}
   </div>
   <div class="composer">
@@ -460,14 +461,53 @@ function aiReply(text) {
   }
   return t('ans.fallback');
 }
-function aiSend(q) {
+/* Claude + MCP assistant (see /assistant). When FALAJ_CONFIG.ASSISTANT_URL is set, questions go to
+   the assistant server; otherwise — or if it can't be reached — the offline keyword replies above answer. */
+const AI_URL = (((typeof window !== 'undefined' && window.FALAJ_CONFIG) || {}).ASSISTANT_URL || '').replace(/\/+$/, '');
+let aiBusy = false;
+function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+// Minimal, safe Markdown for AI replies: escape first, then **bold**, bullet lines and line breaks.
+function fmtAI(text) {
+  return escHtml(text).split(/\n{2,}/).map(par => {
+    const lines = par.split('\n');
+    const md = l => l.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    if (lines.every(l => /^\s*([-*•]|\d+[.)])\s+/.test(l))) return '<ul>' + lines.map(l => '<li>' + md(l.replace(/^\s*([-*•]|\d+[.)])\s+/, '')) + '</li>').join('') + '</ul>';
+    return '<p>' + lines.map(md).join('<br>') + '</p>';
+  }).join('');
+}
+function aiScroll() { const sc = document.querySelector('.chatscroll'); if (sc) sc.scrollTop = sc.scrollHeight; }
+async function aiRemote(text) {
+  const history = (S.chat || []).slice(0, -1).map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', text: String(m.text || '').replace(/<[^>]+>/g, '') }));
+  const app = {
+    farm: S.farm || null,
+    zones: (S.monZones || []).map(z => ({ id: z.id, crop: t(z.cropKey), moisture: Math.round(z.moisture), status: z.moisture < MOIST_MIN ? 'needs_water' : 'ok' })),
+  };
+  const res = await fetch(AI_URL + '/api/chat', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: text, history, lang: CURRENT_LANG, app }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.reply) throw new Error(data.error || 'HTTP ' + res.status);
+  return data.reply;
+}
+async function aiSend(q) {
   const text = q != null ? q : val('aiInput');
-  if (!text) return;
+  if (!text || aiBusy) return;
   if (!S.chat || !S.chat.length) S.chat = [{ role: 'bot', text: t('ai.welcome') }];
   S.chat.push({ role: 'user', text });
-  S.chat.push({ role: 'bot', text: aiReply(text) });
-  save(); render();
-  const sc = document.querySelector('.chatscroll'); if (sc) sc.scrollTop = sc.scrollHeight;
+  if (!AI_URL) {
+    S.chat.push({ role: 'bot', text: aiReply(text) });
+    save(); render(); aiScroll();
+    return;
+  }
+  aiBusy = true; save(); render(); aiScroll();
+  let reply;
+  try { reply = { role: 'bot', text: await aiRemote(text), ai: true }; }
+  catch (e) { console.warn('FALAJ assistant unreachable, using offline replies:', e); reply = { role: 'bot', text: aiReply(text) }; }
+  aiBusy = false;
+  S.chat.push(reply);
+  save();
+  if (S.route === 'support') { render(); aiScroll(); }
 }
 
 /* ---------- settings ---------- */

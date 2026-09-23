@@ -1,0 +1,21 @@
+{
+  "name": "falaj-assistant",
+  "version": "1.0.0",
+  "description": "FALAJ smart-farming assistant (Claude + MCP)",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/server.js",
+    "chat": "node --env-file-if-exists=.env src/cli.js",
+    "mcp": "node mcp/falaj-server.js",
+    "mcp:http": "node mcp/falaj-server.js --http"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "zod": "^4.6.5"
+  },
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.9"
+  }
+}

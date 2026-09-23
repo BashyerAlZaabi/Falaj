@@ -98,5 +98,11 @@ data syncs across devices — no other code changes needed.
 The anon key is meant to be public — Row Level Security (step 4) ensures each user only ever reads or
 writes their **own** row.
 
+## 🤖 Turn on the AI assistant (Claude + MCP)
+
+The chat tab answers with built-in keyword replies by default. To use a real Claude-powered assistant
+that reads the farm through MCP tools (and can connect to any other MCP server), run the server in
+[`assistant/`](../assistant/README.md) and set `ASSISTANT_URL` in `app/js/config.js`.
+
 ---
 صُنع لرؤية الأمن الغذائي الإماراتي 2051 🇦🇪
