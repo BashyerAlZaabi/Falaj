@@ -43,7 +43,11 @@ async function login(page, user) {
   await page.click('#login-form button[type=submit]');
   await page.waitForSelector('.greet h1');
 }
+async function openChat(page) {
+  if (await page.locator('#chat.collapsed').count() && await page.locator('#ask-dock').isVisible()) await page.click('#ask-dock');
+}
 async function chat(page, text) {
+  await openChat(page);
   const before = await page.locator('#chat-body .msg.assistant').count();
   await page.fill('#chat-input', text);
   await page.click('#btn-send');
@@ -168,6 +172,7 @@ await step('11. البيانات باقية بعد إعادة الدخول', asy
 await step('12. أمر صوتي (تعرّف محاكى) مع تأكيد القيمة المؤثرة قبل التنفيذ', async () => {
   const vp = await newPage(undefined, { voice: 'حدّث تقدم مشروع البوابة الموحدة إلى 80%' });
   await login(vp, 'mariam');
+  await openChat(vp);
   await vp.click('#btn-mute'); // keep headless quiet
   await vp.click('#btn-mic');
   await vp.waitForSelector('.confirm-card', { timeout: 15000 });

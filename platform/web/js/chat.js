@@ -84,7 +84,7 @@ export function refreshContext() {
   const bar = $('#context-bar'); if (!bar) return;
   const chips = [];
   const chip = (label, clear) => h('span.chip.tiny', label, clear ? h('button.icon-btn', { style: { width: '18px', height: '18px' }, 'aria-label': L('إزالة', 'Remove'), onclick: () => { clear(); refreshContext(); } }, icon('x')) : null);
-  const viewNames = { home: 'Unified Portal', adaa: 'ADAA I', projects: L('المشاريع', 'Projects'), tasks: L('المهام', 'Tasks'), documents: L('المستندات', 'Documents'), office: L('مكتب الوكلاء', 'Agents Office') };
+  const viewNames = { home: 'Unified Portal', adaa: 'ADAA I', projects: L('المشاريع', 'Projects'), tasks: L('المهام', 'Tasks'), documents: L('المستندات', 'Documents'), office: L('مكتب الوكلاء', 'Agents Office'), achievements: L('إنجازاتي', 'Achievements'), apps: L('تطبيقاتي', 'My Apps'), uploader: 'Smart Uploader', admin: L('إدارة المنصة', 'Admin') };
   chips.push(chip(`📍 ${viewNames[state.route] || state.route}`));
   if (state.selectedProjectId && state.projectName) chips.push(chip(`${L('المشروع', 'Project')}: ${state.projectName}`, () => { state.selectedProjectId = null; }));
   if (state.openDocumentId && Editor.currentTitle()) chips.push(chip(`${L('المستند', 'Doc')}: ${Editor.currentTitle()}`));

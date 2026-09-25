@@ -26,15 +26,23 @@ body {
 }
 /* Ambient environment: soft, blurred color fields that give glass something to refract.
    Painted once on a fixed layer (no per-frame cost). */
-.ambient {
-  position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden;
+.ambient { position: fixed; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; background: var(--bg-base); }
+/* Aurora: large soft color fields drifting very slowly (transform-only → composited, no repaint) */
+.ambient::before {
+  content: ""; position: absolute; inset: -12%; will-change: transform;
   background:
-    radial-gradient(42% 38% at 12% 8%, var(--ambient-1), transparent 70%),
-    radial-gradient(38% 34% at 92% 12%, var(--ambient-2), transparent 72%),
-    radial-gradient(44% 40% at 78% 96%, var(--ambient-3), transparent 70%),
-    radial-gradient(36% 30% at 18% 88%, var(--ambient-4), transparent 72%),
-    var(--bg-base);
+    radial-gradient(40% 36% at 14% 10%, var(--ambient-1), transparent 70%),
+    radial-gradient(36% 32% at 90% 14%, var(--ambient-2), transparent 72%),
+    radial-gradient(42% 38% at 76% 94%, var(--ambient-3), transparent 70%),
+    radial-gradient(34% 30% at 20% 86%, var(--ambient-4), transparent 72%);
+  animation: aurora 42s var(--ease-in-out) infinite alternate;
 }
+@keyframes aurora {
+  0% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+  50% { transform: translate3d(2.5%, -2%, 0) scale(1.06) rotate(2deg); }
+  100% { transform: translate3d(-2%, 2.5%, 0) scale(1.03) rotate(-1.5deg); }
+}
+@media (prefers-reduced-transparency: reduce) { .ambient::before { animation: none; } }
 .ambient::after { /* whisper of grain to avoid banding on large gradients */
   content: ""; position: absolute; inset: 0; opacity: 0.025; mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
@@ -75,6 +83,7 @@ hr { border: 0; height: 1px; background: var(--separator); margin: var(--space-4
 .t-caption { font: var(--type-caption); letter-spacing: 0.01em; }
 .t-numeral { font: var(--type-numeral); font-variant-numeric: proportional-nums; }
 .tabular { font-variant-numeric: tabular-nums; }
+.num, bdi.num { direction: ltr; unicode-bidi: isolate; display: inline-block; }
 /* Negative tracking only for Latin script — Arabic must never be tracked */
 :lang(en) .t-display { letter-spacing: var(--track-display); }
 :lang(en) .t-large-title { letter-spacing: var(--track-large-title); }

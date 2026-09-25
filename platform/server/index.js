@@ -17,6 +17,7 @@ import { publicTools } from './mcp/tools.js';
 import { subscribe } from './bus.js';
 import { seedAll, seedConfig } from './seed.js';
 import * as O from './services/office.js';
+import * as G from './services/game.js';
 
 if (!one('SELECT 1 FROM users LIMIT 1')) seedAll(); else seedConfig(); // config upserts are idempotent
 
@@ -164,6 +165,11 @@ app.get('/api/office/runs', wrap((req, res) => res.json(O.listRuns(req.user, { s
 app.get('/api/office/runs/:id', wrap((req, res) => res.json(O.getRun(req.user, req.params.id))));
 app.post('/api/office/runs/:id/approve', humanOnly, wrap(async (req, res) => res.json(await O.approveRun(req.user, req.params.id, req.body?.decisions || []))));
 app.post('/api/office/runs/:id/reject', humanOnly, wrap((req, res) => res.json(O.rejectRun(req.user, req.params.id))));
+
+// ---------------- gamification (derived from real work data) ----------------
+app.get('/api/game/me', wrap((req, res) => res.json(G.profile(req.user))));
+app.get('/api/game/team', wrap((req, res) => res.json(G.team(req.user))));
+app.put('/api/game/prefs', wrap((req, res) => res.json(G.setPrefs(req.user.id, req.body || {}))));
 
 // ---------------- dashboard ----------------
 app.get('/api/dashboard', wrap((req, res) => res.json({ ...B.getDashboard(req.user), types: B.WIDGET_TYPES })));

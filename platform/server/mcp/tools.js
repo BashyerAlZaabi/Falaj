@@ -9,6 +9,7 @@ import { runSkill, SKILL_DEFS } from '../ai/skills.js';
 import { one } from '../db.js';
 import * as Policy from '../policy.js';
 import * as O from '../services/office.js';
+import * as G from '../services/game.js';
 
 const S = (properties, required = []) => ({ type: 'object', properties, required, additionalProperties: false });
 const str = (description, extra = {}) => ({ type: 'string', description, ...extra });
@@ -46,6 +47,8 @@ export const TOOLS = [
   { name: 'restore_document_version', group: 'docs', mutates: true, description: 'Restore a previous version of a document (creates a new version; reversible).', input_schema: S({ id: str('document id'), version: int('version number') }, ['id', 'version']), handler: (u, i) => ({ ...D.restoreVersion(u, i), open_document: i.id }) },
   { name: 'export_document', group: 'docs', description: 'Get a download link for a document as docx or pdf.', input_schema: S({ id: str('document id'), format: str('docx|pdf', { enum: ['docx', 'pdf'] }) }, ['id', 'format']), handler: (u, i) => { const d = D.getDocument(u, i.id); return { result: { id: d.id, title: d.title, format: i.format, url: `/api/documents/${d.id}/export.${i.format}` }, open_document: d.id }; } },
   { name: 'run_skill', group: 'docs', mutates: true, description: `Run a reusable skill. Skills: ${SKILL_DEFS.map((s) => `${s.key} (${s.name_en}; inputs ${JSON.stringify(s.inputs.properties)})`).join('; ')}`, input_schema: S({ key: str('skill key', { enum: SKILL_DEFS.map((s) => s.key) }), input: { type: 'object' } }, ['key']), handler: (u, i) => runSkill(u, i.key, i.input || {}) },
+
+  { name: 'get_my_achievements', group: 'work', description: "The user's excellence points (derived from real work), level, streak, weekly rings, today's quests and badges.", input_schema: S({}), handler: (u) => ({ result: G.profile(u) }) },
 
   // ---------- Agents Office (proposals only; approval happens in the UI by the owner) ----------
   { name: 'list_office_templates', group: 'office', description: 'Agent templates available in the Agents Office.', input_schema: S({}), handler: () => ({ result: Object.entries(O.TEMPLATES).map(([k, v]) => ({ key: k, name_ar: v.name_ar, name_en: v.name_en, description_ar: v.description_ar, config: v.config })) }) },

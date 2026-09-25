@@ -94,6 +94,7 @@
   --red: #FF3B30;    --red-text: #C4261C;    --red-tint: rgba(255, 59, 48, 0.12);
   --purple: #AF52DE; --purple-text: #8944AB; --purple-tint: rgba(175, 82, 222, 0.12);
   --amber-vault: #B7791F; --amber-vault-tint: rgba(215, 150, 40, 0.14);
+  --flame-from: #FFB340; --flame-to: #FF6A00; --gold-from: #FFD35A; --gold-to: #F2A900; --gold-ink: #3A2A00;  /* recognition accents */
 
   /* data visualization (validated: CVD-safe order, lightness band) */
   --series-1: #0A7AFF; --series-2: #E8850A; --series-3: #AF52DE; --series-4: #24A148;

@@ -254,6 +254,11 @@ function planClause(user, clause, ctx) {
   if (/^(مرحبا|السلام عليكم|اهلا|hi|hello|hey|صباح الخير|مساء الخير)(?:\s|$)/.test(n) && n.split(/\s+/).length <= 4) return [{ say: 'أهلاً بك! أستطيع عرض ملخص يومك، وإنشاء المهام والمشاريع وتحديثها، وتخصيص الداشبورد، وإعداد المستندات وتعديلها. بماذا أبدأ؟' }];
   if (/^(ماذا تستطيع|ساعدني|مساعده|help|what can you do)/.test(n)) return [{ help: true }];
 
+  // --- achievements / gamification ---
+  if (/(نقاطي|نقاط التميز|نقاط|مستواي|مستوى|انجازاتي|شاراتي|شارات|سلسلتي|xp|level|achievements|badges|quests|تحديات اليوم|مهام اليوم الخاصه)/.test(n) && !/(مشروع|project)/.test(n)) {
+    return [{ tool: 'get_my_achievements', input: {}, label: 'قراءة إنجازاتي', render: 'achievements' }];
+  }
+
   // --- Agents Office ---
   const office = officeIntent(user, clause, n, ctx);
   if (office) return office;

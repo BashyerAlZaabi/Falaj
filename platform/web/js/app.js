@@ -16,6 +16,8 @@ import { renderApps } from './views/apps.js';
 import { renderUploader } from './views/uploader.js';
 import { renderAdmin } from './views/admin.js';
 import { renderOffice, builder as officeBuilder } from './views/office.js';
+import { renderAchievements } from './views/achievements.js';
+import { initGame } from './game.js';
 
 const store = { get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
 
@@ -76,6 +78,7 @@ const ROUTES = {
   tasks: { key: 'nav.tasks', icon: 'check', group: 'work', render: renderTasks },
   documents: { key: 'nav.documents', icon: 'doc', group: 'work', render: renderDocuments },
   office: { key: 'nav.office', icon: 'bot', group: 'work', render: renderOffice },
+  achievements: { key: 'nav.achievements', icon: 'badgeCheck', group: 'work', render: renderAchievements },
   apps: { key: 'nav.apps', icon: 'grid', group: 'apps', render: renderApps },
   uploader: { key: 'nav.uploader', icon: 'upload', group: 'apps', render: renderUploader },
   admin: { key: 'nav.admin', icon: 'settings', group: 'admin', render: renderAdmin, admin: true },
@@ -152,12 +155,21 @@ export function setTab(tab) {
   if (tab === 'chat') setTimeout(() => $('#chat-input').focus(), 50);
 }
 function toggleNav(open) { $('#nav').classList.toggle('open', open); $('#scrim').classList.toggle('hidden', !open); $('#btn-menu').setAttribute('aria-expanded', String(!!open)); if (open && innerWidth <= 900) setTimeout(() => ($('#nav a.item.on') || $('#nav a.item'))?.focus(), 60); }
-function setChatVisible(v) {
+function setChatVisible(v, { remember = true } = {}) {
   if (innerWidth <= 900) { setTab(v ? 'chat' : 'home'); return; }
   $('#chat').classList.toggle('collapsed', !v);
   $('#btn-ask').setAttribute('aria-pressed', String(v));
-  store.set('swp.chat', v ? null : 'hidden');
+  $('#ask-dock').classList.toggle('hidden', v);
+  if (remember) store.set('swp.chat', v ? 'shown' : 'hidden');
+  if (v) setTimeout(() => $('#chat-input').focus(), 60);
 }
+$('#ask-dock').onclick = () => setChatVisible(true);
+// "/" opens Ask AI from anywhere (unless typing)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || !state.me) return;
+  if (e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
+  e.preventDefault(); setChatVisible(true);
+});
 $('#btn-menu').onclick = () => toggleNav(true);
 $('#scrim').onclick = () => toggleNav(false);
 $('#btn-collapse').onclick = () => {
@@ -274,7 +286,9 @@ async function boot() {
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#tabbar').classList.remove('hidden');
   if (me.user.lang && !store.get('swp.lang')) setLang(me.user.lang);
   if (store.get('swp.nav') === 'collapsed') $('#app').classList.add('nav-collapsed');
-  if (store.get('swp.chat') === 'hidden' && innerWidth > 900) setChatVisible(false);
+  // Desktop-first: the Ask AI inspector is open by default only on wide screens;
+  // otherwise the floating Ask AI bar keeps it one click / "/" away.
+  if (innerWidth > 900) { const pref = store.get('swp.chat'); setChatVisible(pref ? pref === 'shown' : innerWidth >= 1600, { remember: false }); }
   buildNav(); setTab('home');
   configurePalette({
     routes: Object.entries(ROUTES).filter(([, d]) => !d.admin || me.user.is_admin).map(([k, d]) => ({ key: k, label: t(d.key), icon: d.icon })),
@@ -288,6 +302,7 @@ async function boot() {
     ],
   });
   Chat.init(); Editor.init();
+  initGame($('#level-chip-host'));
   // Mobile "Document" tab reflects whether a document is open
   const syncDocTab = () => { const b = $('#tabbar button[data-tab="doc"]'); if (b) { const off = $('#editor').classList.contains('collapsed'); b.classList.toggle('dim', off); b.setAttribute('aria-disabled', String(off)); if (off && document.body.dataset.tab === 'doc') setTab('home'); } };
   new MutationObserver(syncDocTab).observe($('#editor'), { attributes: true, attributeFilter: ['class'] });

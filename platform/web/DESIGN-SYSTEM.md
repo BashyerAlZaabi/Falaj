@@ -71,3 +71,12 @@ Primary information dominates (large numerals, title3 headings); secondary info 
 
 ## Accessibility
 WCAG AA contrast for text, visible focus rings, keyboard access for every control, `aria-*` on menus/dialogs/tabs, 44px touch targets on coarse pointers, reduced motion/transparency respected, RTL mirroring for directional icons (`.flip-rtl`).
+
+## Product direction (v2): desktop-first · futuristic · gamified for government
+- **Desktop-first**: primary targets are 1920/1440/1280 px computer screens; tablet and mobile stay fully supported but secondary. Use the width: multi-column layouts via container queries on the page (`@container page (min-width: …)` — `.view > div` is the `page` container), keyboard shortcuts (`⌘K`/Ctrl+K palette, `/` Ask AI), hover affordances, dense-but-calm information.
+- **Futuristic, still user-friendly**: spatial glass over a slowly drifting aurora (`.ambient::before`), luminous edges and soft glows reserved for AI/achievement moments (Ask AI bar `.ask-dock`, level orb, activity rings), smooth springy motion — never at the expense of clarity. Every screen answers "what should I do next?" with a clear primary action.
+- **Gamification ("نقاط التميّز")** — `server/services/game.js`, `web/js/game.js`, `#/achievements`:
+  - Points are **derived from real work** (on-time/early delivery, clearing overdue work, progress transparency, documentation, agent reviews, daily quests). No client-posted points; undo removes them; daily cap prevents farming.
+  - Levels (مبادر → قدوة التميّز), working-day streaks (weekends never break), weekly activity rings (الإنجاز · الالتزام · المبادرة), daily quests generated from the user's actual state, badges tied to public-service values.
+  - Recognition, not shaming: department challenge uses aggregates; the colleague board is **opt-in** and department-scoped; nobody sees another person's work details.
+  - UI kit: `ringsSvg`, `ringLegend`, `levelOrb`, `xpBar`, `questList`, `badgeTile`, `gameHero`, `sidebarChip`, `celebrate` (respects reduced motion and the user's celebrations preference).

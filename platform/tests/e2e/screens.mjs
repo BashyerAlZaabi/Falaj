@@ -38,11 +38,13 @@ const SCREENS = [
   { key: 'documents', user: 'mariam', path: '/#/documents' },
   { key: 'editor', user: 'mariam', path: '/#/documents', after: async (p) => { await p.locator('table.tbl tbody tr, [data-doc-id]').first().click(); await p.waitForSelector('#editor:not(.collapsed) .doc-body'); } },
   { key: 'office', user: 'mariam', path: '/#/office' },
+  { key: 'achievements', user: 'mariam', path: '/#/achievements' },
   { key: 'apps', user: 'president', path: '/#/apps' },
   { key: 'uploader', user: 'ahmed', path: '/#/uploader' },
   { key: 'admin', user: 'mariam', path: '/#/admin' },
   { key: 'chat', user: 'ahmed', path: '/#/home', after: async (p, dev) => {
     if (dev === 'mobile') await p.click('#tabbar button[data-tab=chat]');
+    else if (await p.locator('#chat.collapsed').count()) await p.click('#ask-dock');
     await p.fill('#chat-input', 'جهّز لي ملخص اليوم'); await p.click('#btn-send');
     await p.waitForFunction(() => document.querySelectorAll('#chat-body .msg.assistant').length > 1, null, { timeout: 15000 });
   } },

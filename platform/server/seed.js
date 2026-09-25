@@ -25,7 +25,7 @@ export function seedConfig() {
     ON CONFLICT(key) DO UPDATE SET name_ar=excluded.name_ar,name_en=excluded.name_en,description_ar=excluded.description_ar,description_en=excluded.description_en,tools=excluded.tools,instructions=excluded.instructions`, key, ar, en, dar, den, JSON.stringify(tools), JSON.stringify(roles), instr);
   const ALL = ['employee', 'manager', 'president'];
   agent('work', 'مساعد الأعمال', 'Work agent', 'المشاريع والمهام والمواعيد والبحث والملخص اليومي', 'Projects, tasks, appointments, search, daily summary',
-    ['get_daily_summary', 'list_projects', 'get_project', 'find_project', 'list_tasks', 'list_events', 'search_workspace', 'list_assignable_users', 'create_project', 'update_project', 'create_task', 'update_task', 'create_event', 'delete_project', 'delete_task'], ALL,
+    ['get_daily_summary', 'get_my_achievements', 'list_projects', 'get_project', 'find_project', 'list_tasks', 'list_events', 'search_workspace', 'list_assignable_users', 'create_project', 'update_project', 'create_task', 'update_task', 'create_event', 'delete_project', 'delete_task'], ALL,
     'ينفّذ عمليات المشاريع والمهام ضمن نطاق المستخدم. لا يفترض نسب الإنجاز.');
   agent('dashboard', 'مساعد الداشبورد', 'Dashboard agent', 'تخصيص عناصر الداشبورد وطريقة عرضها', 'Customise dashboard widgets and views',
     ['get_dashboard', 'add_widget', 'update_widget', 'reorder_widgets', 'remove_widget', 'restore_dashboard', 'get_kpis'], ALL,

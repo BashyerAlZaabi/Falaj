@@ -239,6 +239,12 @@ function renderResult(user, step, r) {
       if (res.unchanged) return step.formal ? 'لم أجد تعابير عامية لتحويلها. الصياغة الرسمية الكاملة تتطلب خدمة توليد متصلة.' : 'لم يتغير المستند.';
       return `${step.label}: تم على نفس المستند (الإصدار ${res.document.current_version}).${step.formal ? ` استُبدل ${res.replacements} تعبيراً. (تحويل محلي محدود؛ الصياغة الكاملة تتطلب خدمة التوليد)` : ''}${step.filledFromData === false ? ' لم أجد مهاماً مرتبطة بمصادر المستند، فأضفت صفاً للاستكمال.' : ''}${rep}`;
     }
+    case 'achievements': {
+      const g = res;
+      const q = g.quests.map((x) => `${x.done ? '✓' : '○'} ${x.ar}`).join('\n');
+      const earned = g.badges.filter((b) => b.earned).map((b) => b.ar);
+      return `**نقاط التميّز: ${g.xp}** — المستوى ${g.level.n} «${g.level.ar}»${g.level.to ? ` (${g.level.to - g.xp} نقطة للمستوى التالي «${g.level.next_ar}»)` : ''}\nاليوم: +${g.today_xp} · هذا الأسبوع: +${g.week_xp} · السلسلة: ${g.streak.current} يوم عمل\n\n**مهام اليوم:**\n${q}\n\n**الشارات:** ${earned.length ? earned.join('، ') : 'لا شارات بعد — أنجز مهمة في موعدها لتبدأ.'}\n_النقاط محسوبة من عملك الفعلي في المنصة._`;
+    }
     case 'create_office_agent': {
       const sc = LP.SCHED_AR(res.schedule);
       return `بنيت الوكيل «${res.name}» في مكتب الوكلاء (${sc}). سيجهّز العمل ثم ينتظر مراجعتك وموافقتك قبل تنفيذ أي إجراء.${step.officeNoSchedule ? ' لم تحدد موعداً، لذا جعلته للتشغيل اليدوي؛ يمكنك جدولته من المكتب أو قل مثلاً: «اجعله يومياً الساعة 7».' : ''}${step.officeDefaultTime ? ` لم تحدد الساعة فاستخدمت ${res.schedule.time}؛ عدّلها من المكتب إن أردت.` : ''}${rep}`;
