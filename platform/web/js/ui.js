@@ -67,11 +67,16 @@ function trapFocus(container, e) {
 let modalSeq = 0;
 // initialFocus: 'auto' (first field, else primary action) | 'close' | 'primary'.
 // closeOnNavigate: a route change while the dialog is open dismisses it (resolves null).
-export function modal(title, body, actions = [], { wide = false, dismissible = true, initialFocus = 'auto', closeOnNavigate = dismissible } = {}) {
+// beforeClose(value): return false (or a promise of false) to keep the dialog open, e.g. for form validation.
+export function modal(title, body, actions = [], { wide = false, dismissible = true, initialFocus = 'auto', closeOnNavigate = dismissible, beforeClose = null } = {}) {
   return new Promise((resolve) => {
     const prevFocus = document.activeElement;
     const id = `mdl-${++modalSeq}`;
     let done = false;
+    const attempt = async (v) => {
+      if (beforeClose && v !== null && v !== false) { try { if ((await beforeClose(v)) === false) return; } catch { return; } }
+      close(v);
+    };
     const close = (v) => {
       if (done) return; done = true;
       wrap.classList.add('leaving');
@@ -87,13 +92,13 @@ export function modal(title, body, actions = [], { wide = false, dismissible = t
       h('h3', { id }, title),
       dismissible ? h('button.icon-btn.modal-close', { type: 'button', 'aria-label': t('close'), onclick: () => close(null) }, icon('x')) : null,
       body,
-      actions.length ? h('div.actions', actions.map((a) => h(`button.btn${a.primary ? '.primary' : ''}${a.danger ? '.danger' : ''}${!a.primary && !a.danger ? '.secondary' : ''}`, { type: 'button', onclick: () => close(a.value) }, a.icon ? icon(a.icon) : null, a.label))) : null);
+      actions.length ? h('div.actions', actions.map((a) => h(`button.btn${a.primary ? '.primary' : ''}${a.danger ? '.danger' : ''}${!a.primary && !a.danger ? '.secondary' : ''}`, { type: 'button', onclick: () => attempt(a.value) }, a.icon ? icon(a.icon) : null, a.label))) : null);
     const wrap = h('div.modal-wrap', { onclick: (e) => { if (e.target === wrap && dismissible) close(null); } }, dlg);
     document.body.append(wrap);
     document.addEventListener('keydown', onKey, true);
     if (closeOnNavigate) window.addEventListener('hashchange', onNav);
     // Enter submits the primary action from single-line inputs
-    dlg.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('input:not([type=checkbox]):not([type=radio])')) { const p = actions.find((a) => a.primary); if (p) { e.preventDefault(); close(p.value); } } });
+    dlg.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('input:not([type=checkbox]):not([type=radio])')) { const p = actions.find((a) => a.primary); if (p) { e.preventDefault(); attempt(p.value); } } });
     const primaryBtn = () => dlg.querySelector('.actions .btn.primary, .actions .btn.danger');
     const first = initialFocus === 'close' ? dlg.querySelector('.modal-close') : initialFocus === 'primary' ? primaryBtn() : dlg.querySelector('input,textarea,select') || primaryBtn();
     setTimeout(() => (first || dlg).focus?.(), 40);

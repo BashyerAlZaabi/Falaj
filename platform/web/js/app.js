@@ -18,6 +18,7 @@ import { renderAdmin } from './views/admin.js';
 import { renderOffice, builder as officeBuilder } from './views/office.js';
 import { renderAchievements } from './views/achievements.js';
 import { initGame } from './game.js';
+import { renderSystem, systemMeta, sortSystems } from './systems.js';
 
 const store = { get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
 
@@ -37,14 +38,35 @@ $('#lg-reveal')?.replaceChildren(icon('eye'));
 $$('.icon-slot').forEach((s) => s.replaceWith(icon(s.closest('#btn-ask') || s.closest('.panel-head') ? 'spark' : 'search')));
 
 // ---------------- login ----------------
-const DEMO = [['president', 'خالد المنصوري', 'Khalid Al Mansoori', 'الرئيس', 'President'], ['mariam', 'مريم الكعبي', 'Mariam Al Kaabi', 'مديرة · مدير المنصة', 'Manager · Admin'], ['omar', 'عمر الظاهري', 'Omar Al Dhaheri', 'مدير', 'Manager'], ['ahmed', 'أحمد الشامسي', 'Ahmed Al Shamsi', 'موظف', 'Employee'], ['sara', 'سارة النعيمي', 'Sara Al Nuaimi', 'موظفة', 'Employee'], ['noura', 'نورة المهيري', 'Noura Al Muhairi', 'موظفة · المالية', 'Employee · Finance']];
+// Demo personas across departments (password Demo@2026), plus external identities.
+const DEMO = [
+  ['القيادة', 'Leadership', [['president', 'خالد المنصوري', 'Khalid Al Mansoori', 'الرئيس', 'President']]],
+  ['التحول الرقمي', 'Digital Transformation', [['mariam', 'مريم الكعبي', 'Mariam Al Kaabi', 'مديرة · مدير المنصة', 'Director · Admin'], ['ahmed', 'أحمد الشامسي', 'Ahmed Al Shamsi', 'مهندس أنظمة', 'Systems Engineer'], ['sara', 'سارة النعيمي', 'Sara Al Nuaimi', 'محللة أعمال', 'Business Analyst']]],
+  ['المشاريع الاستراتيجية', 'Strategic Projects', [['latifa', 'لطيفة السويدي', 'Latifa Al Suwaidi', 'مديرة الإدارة', 'Director'], ['hamad', 'حمد الكتبي', 'Hamad Al Ketbi', 'محلل أداء استراتيجي', 'Strategy Analyst']]],
+  ['الموارد البشرية', 'Human Resources', [['hessa', 'حصة البلوشي', 'Hessa Al Balushi', 'مديرة الموارد البشرية', 'HR Director'], ['salem', 'سالم الرميثي', 'Salem Al Rumaithi', 'أخصائي موارد بشرية', 'HR Specialist']]],
+  ['المالية والمشتريات', 'Finance & Procurement', [['majed', 'ماجد الحوسني', 'Majed Al Hosani', 'المدير المالي', 'CFO'], ['noura', 'نورة المهيري', 'Noura Al Muhairi', 'محاسبة', 'Accountant'], ['reem', 'ريم العامري', 'Reem Al Ameri', 'أخصائية مشتريات', 'Procurement Specialist']]],
+  ['الشؤون القانونية', 'Legal Affairs', [['yousef', 'يوسف الزعابي', 'Yousef Al Zaabi', 'مدير قانوني · الامتثال', 'Legal Director · Compliance']]],
+  ['التدقيق الداخلي', 'Internal Audit', [['aisha', 'عائشة النقبي', 'Aisha Al Naqbi', 'رئيسة التدقيق', 'Chief Audit Executive'], ['saeed', 'سعيد المزروعي', 'Saeed Al Mazrouei', 'مدقق داخلي', 'Internal Auditor']]],
+  ['العمليات', 'Operations', [['omar', 'عمر الظاهري', 'Omar Al Dhaheri', 'مدير العمليات', 'Operations Director'], ['fatima', 'فاطمة الحمادي', 'Fatima Al Hammadi', 'أخصائية عمليات', 'Operations Specialist']]],
+  ['جهات خارجية', 'External parties', [['rashid', 'راشد المرر', 'Rashid Al Marar', 'مدقق خارجي', 'External Auditor'], ['horizon', 'عبدالله الفلاسي', 'Abdulla Al Falasi', 'مقدم خدمة — الأفق', 'Provider — Horizon'], ['oasis', 'ليلى الشحي', 'Laila Al Shehhi', 'مقدم خدمة — الواحة', 'Provider — Oasis']]],
+];
 let sessionExpired = false;
 function showLogin() {
   if (state.me) sessionExpired = true;
   $('#login-banner')?.classList.toggle('hidden', !sessionExpired);
   $('#app').classList.add('hidden'); $('#tabbar').classList.add('hidden'); $('#login').classList.remove('hidden');
-  $('#demo-grid').replaceChildren(...DEMO.map(([u, ar, en, rar, ren]) => h('button', { type: 'button', 'aria-label': `${L('دخول باسم', 'Sign in as')} ${L(ar, en)}`, onclick: () => { $('#lg-user').value = u; $('#lg-pass').value = 'Demo@2026'; $('#login-form').requestSubmit(); } },
-    avatar(ar), h('span', h('span.n', L(ar, en)), h('span.r', `${u} · ${L(rar, ren)}`)))));
+  $('#demo-grid').replaceChildren(...DEMO.map(([gar, gen, people]) => h('div.demo-dept', { role: 'group', 'aria-label': L(gar, gen) }, h('div.demo-dept-title', L(gar, gen)),
+    h('div.demo-people', people.map(([u, ar, en, rar, ren]) => h('button', { type: 'button', 'aria-label': `${L('دخول باسم', 'Sign in as')} ${L(ar, en)} — ${L(rar, ren)}`, onclick: () => { $('#lg-user').value = u; $('#lg-pass').value = 'Demo@2026'; $('#login-form').requestSubmit(); } },
+      avatar(ar), h('span', h('span.n', L(ar, en)), h('span.r', L(rar, ren)))))))));
+  $('#login-hero').replaceChildren(
+    h('div.lh-brand', h('span.brand-mark', icon('layers')), h('span', h('b', L('منصة العمل الذكية', 'Smart Work Platform')), h('small', L('مساحة العمل الحكومية الموحدة', 'Unified government workspace')))),
+    h('div', h('h2', L('كل عملك في مكان واحد — بذكاء وأمان', 'All your work in one place — smart and secure')),
+      h('p.lh-lead', L('مساحة عمل موحدة تجمع المشاريع والمهام والمستندات والأنظمة المؤسسية، مع مساعد ذكي ينفّذ طلباتك ضمن صلاحياتك.', 'One workspace for projects, tasks, documents and enterprise systems, with an assistant that acts within your permissions.')),
+      h('ul',
+        h('li', h('span.lh-ic', icon('grid')), h('span', h('b', L('أنظمة متكاملة', 'Integrated systems')), L('الأداء الاستراتيجي، الاجتماعات، المشتريات، التدقيق، الجوائز والمزيد', 'Strategy, meetings, procurement, audit, awards and more'))),
+        h('li', h('span.lh-ic', icon('spark')), h('span', h('b', L('مساعد ذكي تحت سيطرتك', 'An assistant you control')), L('ينفّذ ويؤكد قبل الإجراءات الحساسة، ولا يصل إلا لما تسمح به سياسة البيانات', 'Executes, confirms sensitive actions, and only reads what data policy allows'))),
+        h('li', h('span.lh-ic', icon('lockKeyhole')), h('span', h('b', L('بيانات لا تختلط', 'Data that never mixes')), L('عزل حسب القسم والتصنيف، وسجل اطلاع للبيانات السرية، وVault معزول', 'Isolation by department and classification, access logs for sensitive data, isolated Vault'))))),
+    h('div.lh-foot', L('بيئة تجريبية — البيانات المعروضة تجريبية', 'Demo environment — data shown is sample data')));
   $('#lg-lang').textContent = getLang() === 'ar' ? 'English' : 'العربية';
   if (matchMedia('(pointer: fine)').matches) setTimeout(() => $('#lg-user').focus(), 50);
 }
@@ -82,13 +104,26 @@ const ROUTES = {
   apps: { key: 'nav.apps', icon: 'grid', group: 'apps', render: renderApps },
   uploader: { key: 'nav.uploader', icon: 'upload', group: 'apps', render: renderUploader },
   admin: { key: 'nav.admin', icon: 'settings', group: 'admin', render: renderAdmin, admin: true },
+  // enterprise systems: #/sys/<key>/<tab>/<id>… (nav entries are built from /api/me.systems)
+  sys: { key: 'nav.sys', icon: 'grid', group: null, render: (v, p, o) => renderSystem(v, p[0], p.slice(1), o), external: true },
+  integrations: { key: 'nav.sys', icon: 'plug', group: null, alias: '#/sys/integrations' },
 };
 const GROUPS = [['work', 'nav.group.work'], ['apps', 'nav.apps'], ['admin', 'nav.group.admin']];
 
 // ---------------- shell ----------------
+const isExternal = () => !!state.me?.external;
+function systemsGroup() {
+  const list = sortSystems((state.me.systems || []).filter((s) => s.pinned));
+  if (!list.length) return null;
+  return h('div.nav-group.nav-systems', { role: 'group', 'aria-label': t('nav.group.systems') }, h('div.nav-group-title', t('nav.group.systems')),
+    list.map((s) => h('a.item', { href: `#/sys/${s.key}`, 'data-route': `sys:${s.key}`, title: L(s.name_ar, s.name_en) }, icon(s.icon), h('span.label', L(s.name_ar, s.name_en)), h('span.nav-badge.hidden', { 'data-badge': `sys:${s.key}` }))));
+}
 function buildNav() {
   const nav = $('#nav-items'); nav.replaceChildren();
-  for (const [g, key] of GROUPS) {
+  document.body.dataset.external = isExternal() ? '1' : '';
+  if (isExternal()) { nav.append(systemsGroup() || ''); }
+  for (const [g, key] of isExternal() ? [] : GROUPS) {
+    if (g === 'apps') { const sg = systemsGroup(); if (sg) nav.append(sg); }
     const keys = Object.keys(ROUTES).filter((r) => ROUTES[r].group === g && (!ROUTES[r].admin || state.me.user.is_admin));
     if (!keys.length) continue;
     nav.append(h('div.nav-group', { role: 'group', 'aria-label': t(key) }, h('div.nav-group-title', t(key)),
@@ -221,13 +256,17 @@ window.addEventListener('swp:chat-visible', (e) => setChatVisible(e.detail));
 let renderSeq = 0;
 export async function route({ soft = false } = {}) {
   const [, r = 'home', ...params] = (location.hash || '#/home').split('/');
+  if (ROUTES[r]?.alias) { location.replace(ROUTES[r].alias + (params.length ? '/' + params.join('/') : '')); return; }
+  // External identities only ever see their portal systems.
+  if (isExternal() && r !== 'sys') { const first = sortSystems(state.me.systems || [])[0]; location.replace(first ? `#/sys/${first.key}` : '#/sys/none'); return; }
   const def = ROUTES[r] || ROUTES.home;
   if (def.admin && !state.me.user.is_admin) { location.hash = '#/home'; return; }
   const key = ROUTES[r] ? r : 'home';
   if (key === 'projects' && params[0]) state.selectedProjectId = params[0];
   state.route = key; state.params = params;
   if (innerWidth <= 900 && !['chat', 'doc'].includes(document.body.dataset.tab)) setTab(['apps', 'uploader', 'admin'].includes(key) ? 'apps' : 'home');
-  $$('#nav a.item').forEach((a) => { const on = a.dataset.route === key; a.classList.toggle('on', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
+  const navKey = key === 'sys' ? `sys:${params[0]}` : key;
+  $$('#nav a.item').forEach((a) => { const on = a.dataset.route === navKey; a.classList.toggle('on', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
   toggleNav(false);
   const seq = ++renderSeq;
   const view = $('#view');
@@ -246,11 +285,15 @@ export async function route({ soft = false } = {}) {
   }
   clearTimeout(progTimer); prog?.classList.remove('on');
   setCrumbs(key, params);
-  if (!soft) { view.focus({ preventScroll: true }); document.title = `${t(def.key)} · ${t('brand')}`; remember(location.hash || '#/home', t(def.key) + (key === 'projects' && params[0] && state.projectName ? ` › ${state.projectName}` : '')); }
+  if (!soft) { view.focus({ preventScroll: true }); const title = routeTitle(key, params); document.title = `${title} · ${t('brand')}`; remember(location.hash || '#/home', title + (key === 'projects' && params[0] && state.projectName ? ` › ${state.projectName}` : '')); }
   Chat.refreshContext();
 }
+function routeTitle(key, params) {
+  if (key === 'sys') { const m = systemMeta(params[0]); return m ? L(m.name_ar, m.name_en) : t('nav.sys'); }
+  return t(ROUTES[key].key);
+}
 function setCrumbs(key, params) {
-  const c = $('#crumbs'); const title = t(ROUTES[key].key);
+  const c = $('#crumbs'); const title = routeTitle(key, params);
   if (key === 'projects' && params[0]) c.replaceChildren(h('a', { href: '#/projects' }, title), h('span.sep', { 'aria-hidden': 'true' }, icon('chevron', 'sm')), h('h2#view-title', state.projectName || '…'));
   else c.replaceChildren(h('h2#view-title', title));
 }
@@ -262,7 +305,7 @@ on('data-changed', softRefresh);
 
 // ---------------- badges (alerts, pending agent reviews) ----------------
 async function refreshBadges() {
-  const [alerts, runs] = await Promise.all([api('/api/alerts').catch(() => []), api('/api/office/runs?status=awaiting_review').catch(() => [])]);
+  const [alerts, runs] = await Promise.all([api('/api/alerts').catch(() => []), isExternal() ? [] : api('/api/office/runs?status=awaiting_review').catch(() => [])]);
   const unread = alerts.filter((a) => a.derived || !a.read_at).length;
   const ac = $('#alerts-count'); if (ac) { ac.textContent = unread > 9 ? '9+' : String(unread); ac.classList.toggle('hidden', !unread); }
   const ob = $('[data-badge="office"]'); if (ob) { ob.textContent = String(runs.length); ob.classList.toggle('hidden', !runs.length); ob.classList.add('alert'); }
@@ -289,10 +332,13 @@ async function boot() {
   if (store.get('swp.nav') === 'collapsed') $('#app').classList.add('nav-collapsed');
   // Desktop-first: the Ask AI inspector is open by default only on wide screens;
   // otherwise the floating Ask AI bar keeps it one click / "/" away.
-  if (innerWidth > 900) { const pref = store.get('swp.chat'); setChatVisible(pref ? pref === 'shown' : innerWidth >= 1600, { remember: false }); }
+  if (innerWidth > 900 && !me.external) { const pref = store.get('swp.chat'); setChatVisible(pref ? pref === 'shown' : innerWidth >= 1600, { remember: false }); }
   buildNav(); setTab('home');
   configurePalette({
-    routes: Object.entries(ROUTES).filter(([, d]) => !d.admin || me.user.is_admin).map(([k, d]) => ({ key: k, label: t(d.key), icon: d.icon })),
+    routes: [
+      ...(me.external ? [] : Object.entries(ROUTES).filter(([, d]) => d.group && (!d.admin || me.user.is_admin)).map(([k, d]) => ({ key: k, label: t(d.key), icon: d.icon }))),
+      ...sortSystems(me.systems || []).map((s) => ({ key: `sys/${s.key}`, label: L(s.name_ar, s.name_en), icon: s.icon, hint: L(s.description_ar, s.description_en) })),
+    ],
     actions: [
       ...newActions(),
       { label: L('جهّز ملخص اليوم', 'Prepare my daily summary'), icon: 'spark', keywords: 'summary ملخص', run: () => { setChatVisible(true); Chat.send(L('جهّز لي ملخص اليوم', 'Prepare my daily summary')); } },
@@ -300,10 +346,10 @@ async function boot() {
       { label: getLang() === 'ar' ? 'Switch to English' : 'التبديل إلى العربية', icon: 'languages', keywords: 'language لغة', run: switchLang },
       { label: L('إظهار/إخفاء Ask AI', 'Show/hide Ask AI'), icon: 'chat', keywords: 'chat محادثة ai', run: () => setChatVisible($('#chat').classList.contains('collapsed')) },
       { label: L('تسجيل الخروج', 'Sign out'), icon: 'logout', keywords: 'logout خروج', run: logout },
-    ],
+    ].filter((a) => !me.external || ['moon', 'languages', 'logout'].includes(a.icon)),
   });
-  Chat.init(); Editor.init();
-  initGame($('#level-chip-host'));
+  if (!me.external) { Chat.init(); Editor.init(); initGame($('#level-chip-host')); }
+  else { setChatVisible(false, { remember: false }); $('#level-chip-host').replaceChildren(); }
   // Mobile "Document" tab reflects whether a document is open
   const syncDocTab = () => { const b = $('#tabbar button[data-tab="doc"]'); if (b) { const off = $('#editor').classList.contains('collapsed'); b.classList.toggle('dim', off); b.setAttribute('aria-disabled', String(off)); if (off && document.body.dataset.tab === 'doc') setTab('home'); } };
   new MutationObserver(syncDocTab).observe($('#editor'), { attributes: true, attributeFilter: ['class'] });

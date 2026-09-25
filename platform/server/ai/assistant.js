@@ -1,6 +1,7 @@
 // Ask AI orchestrator. Stages streamed to the client:
 //   understanding -> executing(tool…) -> done | partial | failed | needs_input | needs_confirmation
 // Uses a connected model (tool use) when available; otherwise the local planner.
+import { accessibleSystems } from '../systems/registry.js';
 import { one, all, run, uid, now, json, tx } from '../db.js';
 import { resolve, complete } from './services.js';
 import { executeTool, undoAction, allowedToolNames, agentForTool } from './executor.js';
@@ -161,6 +162,8 @@ async function localLoop(user, message, ctx, emit) {
 }
 
 function entityOf(tool) {
+  const sys = toolByName.get(tool)?.system;
+  if (sys) return `sys:${sys}`;
   if (/widget|dashboard/.test(tool)) return 'dashboard';
   if (/project/.test(tool)) return 'project';
   if (/task/.test(tool)) return 'task';
@@ -259,12 +262,18 @@ function renderResult(user, step, r) {
     case 'tasks': return res.length ? res.slice(0, 15).map((t) => `– ${t.title} — ${S_AR[t.status]}، ${P_AR[t.priority]}${t.due_date ? `، ${t.due_date}` : ''}${t.overdue ? ' ⚠️ متأخرة' : ''}`).join('\n') : 'لا توجد مهام مطابقة.';
     case 'events': return res.length ? res.map((e) => `– ${e.title}: ${localDT(e.starts_at)}${e.location ? ` — ${e.location}` : ''}`).join('\n') : 'لا توجد مواعيد قادمة.';
     case 'kpis': return res.items.map((k) => `– ${k.label_ar}: ${k.value == null ? 'غير متاح' : k.value + (k.unit || '')}${k.note_ar ? ` (${k.note_ar})` : ''}`).join('\n');
-    default: return `${step.label}: تم.${rep}`;
+    default: {
+      // Enterprise system tools format their own results (see server/systems/*).
+      const fmt = step.format || toolByName.get(step.tool)?.format;
+      if (typeof fmt === 'function') { try { return `${fmt(res, { user, step })}${rep}`; } catch (e) { console.error('[format]', step.tool, e.message); } }
+      return `${step.label}: تم.${rep}`;
+    }
   }
 }
 
 function helpText(user) {
-  return `أستطيع مساعدتك في:\n– ملخص يومك ومهامك ومواعيدك\n– إنشاء المشاريع والمهام وتحديث التقدم (عندما تحدد القيمة)\n– تخصيص الداشبورد: إضافة بطاقات، تحويل العرض لرسم، الترتيب، الاستعادة\n– إعداد تقارير وخطط ومحاضر وخطابات وتعديلها وتنزيلها Word/PDF\n– البحث والتلخيص وتحليل الملفات المرفوعة\nلا أصل إلى بيانات FS ومرصاد داخل Vault.`;
+  const systems = accessibleSystems(user).filter((s) => (s.tools || []).length).map((s) => s.name_ar);
+  return `أستطيع مساعدتك في:${systems.length ? `\n– الأنظمة المؤسسية المتاحة لك: ${systems.join('، ')} (ضمن صلاحياتك وسياسة البيانات)` : ''}\n– ملخص يومك ومهامك ومواعيدك\n– إنشاء المشاريع والمهام وتحديث التقدم (عندما تحدد القيمة)\n– تخصيص الداشبورد: إضافة بطاقات، تحويل العرض لرسم، الترتيب، الاستعادة\n– إعداد تقارير وخطط ومحاضر وخطابات وتعديلها وتنزيلها Word/PDF\n– البحث والتلخيص وتحليل الملفات المرفوعة\nلا أصل إلى بيانات FS ومرصاد داخل Vault.`;
 }
 
 function shortTextTemplate(clause, user, notes) {

@@ -59,24 +59,62 @@ export function seedConfig() {
   app('admin', 'إدارة المنصة', 'Platform admin', 'خدمات الذكاء الاصطناعي، الوكلاء، المهارات، MCP', 'settings', 'admin', 'portal', null, ['admin'], '#/admin', 'built_in', 10);
 }
 
-export function seedOrgAndDemo() {
-  const dept = (id, ar, en, parent) => run('INSERT OR IGNORE INTO departments (id,name_ar,name_en,parent_id) VALUES (?,?,?,?)', id, ar, en, parent);
+// Departments and demo personas across the organisation, plus external
+// identities (an external auditor and two service providers). Idempotent:
+// safe to run on every boot. Capabilities are granted only when a persona is
+// first created, so later admin revocations are respected.
+export function seedPeople() {
+  if (process.env.SEED_DEMO === '0') return;
+  const dept = (id, ar, en, parent, external = 0) => run('INSERT OR IGNORE INTO departments (id,name_ar,name_en,parent_id,is_external) VALUES (?,?,?,?,?)', id, ar, en, parent, external);
   dept('dept_exec', 'مكتب الرئيس', 'President Office', null);
   dept('dept_it', 'إدارة التحول الرقمي', 'Digital Transformation', 'dept_exec');
   dept('dept_ops', 'إدارة العمليات', 'Operations', 'dept_exec');
   dept('dept_fin', 'الإدارة المالية', 'Finance', 'dept_exec');
+  dept('dept_spmo', 'إدارة المشاريع الاستراتيجية', 'Strategic Projects Management', 'dept_exec');
+  dept('dept_hr', 'إدارة الموارد البشرية', 'Human Resources', 'dept_exec');
+  dept('dept_legal', 'إدارة الشؤون القانونية', 'Legal Affairs', 'dept_exec');
+  dept('dept_ia', 'مكتب التدقيق الداخلي', 'Internal Audit', 'dept_exec');
+  dept('dept_proc', 'قسم المشتريات', 'Procurement', 'dept_fin');
+  // external organisations (never part of the internal tree)
+  dept('ext_audit', 'جهة التدقيق الخارجي (تجريبية)', 'External audit firm (demo)', null, 1);
+  dept('ext_v_horizon', 'شركة الأفق للحلول التقنية (تجريبية)', 'Horizon Tech Solutions (demo)', null, 1);
+  dept('ext_v_oasis', 'مؤسسة الواحة للتوريدات (تجريبية)', 'Oasis Supplies (demo)', null, 1);
 
   const pw = hashPassword(DEMO_PASSWORD);
-  const user = (id, username, ar, en, role, deptId, tar, ten, admin = 0) => run(`INSERT OR IGNORE INTO users (id,username,password_hash,name_ar,name_en,email,role,is_admin,department_id,title_ar,title_en,is_demo) VALUES (?,?,?,?,?,?,?,?,?,?,?,1)`,
-    id, username, pw, ar, en, `${username}@demo.local`, role, admin, deptId, tar, ten);
-  user('u_president', 'president', 'خالد المنصوري', 'Khalid Al Mansoori', 'president', 'dept_exec', 'الرئيس', 'President');
-  user('u_mariam', 'mariam', 'مريم الكعبي', 'Mariam Al Kaabi', 'manager', 'dept_it', 'مديرة التحول الرقمي', 'Director, Digital Transformation', 1);
-  user('u_ahmed', 'ahmed', 'أحمد الشامسي', 'Ahmed Al Shamsi', 'employee', 'dept_it', 'مهندس أنظمة', 'Systems Engineer');
-  user('u_sara', 'sara', 'سارة النعيمي', 'Sara Al Nuaimi', 'employee', 'dept_it', 'محللة أعمال', 'Business Analyst');
-  user('u_omar', 'omar', 'عمر الظاهري', 'Omar Al Dhaheri', 'manager', 'dept_ops', 'مدير العمليات', 'Director, Operations');
-  user('u_fatima', 'fatima', 'فاطمة الحمادي', 'Fatima Al Hammadi', 'employee', 'dept_ops', 'أخصائية عمليات', 'Operations Specialist');
-  user('u_noura', 'noura', 'نورة المهيري', 'Noura Al Muhairi', 'employee', 'dept_fin', 'محاسبة', 'Accountant');
+  // Demo capability grants are applied once per seed version; admin changes made
+  // afterwards (grant/revoke in the Integration & Control Center) are kept.
+  db.exec('CREATE TABLE IF NOT EXISTS seed_marks (key TEXT PRIMARY KEY, at TEXT NOT NULL DEFAULT (datetime(\'now\')))');
+  const grantCaps = !one("SELECT 1 FROM seed_marks WHERE key='caps_v1'");
+  const person = (id, username, ar, en, role, deptId, tar, ten, caps = [], { admin = 0, type = 'staff' } = {}) => {
+    run(`INSERT OR IGNORE INTO users (id,username,password_hash,name_ar,name_en,email,role,is_admin,department_id,title_ar,title_en,is_demo,user_type) VALUES (?,?,?,?,?,?,?,?,?,?,?,1,?)`,
+      id, username, pw, ar, en, `${username}@demo.local`, role, admin, deptId, tar, ten, type);
+    if (grantCaps && one('SELECT 1 FROM users WHERE id=?', id)) for (const c of caps) run('INSERT OR IGNORE INTO user_caps (user_id,cap,granted_by) VALUES (?,?,?)', id, c, 'seed');
+  };
+  person('u_president', 'president', 'خالد المنصوري', 'Khalid Al Mansoori', 'president', 'dept_exec', 'الرئيس', 'President', ['audit.committee', 'awards.committee', 'ideas.committee']);
+  person('u_mariam', 'mariam', 'مريم الكعبي', 'Mariam Al Kaabi', 'manager', 'dept_it', 'مديرة التحول الرقمي', 'Director, Digital Transformation', ['ideas.committee', 'procurement.committee'], { admin: 1 });
+  person('u_ahmed', 'ahmed', 'أحمد الشامسي', 'Ahmed Al Shamsi', 'employee', 'dept_it', 'مهندس أنظمة', 'Systems Engineer');
+  person('u_sara', 'sara', 'سارة النعيمي', 'Sara Al Nuaimi', 'employee', 'dept_it', 'محللة أعمال', 'Business Analyst');
+  person('u_omar', 'omar', 'عمر الظاهري', 'Omar Al Dhaheri', 'manager', 'dept_ops', 'مدير العمليات', 'Director, Operations');
+  person('u_fatima', 'fatima', 'فاطمة الحمادي', 'Fatima Al Hammadi', 'employee', 'dept_ops', 'أخصائية عمليات', 'Operations Specialist');
+  person('u_noura', 'noura', 'نورة المهيري', 'Noura Al Muhairi', 'employee', 'dept_fin', 'محاسبة', 'Accountant', ['finance.budget']);
+  person('u_majed', 'majed', 'ماجد الحوسني', 'Majed Al Hosani', 'manager', 'dept_fin', 'المدير المالي', 'Chief Financial Officer', ['finance.budget', 'procurement.finance', 'procurement.committee']);
+  person('u_reem', 'reem', 'ريم العامري', 'Reem Al Ameri', 'employee', 'dept_proc', 'أخصائية مشتريات', 'Procurement Specialist', ['procurement.officer', 'providers.manage']);
+  person('u_latifa', 'latifa', 'لطيفة السويدي', 'Latifa Al Suwaidi', 'manager', 'dept_spmo', 'مديرة إدارة المشاريع الاستراتيجية', 'Director, Strategic Projects', ['strategy.admin', 'surveys.author', 'ideas.committee', 'awards.committee']);
+  person('u_hamad', 'hamad', 'حمد الكتبي', 'Hamad Al Ketbi', 'employee', 'dept_spmo', 'محلل أداء استراتيجي', 'Strategy Performance Analyst', ['strategy.admin']);
+  person('u_hessa', 'hessa', 'حصة البلوشي', 'Hessa Al Balushi', 'manager', 'dept_hr', 'مديرة الموارد البشرية', 'Director, Human Resources', ['performance.hr', 'awards.admin', 'surveys.author']);
+  person('u_salem', 'salem', 'سالم الرميثي', 'Salem Al Rumaithi', 'employee', 'dept_hr', 'أخصائي موارد بشرية', 'HR Specialist', ['performance.hr', 'surveys.author']);
+  person('u_yousef', 'yousef', 'يوسف الزعابي', 'Yousef Al Zaabi', 'manager', 'dept_legal', 'مدير الشؤون القانونية وضابط الامتثال', 'Director, Legal Affairs & Compliance Officer', ['integrity.officer', 'procurement.legal']);
+  person('u_aisha', 'aisha', 'عائشة النقبي', 'Aisha Al Naqbi', 'manager', 'dept_ia', 'رئيسة التدقيق الداخلي', 'Chief Audit Executive', ['audit.head', 'audit.auditor']);
+  person('u_saeed', 'saeed', 'سعيد المزروعي', 'Saeed Al Mazrouei', 'employee', 'dept_ia', 'مدقق داخلي', 'Internal Auditor', ['audit.auditor']);
+  // external identities
+  person('u_ext_rashid', 'rashid', 'راشد المرر', 'Rashid Al Marar', 'employee', 'ext_audit', 'مدقق خارجي', 'External Auditor', ['audit.external'], { type: 'external' });
+  person('u_ext_horizon', 'horizon', 'عبدالله الفلاسي', 'Abdulla Al Falasi', 'employee', 'ext_v_horizon', 'مدير الحسابات — شركة الأفق', 'Account Manager, Horizon', ['providers.portal'], { type: 'external' });
+  person('u_ext_oasis', 'oasis', 'ليلى الشحي', 'Laila Al Shehhi', 'employee', 'ext_v_oasis', 'مسؤولة المبيعات — مؤسسة الواحة', 'Sales Lead, Oasis', ['providers.portal'], { type: 'external' });
+  if (grantCaps) run("INSERT OR IGNORE INTO seed_marks (key) VALUES ('caps_v1')");
+}
 
+export function seedOrgAndDemo() {
+  seedPeople();
   if (one('SELECT 1 FROM projects LIMIT 1')) return;
   const proj = (id, name, desc, deptId, owner, progress, start, due, members) => {
     run(`INSERT INTO projects (id,name,description,department_id,owner_id,status,progress,progress_updated_at,progress_updated_by,start_date,due_date,created_by,is_demo) VALUES (?,?,?,?,?,'active',?,?,?,?,?,?,1)`,

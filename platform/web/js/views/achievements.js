@@ -9,6 +9,13 @@ import { state } from '../state.js';
 const KIND = { task_done: ['إنجاز مهمة', 'Task completed'], on_time: ['في الموعد', 'On time'], early: ['إنجاز مبكر', 'Early delivery'], priority: ['أولوية عالية', 'High priority'], backlog: ['إغلاق متأخرة', 'Cleared overdue'], progress: ['تحديث نسبة إنجاز', 'Progress update'], document: ['مستند', 'Document'], review: ['مراجعة عمل وكيل', 'Agent review'], agent: ['بناء وكيل', 'Agent built'], quest: ['مهمة يومية', 'Daily quest'] };
 const QUEST = { clear_overdue: ['إغلاق متأخرة', 'Clear overdue'], priority_task: ['مهمة ذات أولوية', 'Priority task'], update_progress: ['تحديث نسبة إنجاز', 'Update progress'], review_agents: ['مراجعة الوكلاء', 'Review agents'], deliver_one: ['إنجاز مهمة', 'Deliver one'] };
 
+// Kinds from enterprise systems (goals, ideas, disclosures…) carry their own labels in the rules.
+function kindLabel(kind, rules) {
+  if (KIND[kind]) return L(...KIND[kind]);
+  const r = rules.find((x) => x.key === kind);
+  return r ? L(r.ar, r.en) : kind;
+}
+
 export async function renderAchievements(root) {
   const [g, team] = await Promise.all([loadGame(), api('/api/game/team')]);
   const u = state.me.user;
@@ -61,7 +68,7 @@ export async function renderAchievements(root) {
   root.append(h('div.game-two',
     h('section.card', h('h2.card-title', L('آخر النقاط', 'Recent points')),
       g.recent.length ? h('ul.list.xp-list', g.recent.map((e) => h('li', h('span.xp-kind', icon(e.kind === 'quest' ? 'target' : e.kind === 'document' ? 'doc' : e.kind === 'review' || e.kind === 'agent' ? 'bot' : e.kind === 'progress' ? 'gauge' : 'check')),
-        h('span.grow', h('span.title', e.kind === 'quest' ? L(...(QUEST[e.ref] || [e.ref, e.ref])) : e.ref), h('span.meta', `${L(...KIND[e.kind])} · ${fmtDate(e.day)}`)), h('strong.xp-plus.tabular.num', `+${e.points}`))))
+        h('span.grow', h('span.title', e.kind === 'quest' ? L(...(QUEST[e.ref] || [e.ref, e.ref])) : e.ref), h('span.meta', `${kindLabel(e.kind, g.rules)} · ${fmtDate(e.day)}`)), h('strong.xp-plus.tabular.num', `+${e.points}`))))
         : emptyState({ compact: true, icon: 'sparkle', title: L('ابدأ رحلتك', 'Start your journey'), body: L('أنجز مهمة في موعدها لتكسب أول نقاطك.', 'Complete a task on time to earn your first points.'), actions: [{ label: L('افتح مهامي', 'Open my tasks'), primary: true, onClick: () => { location.hash = '#/tasks'; } }] })),
     h('section.card', h('h2.card-title', L('كيف تُحتسب النقاط؟', 'How points work')),
       h('ul.rules', g.rules.map((r) => h('li', h('span.grow', L(r.ar, r.en)), h('strong.tabular.num', `+${r.points}`)))),

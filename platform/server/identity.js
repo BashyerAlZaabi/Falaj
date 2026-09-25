@@ -57,10 +57,15 @@ export function createApiToken(userId, label) {
   return raw;
 }
 
-const USER_COLS = 'u.id,u.username,u.name_ar,u.name_en,u.email,u.role,u.is_admin,u.department_id,u.title_ar,u.title_en,u.lang,u.is_demo';
+const USER_COLS = 'u.id,u.username,u.name_ar,u.name_en,u.email,u.role,u.is_admin,u.department_id,u.title_ar,u.title_en,u.lang,u.is_demo,u.user_type';
+// caps: fine-grained system capabilities (e.g. strategy.admin, audit.auditor),
+// granted explicitly by a platform admin and audited. Roles stay coarse.
 export function getUser(id) {
-  return one(`SELECT ${USER_COLS}, d.name_ar AS dept_ar, d.name_en AS dept_en FROM users u JOIN departments d ON d.id=u.department_id WHERE u.id=? AND u.active=1`, id);
+  const u = one(`SELECT ${USER_COLS}, d.name_ar AS dept_ar, d.name_en AS dept_en FROM users u JOIN departments d ON d.id=u.department_id WHERE u.id=? AND u.active=1`, id);
+  if (u) u.caps = all('SELECT cap FROM user_caps WHERE user_id=? ORDER BY cap', id).map((r) => r.cap);
+  return u;
 }
+export const isExternal = (user) => user?.user_type === 'external';
 
 function parseCookies(header = '') {
   const out = {};
@@ -90,7 +95,7 @@ export function requireAuth(req, res, next) {
   next();
 }
 export function requireAdmin(req, res, next) {
-  if (!req.user?.is_admin) return res.status(403).json({ error: 'forbidden', message: 'تتطلب صلاحية مدير المنصة' });
+  if (!req.user?.is_admin || isExternal(req.user)) return res.status(403).json({ error: 'forbidden', message: 'تتطلب صلاحية مدير المنصة' });
   next();
 }
 

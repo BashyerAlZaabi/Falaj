@@ -21,13 +21,17 @@
 <link rel="stylesheet" href="/css/pages/office.css">
 <link rel="stylesheet" href="/css/pages/admin.css">
 <link rel="stylesheet" href="/css/pages/game.css">
+<link rel="stylesheet" href="/css/pages/systems.css">
 </head>
 <body>
 <div class="ambient" aria-hidden="true"></div>
 
 <!-- Login -->
 <section id="login" class="hidden" aria-labelledby="login-title">
+  <div class="login-shell">
+  <aside class="login-hero" id="login-hero" aria-hidden="false"></aside>
   <form class="login-card glass-4" id="login-form" autocomplete="on" novalidate>
+    <div class="login-form-col">
     <div class="brand-mark" aria-hidden="true"></div>
     <div class="banner warn hidden" id="login-banner" role="status" data-i18n="login.expired">انتهت الجلسة، سجّل الدخول مجدداً للمتابعة.</div>
     <h1 id="login-title" data-i18n="login.title">تسجيل الدخول الموحّد</h1>
@@ -46,11 +50,13 @@
       <span class="tiny faint" data-i18n="login.secure">اتصال آمن · دخول موحّد لكل المكونات</span>
       <button class="btn ghost sm" type="button" id="lg-lang">English</button>
     </div>
+    </div>
     <div class="demo-list" id="demo-list">
       <div class="demo-head"><span class="chip demo tiny" data-i18n="demo">تجريبي</span><span data-i18n="login.demo">حسابات تجريبية — كلمة المرور: Demo@2026</span></div>
       <div class="demo-grid" id="demo-grid"></div>
     </div>
   </form>
+  </div>
 </section>
 
 <!-- App shell -->

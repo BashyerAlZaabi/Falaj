@@ -23,6 +23,20 @@ const MAP = {
   sparkle: 'sparkle', rocket: 'rocket', badgeCheck: 'badge-check', shieldAlert: 'shield-alert', lockOpen: 'lock-open', fileDown: 'file-down', fileUp: 'file-up', files: 'files',
   mic2: 'mic-off', square: 'square', circle: 'circle', dotsV: 'ellipsis-vertical', maximize: 'maximize', columns: 'columns-2', rows: 'rows-3', sidebarClose: 'panel-left-close', panelRightClose: 'panel-right-close',
   fileText: 'file-text', calendarClock: 'calendar-clock', circleDashed: 'circle-dashed', inboxEmpty: 'inbox', checkCheck: 'check-check', link: 'link', globe: 'globe',
+  // enterprise systems
+  gift: 'gift', trophy: 'trophy', award: 'award', medal: 'medal', scale: 'scale', gavel: 'gavel', handshake: 'handshake', cart: 'shopping-cart', receipt: 'receipt',
+  wallet: 'wallet', banknote: 'banknote', coins: 'coins', handCoins: 'hand-coins', calculator: 'calculator', fileSign: 'file-pen-line', clipboardList: 'clipboard-list',
+  clipboardCheck: 'clipboard-check', searchCheck: 'search-check', scanSearch: 'scan-search', fileSearch: 'file-search', fileWarning: 'file-exclamation-point', fileLock: 'file-lock',
+  briefcase: 'briefcase', landmark: 'landmark', network: 'network', milestone: 'milestone', compass: 'compass', crosshair: 'crosshair', goal: 'goal', star: 'star',
+  thumbsUp: 'thumbs-up', thumbsDown: 'thumbs-down', vote: 'vote', listOrdered: 'list-ordered', calendarCheck: 'calendar-check', calendarPlus: 'calendar-plus', calendarX: 'calendar-x',
+  usersRound: 'users-round', userPlus: 'user-plus', userX: 'user-x', userCog: 'user-cog', package: 'package', truck: 'truck', store: 'store', factory: 'factory',
+  shieldQuestion: 'shield-question-mark', shieldX: 'shield-x', shieldBan: 'shield-ban', fingerprint: 'fingerprint-pattern', lockKeyhole: 'lock-keyhole', unplug: 'unplug', cable: 'cable',
+  webhook: 'webhook', arrowLR: 'arrow-left-right', compare: 'git-compare', workflow: 'workflow', kanban: 'square-kanban', gantt: 'chart-gantt', sigma: 'sigma',
+  idCard: 'id-card', contact: 'contact', mailCheck: 'mail-check', heartHandshake: 'heart-handshake', party: 'party-popper', crown: 'crown', gem: 'gem', flame: 'flame',
+  dashboard: 'layout-dashboard', presentation: 'presentation', notebook: 'notebook-pen', sticky: 'sticky-note', messagePlus: 'message-square-plus', reply: 'reply', tag: 'tag',
+  tags: 'tags', bookmark: 'bookmark', archive: 'archive', clockAlert: 'clock-alert', alarm: 'alarm-clock', ban: 'ban',
+  squareCheck: 'square-check', circlePlay: 'circle-play', ruler: 'ruler', puzzle: 'puzzle', radar: 'radar', lineChart: 'chart-spline', scatter: 'chart-scatter', stamp: 'stamp',
+  faceHappy: 'face-grinning', faceNeutral: 'face-neutral', faceSad: 'face-slightly-frowning', signature: 'signature', mapPin: 'map-pin', eyeCheck: 'scan-eye', badgeAlert: 'badge-alert', badgeDollar: 'badge-dollar-sign', percentCircle: 'circle-percent', hash: 'hash',
 };
 const out = {};
 const missing = [];

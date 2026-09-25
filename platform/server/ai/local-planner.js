@@ -3,6 +3,7 @@
 // It maps a request to explicit tool steps; it never guesses values: when a
 // required value (project, percentage, title, time…) is missing or ambiguous
 // it asks one specific question instead.
+import { accessibleSystems } from '../systems/registry.js';
 import * as W from '../services/work.js';
 import * as B from '../services/dashboard.js';
 import { one, all } from '../db.js';
@@ -257,6 +258,17 @@ function planClause(user, clause, ctx) {
   // --- achievements / gamification ---
   if (/(نقاطي|نقاط التميز|نقاط|مستواي|مستوى|انجازاتي|شاراتي|شارات|سلسلتي|xp|level|achievements|badges|quests|تحديات اليوم|مهام اليوم الخاصه)/.test(n) && !/(مشروع|project)/.test(n)) {
     return [{ tool: 'get_my_achievements', input: {}, label: 'قراءة إنجازاتي', render: 'achievements' }];
+  }
+
+  // --- enterprise systems (each system contributes its own intents) ---
+  for (const sys of accessibleSystems(user)) {
+    for (const it of sys.intents || []) {
+      try {
+        if (!it.test(n, clause)) continue;
+        const steps = it.plan(user, clause, ctx, { norm, parseDate, parseTime, digits, matchByName });
+        if (steps?.length) return steps;
+      } catch (e) { console.error(`[planner] ${sys.key} intent failed:`, e.message); }
+    }
   }
 
   // --- Agents Office ---

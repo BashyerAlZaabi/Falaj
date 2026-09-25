@@ -10,7 +10,7 @@
     "dev": "node --no-warnings scripts/run-all.js",
     "seed": "node --no-warnings server/seed.js --reset",
     "wajib:sim": "node --no-warnings scripts/wajib-sim.js",
-    "test": "node --no-warnings --test tests/*.test.js",
+    "test": "node --no-warnings --test tests/*.test.js tests/sys/*.test.js",
     "e2e": "node --no-warnings tests/e2e/journey.mjs"
   },
   "engines": {

@@ -8,6 +8,7 @@
 //  * Recognition, not shaming: department challenges use aggregates; personal
 //    rankings show only colleagues who opted in; nobody sees another person's
 //    detailed record.
+import { systemGameEvents, systemGameRules } from '../systems/registry.js';
 import { one, all, run, uid, now, today } from '../db.js';
 import * as P from '../policy.js';
 import { weekStart } from './work.js';
@@ -95,6 +96,8 @@ function events(userId) {
     if (tpl.has(a.template)) continue; tpl.add(a.template);
     ev.push({ kind: 'agent', points: R.agent, day: dayOf(a.created_at), at: a.created_at, ref: a.name, entity: 'office_agent', id: a.id });
   }
+  // enterprise systems (goals achieved, ideas adopted, disclosures on time, …)
+  for (const e of systemGameEvents(userId)) ev.push({ kind: e.kind, points: e.points, day: dayOf(e.at), at: e.at, ref: e.ref, entity: e.entity, id: e.id });
   for (const q of all('SELECT day, quest, completed_at FROM quest_log WHERE user_id=?', userId))
     ev.push({ kind: 'quest', points: R.quest, day: q.day, at: q.completed_at, ref: q.quest, entity: 'quest', id: `${q.day}:${q.quest}` });
   // daily cap (anti-farming): keep the earliest events of each day up to the cap
@@ -208,7 +211,7 @@ export function profile(user) {
     daily_cap: DAILY_CAP, level: levelFor(xp2), streak: streak(ev2), rings: rings(user, ev2), quests: q, badges: badges(user, ev2),
     recent: ev2.filter((e) => e.counted > 0).slice(-12).reverse().map((e) => ({ kind: e.kind, points: e.counted, day: e.day, ref: e.ref, entity: e.entity, id: e.id })),
     heat: (() => { const map = {}; for (const e of ev2) map[e.day] = (map[e.day] || 0) + e.counted; const out = []; for (let i = 27; i >= 0; i--) { const d = utcDay(Date.now() - i * DAY); out.push({ day: d, xp: map[d] || 0, weekend: isWeekend(d) }); } return out; })(),
-    prefs: prefs(user.id), rules: RULES, levels: LEVELS, xp_counted_before: xp,
+    prefs: prefs(user.id), rules: [...RULES, ...systemGameRules()], levels: LEVELS, xp_counted_before: xp,
   };
 }
 

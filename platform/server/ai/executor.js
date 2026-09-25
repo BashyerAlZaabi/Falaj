@@ -4,19 +4,25 @@
 import crypto from 'node:crypto';
 import { one, all, run, uid, json, now } from '../db.js';
 import { toolByName, validate } from '../mcp/tools.js';
+import { canAccess } from '../systems/registry.js';
+import { aiAllowed } from '../systems/kit.js';
 
 export function agentsFor(user) {
+  // External identities (auditors, providers) never get Ask AI / MCP agents.
+  if (user.user_type === 'external') return [];
   return all('SELECT * FROM agents WHERE enabled=1').map((a) => ({ ...a, tools: JSON.parse(a.tools), allowed_roles: JSON.parse(a.allowed_roles) }))
-    .filter((a) => a.allowed_roles.includes(user.role));
+    .filter((a) => a.allowed_roles.includes(user.role) && (!a.system || canAccess(user, a.system)));
 }
 
 export function agentForTool(user, toolName) {
   return agentsFor(user).find((a) => a.tools.includes(toolName)) || null;
 }
 
+// Tools offered to Ask AI / MCP: allowed by an agent for the user's role and not
+// blocked by the data-domain AI policy.
 export function allowedToolNames(user) {
   const s = new Set();
-  for (const a of agentsFor(user)) for (const t of a.tools) s.add(t);
+  for (const a of agentsFor(user)) for (const t of a.tools) { const tool = toolByName.get(t); if (tool?.domain && !aiAllowed(user, tool.domain)) continue; s.add(t); }
   return s;
 }
 
@@ -30,6 +36,12 @@ export async function executeTool(user, name, input = {}, ctx = {}) {
   if (!tool.internal) {
     agent = agentForTool(user, name);
     if (!agent) return { status: 'error', code: 'forbidden', error: 'لا يوجد مساعد مصرّح له بتنفيذ هذه الأداة لدورك' };
+  }
+  // Data-domain AI policy: Ask AI and MCP clients may only touch a system's data
+  // when its domain allows it (or the user opted in). Direct UI actions are the
+  // user's own and are governed by the system's authorisation alone.
+  if (tool.domain && ['assistant', 'mcp', 'office'].includes(ctx.source) && !aiAllowed(user, tool.domain)) {
+    return { status: 'error', code: 'ai_policy', error: 'سياسة البيانات لا تسمح للمساعد الذكي بالوصول إلى هذا النوع من البيانات. يمكنك فتح النظام مباشرة، أو تفعيل الوصول من «مركز التكامل والتحكم» إن كانت السياسة تسمح بذلك.' };
   }
   const errors = validate(tool.input_schema, input);
   if (errors.length) return { status: 'error', code: 'bad_input', error: `مدخلات غير صالحة: ${errors.join('; ')}` };

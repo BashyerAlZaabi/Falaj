@@ -75,33 +75,12 @@ export const TOOLS = [
 
 export const toolByName = new Map(TOOLS.map((t) => [t.name, t]));
 export const publicTools = () => TOOLS.filter((t) => !t.internal);
-
-// Minimal JSON-schema validation (types, enums, required, bounds, no extra props).
-export function validate(schema, input, path = 'input') {
-  const errs = [];
-  if (schema.type === 'object') {
-    if (typeof input !== 'object' || input === null || Array.isArray(input)) return [`${path} must be an object`];
-    for (const r of schema.required || []) if (input[r] === undefined || input[r] === null || input[r] === '') errs.push(`${path}.${r} is required`);
-    if (schema.properties) {
-      for (const [k, v] of Object.entries(input)) {
-        const ps = schema.properties[k];
-        if (!ps) { if (schema.additionalProperties === false) errs.push(`${path}.${k} is not allowed`); continue; }
-        if (v === undefined || v === null) continue;
-        errs.push(...validate(ps, v, `${path}.${k}`));
-      }
-    }
-  } else if (schema.type === 'string') {
-    if (typeof input !== 'string') errs.push(`${path} must be a string`);
-    else if (schema.enum && !schema.enum.includes(input)) errs.push(`${path} must be one of ${schema.enum.join(',')}`);
-    else if (input.length > 200000) errs.push(`${path} too long`);
-  } else if (schema.type === 'integer') {
-    if (!Number.isInteger(input)) errs.push(`${path} must be an integer`);
-    else if ((schema.minimum != null && input < schema.minimum) || (schema.maximum != null && input > schema.maximum)) errs.push(`${path} out of range`);
-  } else if (schema.type === 'boolean') {
-    if (typeof input !== 'boolean') errs.push(`${path} must be a boolean`);
-  } else if (schema.type === 'array') {
-    if (!Array.isArray(input)) errs.push(`${path} must be an array`);
-    else if (schema.items) input.forEach((x, i) => errs.push(...validate(schema.items, x, `${path}[${i}]`)));
+// Enterprise systems (server/systems/*) contribute their own tools at startup.
+export function registerTools(list) {
+  for (const t of list) {
+    if (toolByName.has(t.name)) throw new Error(`duplicate tool ${t.name}`);
+    TOOLS.push(t); toolByName.set(t.name, t);
   }
-  return errs;
 }
+
+export { validate } from '../lib/validate.js';

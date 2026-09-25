@@ -15,11 +15,12 @@ import { executeTool, undoAction, resolveConfirmation, agentsFor } from './ai/ex
 import { handleMcp } from './mcp/server.js';
 import { publicTools } from './mcp/tools.js';
 import { subscribe } from './bus.js';
-import { seedAll, seedConfig } from './seed.js';
+import { seedAll, seedConfig, seedPeople } from './seed.js';
+import { initSystems, systemsFor } from './systems/index.js';
 import * as O from './services/office.js';
 import * as G from './services/game.js';
 
-if (!one('SELECT 1 FROM users LIMIT 1')) seedAll(); else seedConfig(); // config upserts are idempotent
+if (!one('SELECT 1 FROM users LIMIT 1')) seedAll(); else { seedConfig(); seedPeople(); } // idempotent upserts
 
 export const app = express();
 app.disable('x-powered-by');
@@ -83,18 +84,34 @@ app.get('/api/identity/sso/authorize', (req, res) => {
   if (!redirect.startsWith(config.vaultPublicUrl + '/sso/callback')) return res.status(400).send('invalid redirect_uri');
   const user = I.userFromRequest(req);
   if (!user) return res.redirect(`/?next=${encodeURIComponent(req.originalUrl)}#/login`);
+  if (I.isExternal(user)) return res.status(403).send('External accounts cannot access Vault.');
   const assertion = I.signAssertion({ aud: 'vault', sub: user.id, name_ar: user.name_ar, name_en: user.name_en, role: user.role, department_id: user.department_id, state: String(req.query.state || '') });
   res.redirect(`${redirect}${redirect.includes('?') ? '&' : '?'}assertion=${encodeURIComponent(assertion)}`);
 });
 
 app.use('/api', (req, res, next) => (req.path.startsWith('/auth/') || req.path === '/health' || req.path.startsWith('/identity/')) ? next() : I.requireAuth(req, res, next));
 
+// External identities (external auditors, service providers) are confined to the
+// systems that expose an external portal: no workspace data, Ask AI, MCP, Vault.
+const EXTERNAL_OK = [/^\/me$/, /^\/systems$/, /^\/systems\/[a-z_]+\/prefs$/, /^\/workspace$/, /^\/sys\/[a-z_]+(\/|$)/, /^\/alerts(\/|$)/, /^\/stream$/, /^\/auth\//, /^\/health$/, /^\/identity\/public-key$/];
+app.use('/api', (req, res, next) => {
+  if (!req.user || !I.isExternal(req.user) || EXTERNAL_OK.some((re) => re.test(req.path))) return next();
+  res.status(403).json({ error: 'external_scope', message: 'هذا حساب جهة خارجية ويقتصر على البوابة المخصصة له' });
+});
+
 app.get('/api/me', wrap((req, res) => {
   const u = req.user;
   const chat = AI.resolve('chat');
+  const external = I.isExternal(u);
+  const systems = systemsFor(u);
   res.json({
     user: u,
-    apps: P.visibleApps(u).map((a) => ({ ...a, roles: undefined, url: a.zone === 'vault' ? `${config.vaultPublicUrl}${a.route}` : a.route })),
+    external,
+    systems,
+    apps: [
+      ...P.visibleApps(u).map((a) => ({ ...a, roles: undefined, url: a.zone === 'vault' ? `${config.vaultPublicUrl}${a.route}` : a.route })),
+      ...systems.map((s) => ({ key: `sys_${s.key}`, system: s.key, name_ar: s.name_ar, name_en: s.name_en, description_ar: s.description_ar, description_en: s.description_en, icon: s.icon, category: 'enterprise', zone: 'portal', route: s.route, url: s.route, integration_status: 'built_in', classification: s.classification })),
+    ],
     managed_departments: P.managedDepartments(u),
     assistant: { mode: chat.provider.kind === 'local' ? 'local' : 'model', provider: chat.provider.name, degraded: chat.degraded, status: chat.degraded ? chat.wantedStatus : chat.status },
     voice: { stt: AI.resolve('stt').provider, tts: AI.resolve('tts').provider },
@@ -104,7 +121,8 @@ app.get('/api/me', wrap((req, res) => {
   });
 }));
 app.get('/api/users/assignable', wrap((req, res) => res.json(P.assignableUsers(req.user))));
-app.get('/api/users/directory', wrap((req, res) => res.json(all('SELECT id,name_ar,name_en,department_id FROM users WHERE active=1 ORDER BY name_ar'))));
+app.get('/api/users/directory', wrap((req, res) => res.json(all("SELECT u.id,u.name_ar,u.name_en,u.department_id,u.role,u.title_ar,u.title_en,d.name_ar AS dept_ar,d.name_en AS dept_en FROM users u JOIN departments d ON d.id=u.department_id WHERE u.active=1 AND u.user_type='staff' ORDER BY d.name_ar, u.name_ar"))));
+app.get('/api/departments', wrap((req, res) => res.json(all('SELECT id,name_ar,name_en,parent_id FROM departments WHERE is_external=0 ORDER BY name_ar'))));
 
 app.post('/api/me/tokens', wrap((req, res) => res.json({ token: I.createApiToken(req.user.id, req.body?.label || 'MCP client'), note: 'يظهر الرمز مرة واحدة فقط' })));
 
@@ -358,11 +376,15 @@ async function vaultHealth() {
 app.post('/mcp', express.json({ limit: '1mb' }), (req, res, next) => {
   const user = I.userFromRequest(req);
   if (!user) return res.status(401).json({ jsonrpc: '2.0', id: null, error: { code: -32001, message: 'Unauthorized' } });
+  if (I.isExternal(user)) return res.status(403).json({ jsonrpc: '2.0', id: null, error: { code: -32003, message: 'External accounts cannot use MCP' } });
   if (!(req.headers.authorization || '').startsWith('Bearer ') && req.headers['x-requested-with'] !== 'swp') return res.status(403).json({ error: 'missing_csrf_header' });
   req.user = user;
   handleMcp(req, res).catch(next);
 });
 app.get('/mcp', (req, res) => res.status(405).set('Allow', 'POST').end());
+
+// ---------------- enterprise systems (/api/sys/<key>, /api/systems, /api/workspace) ----------------
+initSystems(app, { requireAdmin: I.requireAdmin });
 
 // ---------------- static web app ----------------
 app.use('/fonts', express.static(path.join(ROOT, 'node_modules/@fontsource/ibm-plex-sans-arabic/files'), { maxAge: '30d' }));

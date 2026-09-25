@@ -241,3 +241,37 @@ export function audit(userId, action, target, detail) {
   run('INSERT INTO audit (id,user_id,action,target,detail) VALUES (?,?,?,?,?)',
     uid('au_'), userId ?? null, action, target ?? null, detail ? JSON.stringify(detail) : null);
 }
+
+// ---------------- additive migrations (idempotent) ----------------
+export function ensureColumn(table, column, ddl) {
+  if (!all(`PRAGMA table_info(${table})`).some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+}
+// Staff vs external identities (external auditors, service providers). External
+// users live in external organisations (departments.is_external = 1) and only
+// ever reach the systems that expose an external portal.
+ensureColumn('users', 'user_type', "user_type TEXT NOT NULL DEFAULT 'staff'");
+ensureColumn('departments', 'is_external', 'is_external INTEGER NOT NULL DEFAULT 0');
+ensureColumn('agents', 'system', 'system TEXT');
+db.exec(`
+CREATE TABLE IF NOT EXISTS user_caps (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, cap TEXT NOT NULL,
+  granted_by TEXT, granted_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (user_id, cap)
+);
+CREATE TABLE IF NOT EXISTS data_domains (
+  key TEXT PRIMARY KEY, system TEXT NOT NULL, name_ar TEXT NOT NULL, name_en TEXT NOT NULL,
+  classification TEXT NOT NULL CHECK (classification IN ('internal','confidential','restricted')),
+  ai_policy TEXT NOT NULL CHECK (ai_policy IN ('allowed','opt_in','off')),
+  ai_locked INTEGER NOT NULL DEFAULT 0, note_ar TEXT, note_en TEXT, updated_by TEXT, updated_at TEXT
+);
+CREATE TABLE IF NOT EXISTS user_system_prefs (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, system TEXT NOT NULL,
+  pinned INTEGER, ai_enabled INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY (user_id, system)
+);
+CREATE TABLE IF NOT EXISTS access_log (
+  id TEXT PRIMARY KEY, user_id TEXT NOT NULL, system TEXT NOT NULL, record_type TEXT NOT NULL,
+  record_id TEXT NOT NULL, action TEXT NOT NULL DEFAULT 'view', at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS ix_access_log_rec ON access_log(system, record_type, record_id);
+`);

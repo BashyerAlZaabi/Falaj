@@ -1,6 +1,8 @@
 // Visual QA harness: boots a fresh Portal + Vault stack and captures every
 // screen in light/dark × desktop/tablet/mobile × Arabic/English.
 // Usage: node tests/e2e/screens.mjs [outDir] [--only=home,adaa] [--themes=light,dark] [--devices=desktop,mobile] [--langs=ar,en]
+//        [--shot=name@user:#/sys/meetings/list ...] (ad-hoc screens for any persona/route; repeatable; implies --only=those)
+//        [--full] full-page screenshots. Console errors (not only page errors) are reported in _errors.json.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -12,7 +14,9 @@ const OUT = argv.find((a) => !a.startsWith('--')) || path.join(ROOT, 'tests/e2e/
 fs.mkdirSync(OUT, { recursive: true });
 const DEVICES = { wide: { width: 1920, height: 1080 }, desktop: { width: 1440, height: 900 }, laptop: { width: 1280, height: 800 }, tablet: { width: 1024, height: 1366 }, mobile: { width: 390, height: 844 } };
 const themes = opt('themes', ['light', 'dark']); const devices = opt('devices', ['desktop', 'mobile']); const langs = opt('langs', ['ar']);
-const only = opt('only', null);
+const custom = argv.filter((a) => a.startsWith('--shot=')).map((a) => { const m = a.slice(7).match(/^([\w.-]+)@([\w.-]+):(.+)$/); if (!m) throw new Error(`bad --shot ${a}`); return { key: m[1], user: m[2], path: `/${m[3].startsWith('#') ? m[3] : '#/' + m[3]}`, custom: true }; });
+const only = opt('only', custom.length ? custom.map((c) => c.key) : null);
+const FULL = argv.includes('--full');
 
 const S = await startStack();
 // Seed a little extra state: a document, a pending Agents Office proposal, Vault data.
@@ -50,6 +54,7 @@ const SCREENS = [
   } },
   { key: 'modal', user: 'mariam', path: '/#/projects', after: async (p) => { await p.getByRole('button', { name: /مشروع جديد|New project/ }).first().click(); await p.waitForSelector('.modal'); } },
   { key: 'vault', user: 'president', vault: '/marsad' },
+  ...custom,
 ];
 
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
@@ -63,6 +68,7 @@ for (const lang of langs) for (const theme of themes) for (const dev of devices)
     if (only && !only.includes(s.key)) continue;
     const page = await ctx.newPage();
     page.on('pageerror', (e) => errors.push(`[${s.key}/${dev}/${theme}] ${e.message}`));
+    page.on('console', (m) => { if (m.type() === 'error' && !/401|Content Security Policy/.test(m.text())) errors.push(`[${s.key}/${dev}/${theme}] console: ${m.text().slice(0, 300)}`); });
     try {
       if (s.user !== current) {
         await ctx.clearCookies();
@@ -79,7 +85,7 @@ for (const lang of langs) for (const theme of themes) for (const dev of devices)
       if (s.after) await s.after(page, dev);
       await page.waitForTimeout(400);
       const file = path.join(OUT, `${s.key}__${dev}__${theme}__${lang}.png`);
-      await page.screenshot({ path: file, fullPage: false });
+      await page.screenshot({ path: file, fullPage: FULL });
       n++;
     } catch (e) { errors.push(`[${s.key}/${dev}/${theme}/${lang}] ${e.message.split('\n')[0]}`); }
     await page.close();

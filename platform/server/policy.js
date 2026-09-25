@@ -24,7 +24,8 @@ export function deptSubtree(rootId) {
 }
 
 export function managedDepartments(user) {
-  if (user.role === 'president') return all('SELECT id FROM departments').map((r) => r.id);
+  if (!user || user.user_type === 'external') return []; // external organisations never manage internal data
+  if (user.role === 'president') return all('SELECT id FROM departments WHERE is_external=0').map((r) => r.id);
   if (user.role === 'manager') return deptSubtree(user.department_id);
   return [];
 }
@@ -78,13 +79,13 @@ export function canEditTask(user, task) {
 // Who may this user assign work to?
 export function canAssignTo(user, assigneeId) {
   if (assigneeId === user.id) return true;
-  const a = one('SELECT department_id FROM users WHERE id=? AND active=1', assigneeId);
+  const a = one("SELECT department_id FROM users WHERE id=? AND active=1 AND user_type='staff'", assigneeId);
   if (!a) return false;
   return managedDepartments(user).includes(a.department_id);
 }
 export function assignableUsers(user) {
   const depts = managedDepartments(user);
-  return all(`SELECT id,name_ar,name_en,department_id,role FROM users WHERE active=1 AND (id=? OR department_id IN (${inList(depts)})) ORDER BY name_ar`, user.id, ...depts);
+  return all(`SELECT id,name_ar,name_en,department_id,role FROM users WHERE active=1 AND user_type='staff' AND (id=? OR department_id IN (${inList(depts)})) ORDER BY name_ar`, user.id, ...depts);
 }
 
 // ----- events -----
@@ -114,6 +115,7 @@ export function documentAccess(user, docId) {
 // Visibility in My Apps only. It does NOT grant data access: each app's API
 // still applies the scopes above.
 export function visibleApps(user) {
+  if (user.user_type === 'external') return []; // external users only see their portal systems
   const depts = new Set([user.department_id, ...managedDepartments(user)]);
   return all('SELECT * FROM apps ORDER BY sort').filter((a) => {
     const roles = JSON.parse(a.roles);
