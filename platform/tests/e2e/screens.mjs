@@ -1,5 +1,6 @@
 // Visual QA harness: boots a fresh Portal + Vault stack and captures every
 // screen in light/dark × desktop/tablet/mobile × Arabic/English.
+// Assistant screens: chat, chat-docked, immersive, immersive-chat, voice, voice-confirm.
 // Usage: node tests/e2e/screens.mjs [outDir] [--only=home,adaa] [--themes=light,dark] [--devices=desktop,mobile] [--langs=ar,en]
 //        [--shot=name@user:#/sys/meetings/list ...] (ad-hoc screens for any persona/route; repeatable; implies --only=those)
 //        [--full] full-page screenshots. Console errors (not only page errors) are reported in _errors.json.
@@ -32,6 +33,31 @@ const seed = async () => {
 };
 const { docId } = await seed();
 
+// Assistant helpers: open the conversation through the orb (desktop → immersive
+// view) or the Chat tab (mobile); a fake speech recogniser for voice screens.
+const openAssistant = async (p, dev) => {
+  if (await p.locator('#chat-input').isVisible()) return;
+  if (dev === 'mobile') await p.click('#tabbar button[data-tab=chat]'); else await p.click('#ai-orb');
+  await p.waitForSelector('#chat-input', { state: 'visible' });
+};
+const askAndWait = async (p, text) => {
+  const n = await p.locator('#chat-body .msg.assistant:not(.welcome)').count();
+  await p.fill('#chat-input', text); await p.click('#btn-send');
+  await p.waitForFunction((k) => document.querySelectorAll('#chat-body .msg.assistant:not(.welcome)').length > k, n, { timeout: 15000 });
+};
+// holdFinal: keep "listening" with an interim caption (no final result) for the screenshot.
+const fakeSpeech = ([transcript, holdFinal]) => {
+  class FakeSR {
+    start() {
+      setTimeout(() => this.onstart?.(), 40);
+      setTimeout(() => { const r = [{ transcript, confidence: 0.93 }]; r.isFinal = !holdFinal; this.onresult?.({ resultIndex: 0, results: [r] }); if (!holdFinal) setTimeout(() => this.onend?.(), 60); }, 250);
+    }
+    stop() { this.onend?.(); } abort() { this.onend?.(); }
+  }
+  window.SpeechRecognition = FakeSR; window.webkitSpeechRecognition = FakeSR;
+  try { localStorage.setItem('swp.mute', '1'); } catch { /* storage off */ }
+};
+
 const SCREENS = [
   { key: 'login', user: null, path: '/' },
   { key: 'home', user: 'mariam', path: '/#/home' },
@@ -47,10 +73,30 @@ const SCREENS = [
   { key: 'uploader', user: 'ahmed', path: '/#/uploader' },
   { key: 'admin', user: 'mariam', path: '/#/admin' },
   { key: 'chat', user: 'ahmed', path: '/#/home', after: async (p, dev) => {
-    if (dev === 'mobile') await p.click('#tabbar button[data-tab=chat]');
-    else if (await p.locator('#chat.collapsed').count()) await p.click('#ask-dock');
-    await p.fill('#chat-input', 'جهّز لي ملخص اليوم'); await p.click('#btn-send');
-    await p.waitForFunction(() => document.querySelectorAll('#chat-body .msg.assistant').length > 1, null, { timeout: 15000 });
+    await openAssistant(p, dev);
+    await askAndWait(p, 'جهّز لي ملخص اليوم');
+  } },
+  // docked side panel (desktop) — «إرساء بجانب الصفحة»
+  { key: 'chat-docked', user: 'ahmed', path: '/#/projects', after: async (p, dev) => {
+    await openAssistant(p, dev);
+    if (dev !== 'mobile') await p.click('#ai-dock');
+    await askAndWait(p, 'ما مهامي؟');
+  } },
+  // immersive conversation (ChatGPT-like): empty state with role-aware starters, and a conversation
+  { key: 'immersive', user: 'latifa', path: '/#/home', after: async (p, dev) => { await openAssistant(p, dev); await p.waitForSelector('#chat.is-empty #ai-starters .starter'); } },
+  { key: 'immersive-chat', user: 'mariam', path: '/#/home', after: async (p, dev) => {
+    await openAssistant(p, dev);
+    await askAndWait(p, 'جهّز لي ملخص اليوم');
+    await askAndWait(p, 'ما المهام المتأخرة في فريقي؟');
+  } },
+  // voice conversation mode: listening with a live caption, and a confirmation asked by voice
+  { key: 'voice', user: 'ahmed', path: '/#/home', init: [fakeSpeech, ['أعطني ملخص المشاريع المتأخرة في إدارتي', true]], after: async (p, dev) => {
+    if (dev === 'mobile') await p.click('.home-ask .ha-voice'); else await p.click('#ai-orb-mic');
+    await p.waitForFunction(() => (document.querySelector('#ai-voice .vo-line.you .vo-text')?.textContent || '').length > 5);
+  } },
+  { key: 'voice-confirm', user: 'mariam', path: '/#/home', init: [fakeSpeech, ['حدّث تقدم مشروع البوابة الموحدة إلى 80%', false]], after: async (p, dev) => {
+    if (dev === 'mobile') await p.click('.home-ask .ha-voice'); else await p.click('#ai-orb-mic');
+    await p.waitForSelector('#ai-voice .vo-confirm .confirm-card', { timeout: 15000 });
   } },
   { key: 'modal', user: 'mariam', path: '/#/projects', after: async (p) => { await p.getByRole('button', { name: /مشروع جديد|New project/ }).first().click(); await p.waitForSelector('.modal'); } },
   { key: 'vault', user: 'president', vault: '/marsad' },
@@ -67,6 +113,7 @@ for (const lang of langs) for (const theme of themes) for (const dev of devices)
   for (const s of SCREENS) {
     if (only && !only.includes(s.key)) continue;
     const page = await ctx.newPage();
+    if (s.init) await page.addInitScript(...s.init);
     page.on('pageerror', (e) => errors.push(`[${s.key}/${dev}/${theme}] ${e.message}`));
     page.on('console', (m) => { if (m.type() === 'error' && !/401|Content Security Policy/.test(m.text())) errors.push(`[${s.key}/${dev}/${theme}] console: ${m.text().slice(0, 300)}`); });
     try {

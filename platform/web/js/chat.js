@@ -1,9 +1,14 @@
-// Ask AI inspector: context-aware requests, a live status card
+// Ask AI engine: context-aware requests, a live status card
 // (understanding → executing → result) with the step log, an execution receipt
 // that shows exactly what was done (with undo), confirmations, options,
 // downloads, voice, conversation history, and the points real work earned.
+//
+// The same #chat engine renders in three presentations (see assistant-orb.js):
+// the docked side panel, the full-screen immersive conversation (history rail,
+// centred thread, starters under the composer) and the mobile Chat tab. The
+// voice conversation mode reuses send(), confirmCard() and the voice engine.
 import { api, chatStream, rid } from './api.js';
-import { h, $, $$, icon, toast, esc, modal, menu, skeleton, emptyState, errorState } from './ui.js';
+import { h, $, $$, icon, toast, esc, modal, menu, skeleton, emptyState, errorState, debounce } from './ui.js';
 import { t, L, fmtTime, fmtDate, fmtNum, getLang } from './i18n.js';
 import { state, uiContext, setConversation, emit, on } from './state.js';
 import * as Voice from './voice.js';
@@ -13,6 +18,69 @@ import { current as gameNow, celebrate } from './game.js';
 let busy = false;
 let uploading = null; // file name while an upload is in flight
 let lang0 = null;
+let railRows = null; // last GET /api/conversations (rail + header title)
+let revealing = null; // { md, finish } while an answer is being progressively revealed
+
+const reduceMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const isImmersive = () => $('#chat')?.classList.contains('immersive');
+export const isBusy = () => busy;
+// Is the conversation on screen right now? (side panel, immersive, or the mobile Chat tab)
+export function chatVisible() {
+  const c = $('#chat'); if (!c || document.hidden) return false;
+  if (innerWidth <= 900) return document.body.dataset.tab === 'chat';
+  return !c.classList.contains('collapsed');
+}
+
+// ---------------------------------------------------------------- the assistant orb (shared markup)
+// kinds: 'fab' floating button · 'w' conversation hero · 'home' Home prompt · 'voice' voice mode · 'xs' rail brand
+export function orbEl(kind = 'w') {
+  return h(`span.aio.aio-${kind}`, { 'aria-hidden': 'true', 'data-state': 'idle' },
+    h('span.aio-halo'), h('span.aio-ring'), h('span.aio-ring.r2'),
+    h('span.aio-body', h('span.aio-core', h('span.aio-swirl'), h('span.aio-swirl.s2'), h('span.aio-gloss'))),
+    h('span.aio-arc'));
+}
+// "Voice conversation" glyph (Lucide audio-lines), not in the icon set.
+export function waveIcon(cls = '') {
+  const NS = 'http://www.w3.org/2000/svg';
+  const s = document.createElementNS(NS, 'svg');
+  for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '1.9', 'stroke-linecap': 'round', 'stroke-linejoin': 'round', class: `icon ${cls}`.trim(), 'aria-hidden': 'true', focusable: 'false' })) s.setAttribute(k, v);
+  for (const d of ['M2 10v3', 'M6 6v11', 'M10 3v18', 'M14 8v7', 'M18 5v13', 'M22 10v3']) { const p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); s.append(p); }
+  return s;
+}
+
+// ---------------------------------------------------------------- role-aware starters
+// Derived from /api/me: the person's capabilities (department systems), role and
+// the systems they can open. Every prompt is something the assistant can act on.
+export function roleSuggestions(n = 4) {
+  const me = state.me || {}; const u = me.user || {};
+  const caps = new Set(u.caps || []);
+  const sys = new Set((me.systems || []).map((s) => s.key));
+  const has = (...c) => c.some((x) => caps.has(x));
+  const out = [];
+  const add = (s) => { if (s && out.length < n && !out.some((o) => o.prompt === s.prompt)) out.push(s); };
+  // department capability first (what this person is here to do)
+  if (has('strategy.admin') && sys.has('strategy')) add({ ic: 'compass', label: L('وضع المحفظة الاستراتيجية', 'Strategic portfolio status'), hint: L('المبادرات المتعثرة ونسب الإنجاز', 'Stalled initiatives and progress'), prompt: L('ما وضع المحفظة الاستراتيجية؟', 'What is the status of the strategic portfolio?') });
+  if (has('performance.hr') && sys.has('performance')) add({ ic: 'chartLine', label: L('حالة تقييمات الأداء', 'Performance review status'), hint: L('ما اكتمل وما يحتاج متابعة', 'What is done and what needs follow-up'), prompt: L('ما حالة تقييمات الأداء؟', 'What is the status of performance reviews?') });
+  if (has('audit.head', 'audit.auditor') && sys.has('audit')) add({ ic: 'searchCheck', label: L('ملاحظات التدقيق المفتوحة', 'Open audit findings'), hint: L('حسب الخطورة وموعد المعالجة', 'By severity and remediation date'), prompt: L('ما ملاحظات التدقيق المفتوحة؟', 'What are the open audit findings?') });
+  if (has('providers.manage') && sys.has('providers')) add({ ic: 'fileWarning', label: L('وثائق الموردين المنتهية', 'Expiring supplier documents'), hint: L('المنتهية والقريبة من الانتهاء', 'Expired and about to expire'), prompt: L('ما وثائق الموردين المنتهية أو القريبة الانتهاء؟', 'Which supplier documents are expired or about to expire?') });
+  if (has('procurement.officer') && sys.has('procurement')) add({ ic: 'cart', label: L('طلبات شراء تنتظرني', 'Purchase requests waiting for me'), hint: L('ما يحتاج إجراءك في المشتريات', 'What needs your action in procurement'), prompt: L('ما طلبات الشراء التي تنتظر إجرائي؟', 'Which purchase requests are waiting for my action?') });
+  if (has('integrity.officer') && sys.has('integrity')) add({ ic: 'scale', label: L('إفصاحات تنتظر المراجعة', 'Disclosures awaiting review'), hint: L('تضارب المصالح والهدايا', 'Conflicts of interest and gifts'), prompt: L('ما الإفصاحات التي تنتظر مراجعتي؟', 'Which disclosures are waiting for my review?') });
+  // role
+  if (u.role === 'president') {
+    add({ ic: 'alert', label: L('المشاريع المتأخرة في الجهة', 'Delayed projects organisation-wide'), hint: L('ما تجاوز موعده ونسب إنجازه', 'Past due, with progress'), prompt: L('اعرض المشاريع المتأخرة', 'Show the delayed projects') });
+    add({ ic: 'gauge', label: L('مؤشرات الأداء المؤسسي', 'Organisational indicators'), hint: L('قراءة ADAA I ضمن نطاقك', 'ADAA I readings in your scope'), prompt: L('ما مؤشرات الأداء؟', 'What are the performance indicators?') });
+  } else if (u.role === 'manager') {
+    add({ ic: 'usersRound', label: L('من في فريقي مثقل بالعمل؟', 'Who on my team is overloaded?'), hint: L('توزيع المهام المفتوحة والمتأخرة', 'Open and overdue work per person'), prompt: L('من في فريقي مثقل بالعمل؟', 'Who on my team is overloaded?') });
+  } else {
+    add({ ic: 'listTodo', label: L('ما مهامي اليوم؟', 'What are my tasks today?'), hint: L('المفتوحة والمستحقة والمتأخرة', 'Open, due and overdue'), prompt: L('ما مهامي اليوم؟', 'What are my tasks today?') });
+  }
+  // everyone
+  add({ ic: 'sparkle', label: L('جهّز ملخص يومي', 'Prepare my daily summary'), hint: L('المهام والمواعيد والتنبيهات في نظرة', 'Tasks, events and alerts at a glance'), prompt: L('جهّز لي ملخص اليوم', 'Prepare my daily summary') });
+  if (u.role !== 'employee') add({ ic: 'fileText', label: L('تقرير المشاريع المتأخرة', 'Delayed projects report'), hint: L('مستند Word/PDF جاهز للمراجعة', 'A Word/PDF document ready to review'), prompt: L('ابنِ تقريراً عن المشاريع المتأخرة', 'Build a report on delayed projects'), xp: 'document' });
+  add({ ic: 'calendarDays', label: L('مواعيدي القادمة', 'My upcoming meetings'), hint: L('الأسبوعان القادمان', 'The next two weeks'), prompt: L('ما مواعيدي؟', 'What are my meetings?') });
+  add({ ic: 'bot', label: L('وكيل لملخص الصباح', 'A morning summary agent'), hint: L('يجهّز ملخصك كل يوم الساعة 7', 'Prepares your summary daily at 7'), prompt: L('ابنِ وكيلاً يجهّز ملخص اليوم كل صباح الساعة 7', 'Build an agent that prepares my daily summary every morning at 7'), xp: 'agent' });
+  return out;
+}
 
 const isLocal = () => state.me?.assistant?.mode !== 'model';
 const first = (name) => String(name || '').split(' ')[0];
@@ -48,15 +116,18 @@ export function init() {
   const input = $('#chat-input');
   input.removeAttribute('data-i18n-ph'); // placeholder is owned here (short, never wraps)
   input.placeholder = PLACEHOLDER();
+  input.setAttribute('enterkeyhint', 'send');
   input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } };
   input.oninput = () => { autosize(); syncSend(); };
   syncSend();
 
-  $('#btn-send').onclick = submit;
+  $('#btn-send').onclick = () => { if (canStop()) stopOutput(); else submit(); };
   $('#chat-collapse').onclick = () => { $('#chat').classList.remove('expanded'); window.dispatchEvent(new CustomEvent('swp:chat-visible', { detail: false })); };
   $('#chat-expand').onclick = () => { $('#chat').classList.toggle('expanded'); labelControls(); };
-  $('#chat-new').onclick = newConversation;
-  $('#chat-history').onclick = showHistory;
+  $('#chat-new').onclick = () => newConversation();
+  $('#chat-history').onclick = () => (isImmersive() ? toggleRail(true) : showHistory());
+  $('#ai-rail-toggle')?.addEventListener('click', () => toggleRail());
+  $('#btn-voice-mode')?.addEventListener('click', () => window.dispatchEvent(new CustomEvent('swp:voice-mode', { detail: { from: $('#btn-voice-mode') } })));
   $('#btn-attach').onclick = () => $('#file-input').click();
   $('#file-input').onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) uploadFile(f); };
   $('#btn-mic').onclick = startVoice;
@@ -66,11 +137,30 @@ export function init() {
     announce(Voice.isMuted() ? L('كُتم الرد الصوتي؛ ستصلك الردود كتابةً فقط.', 'Voice replies muted; replies will be text only.') : L('فُعّل الرد الصوتي للطلبات الصوتية.', 'Voice replies on for spoken requests.'));
   };
   setMuteIcon();
-  // Esc stops a recording from anywhere inside the panel
-  $('#chat').addEventListener('keydown', (e) => { if (e.key === 'Escape' && Voice.isRecording()) { e.stopPropagation(); Voice.stop(); } });
+  // Esc stops a recording (or closes the mobile history drawer) from anywhere inside the panel
+  $('#chat').addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (Voice.isRecording()) { e.stopPropagation(); Voice.stop(); return; }
+    if ($('#chat').classList.contains('rail-open')) { e.stopPropagation(); toggleRail(false); $('#chat-history')?.focus(); }
+  });
   initDrop();
+  buildRail();
+  buildStarters();
+  // Empty conversation → the immersive layout centres the greeting, composer and starters.
+  new MutationObserver(syncEmpty).observe(body, { childList: true });
+  syncEmpty();
+  Voice.on('state', () => syncSend());
+  on('ai-mode', () => { paintTitle(); if (isImmersive() && !railRows) refreshRail(); });
   on('data-changed', () => setTimeout(() => { const qs = $('#chat-body .welcome .quest-strip'); const g = gameNow(); if (qs && g) drawQuests(qs, g); }, 2500));
   load();
+}
+
+function syncEmpty() {
+  const b = $('#chat-body'); if (!b) return;
+  const empty = !b.querySelector('.msg.user, .stage, .chat-skeleton, .msg.assistant:not(.welcome)');
+  $('#chat').classList.toggle('is-empty', empty);
+  const st = $('#ai-starters'); if (st) st.hidden = !empty;
+  paintTitle();
 }
 
 function labelControls() {
@@ -84,8 +174,16 @@ function labelControls() {
   $('#chat-expand').setAttribute('aria-pressed', String(ex));
   set('#btn-attach', 'clip', L('إرفاق ملف (حتى 8MB)', 'Attach a file (up to 8MB)'));
   set('#btn-send', 'send', L('إرسال', 'Send'));
+  $('#btn-send').append(icon('square', 'stop-glyph'));
+  set('#ai-full', 'maximize', L('ملء الشاشة', 'Full screen'));
+  set('#ai-dock', 'sidebarR', L('إرساء بجانب الصفحة', 'Dock beside the page'));
+  set('#ai-close', 'x', L('إغلاق المحادثة (Esc)', 'Close conversation (Esc)'));
+  set('#ai-rail-toggle', 'sidebar', L('إظهار المحادثات السابقة', 'Show conversation history'));
+  const vm = $('#btn-voice-mode');
+  if (vm) { vm.replaceChildren(waveIcon()); vm.setAttribute('aria-label', L('محادثة صوتية', 'Voice conversation')); vm.title = L('محادثة صوتية — تحدّث واستمع دون كتابة', 'Voice conversation — talk and listen hands-free'); }
   const mic = $('#btn-mic'); mic.replaceChildren(icon('mic'));
   if (!Voice.isRecording()) { mic.setAttribute('aria-label', L('تحدّث', 'Speak')); mic.title = L('تحدّث — يبدأ التسجيل عند الضغط فقط', 'Speak — recording starts only when pressed'); }
+  const rail = $('#ai-rail'); if (rail) rail.setAttribute('aria-label', L('المحادثات', 'Conversations'));
 }
 
 function paintMode() {
@@ -122,12 +220,26 @@ function setMuteIcon() {
   b.title = m ? L('الرد الصوتي مكتوم — اضغط لتفعيله', 'Voice replies muted — press to turn on') : L('الرد الصوتي مفعّل للطلبات الصوتية — اضغط للكتم', 'Voice replies on for spoken requests — press to mute');
 }
 
-function autosize() { const i = $('#chat-input'); i.style.height = 'auto'; i.style.height = `${Math.min(160, i.scrollHeight)}px`; }
+function autosize() { const i = $('#chat-input'); i.style.height = 'auto'; i.style.height = `${Math.min(isImmersive() ? 220 : 160, i.scrollHeight)}px`; }
+// Send button states: send · busy (the server is executing — it cannot be
+// stopped safely mid-way) · stop (skip the reveal / stop the spoken reply).
+const canStop = () => !busy && (!!revealing || Voice.isSpeaking());
 function syncSend() {
-  const b = $('#btn-send'); const empty = !$('#chat-input').value.trim();
-  b.disabled = busy || empty;
+  const b = $('#btn-send'); if (!b) return;
+  const empty = !$('#chat-input').value.trim();
+  const stop = canStop() && empty;
+  b.disabled = !stop && (busy || empty);
   b.classList.toggle('is-busy', busy);
-  b.setAttribute('aria-label', busy ? L('جارٍ تنفيذ الطلب…', 'Working on your request…') : L('إرسال', 'Send'));
+  b.classList.toggle('is-stop', stop);
+  b.setAttribute('aria-label', busy ? L('جارٍ تنفيذ الطلب…', 'Working on your request…') : stop ? L('إيقاف', 'Stop') : L('إرسال', 'Send'));
+  b.title = busy ? L('يُنفَّذ طلبك الآن', 'Your request is running') : stop ? (Voice.isSpeaking() ? L('إيقاف الرد الصوتي', 'Stop the spoken reply') : L('عرض الرد كاملاً', 'Show the full reply')) : L('إرسال (Enter)', 'Send (Enter)');
+  // An empty composer offers the voice conversation instead of a dimmed send (ChatGPT pattern).
+  $('#chat .composer-row')?.classList.toggle('offer-voice', empty && !busy && !stop);
+}
+function stopOutput() {
+  revealing?.finish();
+  if (Voice.isSpeaking()) Voice.stopSpeaking();
+  syncSend();
 }
 function announce(text) { const r = $('#chat-live'); if (!r) return; r.textContent = ''; setTimeout(() => { r.textContent = text; }, 30); }
 
@@ -141,20 +253,34 @@ function startVoice() {
 }
 
 // ---------------------------------------------------------------- load / welcome
+let loadSeq = 0;
 async function load() {
   const body = $('#chat-body');
+  const my = ++loadSeq;
+  revealing?.finish();
+  paintRail();
   if (state.conversationId) {
     body.replaceChildren(chatSkeleton());
     try {
       const c = await api(`/api/conversations/${state.conversationId}`);
+      if (my !== loadSeq) return;
       body.replaceChildren();
       renderHistory(c.messages || []);
       scroll(true);
+      paintTitle(c.title);
       return;
-    } catch { setConversation(null); }
+    } catch { if (my !== loadSeq) return; setConversation(null); }
   }
   body.replaceChildren();
   welcome();
+  paintRail();
+}
+
+// Open a conversation from the rail / history (current one: just focus the composer).
+export function openConversation(id) {
+  if (id !== state.conversationId) { setConversation(id); load(); }
+  if (innerWidth <= 900) toggleRail(false);
+  $('#chat-input')?.focus();
 }
 
 function chatSkeleton() {
@@ -185,32 +311,34 @@ function renderHistory(messages) {
   if (!messages.length) welcome();
 }
 
-function newConversation() {
+export function newConversation() {
   setConversation(null);
+  loadSeq++;
+  revealing?.finish();
   $('#chat-body').replaceChildren();
   welcome();
+  paintRail();
+  if (innerWidth <= 900) toggleRail(false);
   $('#chat-input').focus();
+  announce(L('بدأت محادثة جديدة', 'New conversation started'));
 }
 
-const SUGGESTIONS = () => [
-  { ic: 'sparkle', label: L('جهّز ملخص يومي', 'Prepare my daily summary'), hint: L('المهام والمواعيد والتنبيهات في نظرة', 'Tasks, events and alerts at a glance'), prompt: L('جهّز لي ملخص اليوم', 'Prepare my daily summary') },
-  { ic: 'fileText', label: L('تقرير المشاريع المتأخرة', 'Delayed projects report'), hint: L('مستند Word/PDF جاهز للمراجعة', 'A Word/PDF document ready to review'), prompt: L('ابنِ تقريراً عن المشاريع المتأخرة', 'Build a report on delayed projects'), xp: 'document' },
-  { ic: 'layers', label: L('بطاقة للمشاريع المتأخرة', 'Delayed projects card'), hint: L('تُضاف إلى صفحتك الرئيسية', 'Added to your home page'), prompt: L('أضف بطاقة للمشاريع المتأخرة', 'Add a delayed projects card') },
-  { ic: 'bot', label: L('وكيل لملخص الصباح', 'A morning summary agent'), hint: L('يجهّز ملخصك كل يوم الساعة 7', 'Prepares your summary daily at 7'), prompt: L('ابنِ وكيلاً يجهّز ملخص اليوم كل صباح الساعة 7', 'Build an agent that prepares my daily summary every morning at 7'), xp: 'agent' },
-];
-
-function welcomeEl() {
-  const u = state.me.user;
-  const list = h('ul.suggest-list', SUGGESTIONS().map((s) => h('li', h('button.suggest', { type: 'button', 'data-xp': s.xp || null, onclick: () => send(s.prompt) },
+function suggestButton(s, cls = 'suggest') {
+  return h(`button.${cls}`, { type: 'button', 'data-xp': s.xp || null, 'data-prompt': s.prompt, onclick: () => send(s.prompt) },
     h('span.s-icon', icon(s.ic)),
     h('span.grow', h('span.s-label', s.label), h('span.s-hint', s.hint)),
     h('span.s-xp'),
-    icon('arrowUpRight', 's-go flip-rtl')))));
+    icon('arrowUpRight', 's-go flip-rtl'));
+}
+
+function welcomeEl() {
+  const u = state.me.user;
+  const list = h('ul.suggest-list', roleSuggestions(4).map((s) => h('li', suggestButton(s))));
   const quests = h('section.quest-strip', { 'aria-label': L('مهام اليوم', "Today's quests") });
   const el = h('div.msg.assistant.welcome', { 'data-lang': getLang() },
     h('div.w-hero',
-      h('span.w-orb', { 'aria-hidden': 'true' }),
-      h('h3.w-title', L(`كيف أساعدك يا ${first(u.name_ar)}؟`, `How can I help, ${first(u.name_en)}?`)),
+      orbEl('w'),
+      h('h3.w-title', L(`كيف أساعدك اليوم يا ${first(u.name_ar)}؟`, `How can I help you today, ${first(u.name_en)}?`)),
       h('p.w-sub', L('اكتب طلبك أو تحدّث به، وسأنفّذه ضمن صلاحياتك وأُريك كل خطوة. أفهم «هذا المشروع» و«المستند المفتوح» من الصفحة الحالية.', 'Type or speak a request — I’ll carry it out within your permissions and show every step. I understand “this project” and “the open document” from the current page.')),
       h('ul.trust-row', { 'aria-label': L('ضمانات', 'Safeguards') },
         h('li', icon('shield'), L('ضمن صلاحياتك', 'Within your access')),
@@ -224,6 +352,19 @@ function welcomeEl() {
 }
 
 function welcome() { $('#chat-body').append(welcomeEl()); }
+
+// Immersive empty state: the same role-aware starters as cards under the composer.
+function buildStarters() {
+  const host = $('#ai-starters'); if (!host) return;
+  host.setAttribute('role', 'group');
+  host.setAttribute('aria-label', L('اقتراحات للبدء', 'Suggestions to get started'));
+  const list = h('ul.starter-list', roleSuggestions(4).map((s) => h('li', suggestButton(s, 'starter'))));
+  host.replaceChildren(list,
+    h('p.starter-foot',
+      icon('shield', 'sm'), h('span', L('ضمن صلاحياتك · قابل للتراجع · يطلب تأكيدك قبل الحساس', 'Within your access · undoable · asks before anything sensitive')),
+      isLocal() ? h('button.starter-mode', { type: 'button', onclick: () => aiModeInfo($('#ai-mode')) }, L('وضع الأوامر المحلية', 'Local command mode')) : null));
+  hydrateGame(list, null);
+}
 
 // Points & quests come only from GET /api/game/me (via game.js, or directly).
 function whenGame(fn) {
@@ -243,7 +384,7 @@ function hydrateGame(list, host) {
       const p = rulePts(g, b.dataset.xp); const slot = b.querySelector('.s-xp');
       if (p && slot) { slot.replaceWith(h('span.xp-hint', { title: L(`تكسب حتى ${p} نقاط تميّز عند التنفيذ (ضمن الحد اليومي)`, `Earns up to ${p} excellence points (within the daily cap)`), 'aria-label': L(`حتى ${p} نقاط تميّز`, `up to ${p} excellence points`) }, icon('sparkle'), h('bdi.num', `+${fmtNum(p)}`))); }
     });
-    drawQuests(host, g);
+    if (host) drawQuests(host, g);
   });
 }
 function drawQuests(host, g) {
@@ -269,10 +410,13 @@ const VIEW_NAMES = () => ({ home: 'Unified Portal', adaa: 'ADAA I', projects: L(
 
 export function refreshContext() {
   const bar = $('#context-bar'); if (!bar) return;
-  if (lang0 && lang0 !== getLang()) { // language switched: relabel controls and the greeting
+  if (lang0 && lang0 !== getLang()) { // language switched: relabel controls, the greeting, starters and rail
     labelControls(); paintMode(); setMuteIcon();
     $('#chat-input').placeholder = PLACEHOLDER();
     const w = $('#chat-body .welcome'); if (w) w.replaceWith(welcomeEl());
+    buildStarters();
+    const rail = $('#ai-rail'); if (rail) { delete rail.dataset.ready; buildRail(); paintRail(); }
+    syncSend(); paintTitle();
   }
   const chips = [];
   const chip = (ic, label, { full, clear, kind, lead } = {}) => h(`span.ctx-chip${kind ? '.' + kind : ''}`, { title: full || label },
@@ -289,11 +433,13 @@ export function refreshContext() {
   bar.replaceChildren(h('span.sr-only', L('يُرسَل مع طلبك:', 'Sent with your request:')), ...chips);
 }
 
+// Bring the conversation on screen (docked side panel unless the immersive
+// view is already open) and focus the composer, optionally with a prefix.
 export function focus(prefix = '') {
   if (window.innerWidth <= 900) import('./app.js').then((m) => m.setTab('chat'));
-  if ($('#chat').classList.contains('collapsed')) window.dispatchEvent(new CustomEvent('swp:chat-visible', { detail: true }));
+  else if ($('#chat').classList.contains('collapsed')) window.dispatchEvent(new CustomEvent('swp:chat-visible', { detail: true }));
   const i = $('#chat-input'); if (prefix && !i.value.startsWith(prefix)) i.value = prefix + i.value;
-  autosize(); syncSend(); i.focus();
+  autosize(); syncSend(); i.focus({ preventScroll: true });
 }
 
 function submit() {
@@ -342,7 +488,7 @@ const statusLabel = (s) => (s === 'cancelled' ? L('أُلغي', 'Cancelled') : t
 function statusPill(s) { const [cls, ic] = STATUS[s] || ['', 'info']; return h(`span.chip.tiny${cls ? '.' + cls : ''}.status-pill`, icon(ic), statusLabel(s)); }
 
 // Localized, readable data sources: "portal.db (projects, tasks)" → المشاريع · المهام
-const SRC = { projects: ['المشاريع', 'Projects'], tasks: ['المهام', 'Tasks'], events: ['المواعيد', 'Events'], alerts: ['التنبيهات', 'Alerts'], documents: ['المستندات', 'Documents'], kpis: ['المؤشرات', 'Indicators'], widgets: ['البطاقات', 'Cards'] };
+const SRC = { projects: ['المشاريع', 'Projects'], tasks: ['المهام', 'Tasks'], events: ['المواعيد', 'Events'], alerts: ['التنبيهات', 'Alerts'], documents: ['المستندات', 'Documents'], kpis: ['المؤشرات', 'Indicators'], widgets: ['البطاقات', 'Cards'], project_allocations: ['تخصيص الموارد', 'Resource allocations'], allocations: ['تخصيص الموارد', 'Resource allocations'], conversations: ['المحادثات', 'Conversations'], office_runs: ['أعمال الوكلاء', 'Agent runs'] };
 function sourceRow(src) {
   const m = String(src).match(/^(.*?)(?:[،,]\s*(\d{1,2}:\d{2}))?\s*$/);
   const what = (m?.[1] || src).trim(); const time = m?.[2];
@@ -513,7 +659,7 @@ function confirmCard(c, historic) {
   const title = { destructive: L('إجراء نهائي — يحتاج تأكيدك', 'Permanent action — needs your confirmation'), sensitive: L('تغيير حساس — يحتاج تأكيدك', 'Sensitive change — needs your confirmation'), verify: L('تحقّق مما سمعتُه قبل التنفيذ', 'Check what I heard before it runs') }[risk];
   const verb = { destructive: L('احذف نهائياً', 'Delete permanently'), sensitive: L('نعم، نفّذ', 'Yes, run it'), verify: L('صحيح، نفّذ', 'Correct, run it') }[risk];
   const ic = { destructive: 'trash', sensitive: 'shieldAlert', verify: 'mic' }[risk];
-  const card = h('div.confirm-card', { 'data-risk': risk, role: 'group', 'aria-label': title },
+  const card = h('div.confirm-card', { 'data-risk': risk, 'data-cid': c.id || null, role: 'group', 'aria-label': title },
     h('div.cc-head', h('span.cc-icon', icon(ic)), h('strong.cc-title', title)),
     h('p.cc-summary', c.summary));
   // History: the outcome is known; a recent unresolved request can still be answered (the server enforces expiry).
@@ -541,19 +687,39 @@ function setOutcome(card, outcome, err) {
   card.append(h(`div.cc-outcome.${outcome}`, { role: 'status' }, icon(ic), h('span', text)));
 }
 
+// The same confirmation can be on screen twice (conversation + voice mode):
+// every copy (matched by data-cid) shows the busy state and the outcome.
+const pendingConfirms = new Set();
 async function resolveConfirm(c, accept, card) {
-  const btns = $$('.cc-actions button', card); btns.forEach((b) => (b.disabled = true));
-  (accept ? card.querySelector('.btn.danger') : card.querySelector('.cc-cancel'))?.classList.add('is-loading');
+  if (pendingConfirms.has(c.id)) return null;
+  pendingConfirms.add(c.id);
+  const copies = () => { const all = c.id ? $$(`.confirm-card[data-cid="${CSS.escape(c.id)}"]`) : []; return all.includes(card) ? all : [card, ...all]; };
+  for (const k of copies()) {
+    $$('.cc-actions button', k).forEach((b) => (b.disabled = true));
+    (accept ? k.querySelector('.btn.danger') : k.querySelector('.cc-cancel'))?.classList.add('is-loading');
+  }
   const before = gameNow();
+  let outcome = 'failed'; let err = null;
   try {
     const r = await api(`/api/confirmations/${c.id}`, { method: 'POST', body: { accept } });
-    const outcome = r.status === 'ok' ? 'ok' : r.status === 'cancelled' ? 'cancelled' : 'failed';
-    setOutcome(card, outcome, r.error);
-    syncReceipt(card.closest('.msg-body'), c.tool, outcome);
+    outcome = r.status === 'ok' ? 'ok' : r.status === 'cancelled' ? 'cancelled' : 'failed'; err = r.error;
+    for (const k of copies()) { setOutcome(k, outcome, r.error); syncReceipt(k.closest('.msg-body'), c.tool, outcome); }
     announce(outcome === 'ok' ? L(`تم التنفيذ: ${c.summary}`, `Done: ${c.summary}`) : outcome === 'cancelled' ? L('أُلغي الإجراء — لم يُنفَّذ شيء.', 'Cancelled — nothing was done.') : L(`لم يُنفَّذ: ${r.error || ''}`, `Not done: ${r.error || ''}`));
     emit('data-changed', { entity: 'all' });
-    if (outcome === 'ok') watchPoints(card.closest('.msg-body') || card, before);
-  } catch (e) { setOutcome(card, 'failed', e.body?.error || e.message); }
+    if (outcome === 'ok') { const host = copies().map((k) => k.closest('#chat-body .msg-body')).find(Boolean); watchPoints(host || card, before); }
+  } catch (e) { err = e.body?.error || e.message; for (const k of copies()) setOutcome(k, 'failed', err); }
+  finally { pendingConfirms.delete(c.id); }
+  emit('ai-confirm', { id: c.id, outcome, error: err, summary: c.summary });
+  return outcome;
+}
+
+// Voice conversation mode: a live copy of a pending confirmation card, and
+// resolving it by voice («نعم» / «لا») — the same server call as the buttons.
+export function confirmCardFor(c) { return confirmCard(c, false); }
+export function resolveConfirmation(c, accept) {
+  const card = (c.id && $(`#chat-body .confirm-card[data-cid="${CSS.escape(c.id)}"]`)) || confirmCard(c, false);
+  if (card.dataset.outcome) return Promise.resolve(card.dataset.outcome);
+  return resolveConfirm(c, accept, card);
 }
 
 // Keep the execution receipt truthful once a pending confirmation is resolved.
@@ -633,10 +799,13 @@ function stageCard() {
   };
 }
 
-export async function send(text, { voice = false, requestId = null, retry = false } = {}) {
-  if (busy) { toast(L('طلب آخر قيد التنفيذ — انتظر حتى يكتمل.', 'Another request is running — wait for it to finish.'), { kind: 'info' }); return; }
+// Returns the final result (or null when nothing was sent). `speak: false` lets
+// the voice conversation mode speak the reply itself (captions + hands-free loop).
+export async function send(text, { voice = false, requestId = null, retry = false, speak = true } = {}) {
+  if (busy) { toast(L('طلب آخر قيد التنفيذ — انتظر حتى يكتمل.', 'Another request is running — wait for it to finish.'), { kind: 'info' }); return null; }
   focus();
-  busy = true; syncSend();
+  revealing?.finish();
+  busy = true; syncSend(); emit('ai-busy', true);
   const body = $('#chat-body');
   const attachments = state.lastUploadId ? [state.lastUploadName] : [];
   const bubble = retry ? null : userBubble(text, { voice, attachments });
@@ -663,6 +832,7 @@ export async function send(text, { voice = false, requestId = null, retry = fals
     const canRetry = final.status === 'failed' && (final.retryable || !final.messageId);
     const msg = assistantBubble(final, false, { steps: stage.log, retry: canRetry ? again : null, rephrase: final.status === 'failed' && !canRetry ? text : null });
     body.append(msg);
+    reveal(msg.querySelector('.msg-body > .md'));
     scroll(false, bubble || msg);
     announce(`${statusLabel(final.status || 'done')}. ${plain(final.text || '').slice(0, 160)}`);
     if (final.open_document) {
@@ -673,15 +843,61 @@ export async function send(text, { voice = false, requestId = null, retry = fals
     if (final.refresh?.length) emit('data-changed', { entity: final.refresh.join(',') });
     if (final.arrange) { state.arranging = true; location.hash = '#/home'; emit('data-changed', {}); }
     if (final.actions?.some((a) => a.status === 'ok')) watchPoints(msg.querySelector('.msg-body'), before);
-    if (voice && final.text) { const spoke = Voice.speak(final.text); if (!spoke && !Voice.isMuted() && Voice.ttsAvailable()) addNote(L('لا يتوفر صوت عربي في هذا الجهاز للرد الصوتي؛ الرد معروض كتابةً.', 'No voice available on this device; reply shown as text.')); }
+    if (voice && speak && final.text) { const spoke = Voice.speak(final.text); if (!spoke && !Voice.isMuted() && Voice.ttsAvailable()) addNote(L('لا يتوفر صوت عربي في هذا الجهاز للرد الصوتي؛ الرد معروض كتابةً.', 'No voice available on this device; reply shown as text.')); }
+    // Reply arrived while the conversation is off screen → the orb asks for attention.
+    if (!chatVisible()) emit('ai-attention', { kind: (final.confirmations || []).length ? 'confirm' : 'answer', text: plain(final.text || '').slice(0, 120) });
+    refreshRailSoon();
+    return final;
   } catch (e) {
     stage.stop(); stage.el.remove();
     const msg = assistantBubble({ status: 'failed', text: `${t('status.failed')}: ${e.message}` }, false, { retry: again });
     body.append(msg); scroll(true);
     announce(`${t('status.failed')}: ${e.message}`);
+    if (!chatVisible()) emit('ai-attention', { kind: 'answer' });
+    return { status: 'failed', text: `${t('status.failed')}: ${e.message}` };
   } finally {
-    busy = false; syncSend();
+    busy = false; syncSend(); emit('ai-busy', false);
   }
+}
+
+// ---------------------------------------------------------------- progressive reveal
+// The final answer fades in word by word (opacity only; the text is in the DOM
+// from the start, so screen readers and copy get it at once). Action receipts,
+// confirmations and files are outside `.md` and are never delayed. Reduced
+// motion, a hidden tab or a very short answer → shown at once.
+function reveal(md) {
+  if (!md || reduceMotion() || document.hidden) return;
+  const walker = document.createTreeWalker(md, NodeFilter.SHOW_TEXT, { acceptNode: (n) => (n.nodeValue.trim() && !n.parentElement.closest('.md-table') ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT) });
+  const nodes = []; while (walker.nextNode()) nodes.push(walker.currentNode);
+  let words = 0; for (const n of nodes) words += n.nodeValue.split(/\s+/).filter(Boolean).length;
+  if (words < 6) return;
+  const step = Math.max(5, Math.min(26, 1500 / words)); // the whole answer settles in ≈1.5s
+  const spans = []; let i = 0;
+  for (const n of nodes) {
+    const frag = document.createDocumentFragment();
+    for (const part of n.nodeValue.split(/(\s+)/)) {
+      if (!part) continue;
+      if (/^\s+$/.test(part)) { frag.append(part); continue; }
+      const s = document.createElement('span'); s.className = 'rv'; s.style.setProperty('--rv', `${Math.round(i++ * step)}ms`); s.textContent = part;
+      frag.append(s); spans.push(s);
+    }
+    n.replaceWith(frag);
+  }
+  for (const tbl of md.querySelectorAll('.md-table')) { tbl.classList.add('rv-block'); tbl.style.setProperty('--rv', `${Math.round(i * step * 0.6)}ms`); }
+  md.classList.add('revealing');
+  let timer = 0;
+  const finish = () => {
+    clearTimeout(timer);
+    if (revealing?.md === md) revealing = null;
+    md.classList.remove('revealing');
+    for (const s of spans) if (s.isConnected) s.replaceWith(s.textContent);
+    for (const tbl of md.querySelectorAll('.rv-block')) { tbl.classList.remove('rv-block'); tbl.style.removeProperty('--rv'); }
+    md.normalize();
+    syncSend();
+  };
+  revealing = { md, finish };
+  timer = setTimeout(finish, i * step + 420);
+  syncSend();
 }
 
 // ---------------------------------------------------------------- attachments
@@ -754,4 +970,98 @@ async function showHistory() {
   search.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (shown[0]) pick(shown[0]); } });
   modal(L('المحادثات السابقة', 'Previous conversations'), body, []);
   fetchList();
+}
+
+// ---------------------------------------------------------------- history rail (immersive view)
+// Start-side rail: new conversation, search, conversations grouped by date.
+// Desktop: collapsible column (remembered). Mobile Chat tab: a drawer opened by
+// the history button. Rows come from GET /api/conversations (the person's own).
+let railState = 'idle'; // idle · loading · error
+const railQuery = { q: '' };
+function buildRail() {
+  const rail = $('#ai-rail'); if (!rail || rail.dataset.ready) return;
+  rail.dataset.ready = '1';
+  const search = h('input.field.rail-search-input', { type: 'search', value: railQuery.q, placeholder: L('ابحث في المحادثات…', 'Search conversations…'), 'aria-label': L('بحث في عناوين المحادثات', 'Search conversation titles'), autocomplete: 'off' });
+  search.addEventListener('input', () => { railQuery.q = search.value; paintRail(); });
+  search.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); $('#ai-rail .rail-item')?.click(); }
+    if (e.key === 'Escape' && search.value) { e.stopPropagation(); search.value = ''; railQuery.q = ''; paintRail(); }
+  });
+  rail.replaceChildren(
+    h('div.rail-head',
+      h('span.rail-brand', orbEl('xs'), h('span.rail-brand-text', h('b', 'Ask AI'), h('small', L('مساعد المنصة', 'Platform assistant')))),
+      h('button.icon-btn.rail-hide', { type: 'button', 'aria-label': L('إخفاء المحادثات', 'Hide conversations'), title: L('إخفاء المحادثات', 'Hide conversations'), onclick: () => { toggleRail(false); ($('#ai-rail-toggle')?.offsetParent ? $('#ai-rail-toggle') : $('#chat-history'))?.focus(); } }, icon('sidebar', 'rh-desk'), icon('x', 'rh-mob'))),
+    h('button.rail-new', { type: 'button', onclick: () => newConversation() }, h('span.rn-ic', icon('pencil')), h('span.grow', L('محادثة جديدة', 'New conversation')), h('kbd.rail-kbd', { 'aria-hidden': 'true' }, /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⇧⌘O' : 'Ctrl ⇧ O')),
+    h('div.search-field.rail-search', icon('search'), search),
+    h('nav.rail-list', { 'aria-label': L('المحادثات السابقة', 'Previous conversations'), 'aria-busy': 'false' }),
+    h('p.rail-foot', icon('lock', 'sm'), h('span', L('محادثاتك خاصة بحسابك ولا يراها غيرك', 'Your conversations are private to your account'))));
+  if (!$('#chat .rail-scrim')) $('#chat').append(h('div.rail-scrim', { 'aria-hidden': 'true', onclick: () => toggleRail(false) }));
+  // Desktop default: open on wide screens, remembered afterwards.
+  let pref = null; try { pref = localStorage.getItem('swp.ai.rail'); } catch {}
+  $('#chat').classList.toggle('rail-collapsed', pref ? pref === 'collapsed' : innerWidth < 1100);
+}
+
+export async function refreshRail() {
+  railState = 'loading'; if (!railRows) paintRail();
+  try { railRows = await api('/api/conversations'); railState = 'idle'; }
+  catch (e) { railState = 'error'; railRows = railRows || null; paintRail(e); return; }
+  paintRail(); paintTitle();
+}
+const refreshRailSoon = debounce(() => { if (railRows || isImmersive()) refreshRail(); }, 350);
+
+function paintRail(err) {
+  const list = $('#ai-rail .rail-list'); if (!list) return;
+  list.setAttribute('aria-busy', String(railState === 'loading' && !railRows));
+  if (!railRows) {
+    if (railState === 'error') list.replaceChildren(h('div.rail-empty', icon('circleAlert'), h('p', L('تعذّر تحميل المحادثات.', 'Couldn’t load conversations.')), h('button.btn.sm.tertiary', { type: 'button', onclick: () => refreshRail() }, icon('refresh'), L('إعادة المحاولة', 'Try again'))));
+    else list.replaceChildren(h('div.rail-skeleton', { 'aria-label': L('جارٍ تحميل المحادثات', 'Loading conversations') }, [80, 64, 72, 56, 68].map((w) => h('div.sk.sk-line', { style: { width: `${w}%` } }))));
+    return;
+  }
+  const q = railQuery.q.trim().toLowerCase();
+  const rows = q ? railRows.filter((c) => String(c.title || '').toLowerCase().includes(q)) : railRows;
+  if (!railRows.length) { list.replaceChildren(h('div.rail-empty', icon('messageSquare'), h('p', L('لا محادثات سابقة بعد', 'No conversations yet')), h('small', L('ستظهر هنا محادثاتك مع المساعد.', 'Your conversations with the assistant will appear here.')))); return; }
+  if (!rows.length) { list.replaceChildren(h('div.rail-empty', icon('search'), h('p', L(`لا نتائج لـ«${railQuery.q.trim()}»`, `No results for “${railQuery.q.trim()}”`)))); return; }
+  const groups = new Map();
+  for (const c of rows) { const g = dayGroup(toDate(c.updated_at)); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(c); }
+  const had = list.contains(document.activeElement) ? document.activeElement.dataset.id : null;
+  list.replaceChildren(...[...groups].map(([g, items]) => h('section.rail-group', h('h4.rail-group-title', g), h('ul', items.map((c) => {
+    const cur = c.id === state.conversationId;
+    return h('li', h('button.rail-item', { type: 'button', 'data-id': c.id, 'aria-current': cur ? 'true' : null, title: c.title || '', onclick: () => openConversation(c.id) },
+      h('span.ri-title', c.title || L('محادثة بلا عنوان', 'Untitled conversation')),
+      h('time.ri-time', { datetime: c.updated_at }, dayGroup(toDate(c.updated_at)) === L('اليوم', 'Today') ? fmtTime(c.updated_at) : fmtDate(c.updated_at))));
+  })))));
+  if (had) $(`#ai-rail .rail-item[data-id="${CSS.escape(had)}"]`)?.focus({ preventScroll: true });
+  void err;
+}
+
+// Desktop immersive: collapse/expand the rail (remembered). Mobile: open/close the drawer.
+export function toggleRail(force) {
+  const c = $('#chat'); if (!c) return;
+  if (innerWidth <= 900) {
+    const open = force ?? !c.classList.contains('rail-open');
+    c.classList.toggle('rail-open', open);
+    $('#ai-rail')?.toggleAttribute('inert', !open);
+    if (open) { if (!railRows) refreshRail(); else refreshRailSoon(); setTimeout(() => ($('#ai-rail .rail-item[aria-current="true"]') || $('#ai-rail .rail-new'))?.focus({ preventScroll: true }), 80); }
+    return;
+  }
+  const collapsed = force == null ? !c.classList.contains('rail-collapsed') : !force;
+  c.classList.toggle('rail-collapsed', collapsed);
+  try { localStorage.setItem('swp.ai.rail', collapsed ? 'collapsed' : 'open'); } catch {}
+  if (!collapsed && !railRows) refreshRail();
+  if (!collapsed && force == null) setTimeout(() => $('#ai-rail .rail-new')?.focus({ preventScroll: true }), 40);
+}
+
+// Header title: the conversation's title in the immersive view, "Ask AI" in the side panel.
+export function conversationTitle(hint) {
+  const row = railRows?.find((c) => c.id === state.conversationId);
+  if (row?.title) return row.title;
+  if (hint && state.conversationId) return hint;
+  const firstMsg = $('#chat-body .msg.user .msg-text')?.textContent?.trim();
+  return firstMsg ? firstMsg.slice(0, 60) : L('محادثة جديدة', 'New conversation');
+}
+export function paintTitle(hint) {
+  const el = $('#ai-title'); if (!el) return;
+  const text = isImmersive() ? conversationTitle(hint) : 'Ask AI';
+  if (el.textContent !== text) el.textContent = text;
+  el.title = isImmersive() ? text : '';
 }

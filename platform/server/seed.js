@@ -25,8 +25,9 @@ export function seedConfig() {
     ON CONFLICT(key) DO UPDATE SET name_ar=excluded.name_ar,name_en=excluded.name_en,description_ar=excluded.description_ar,description_en=excluded.description_en,tools=excluded.tools,instructions=excluded.instructions`, key, ar, en, dar, den, JSON.stringify(tools), JSON.stringify(roles), instr);
   const ALL = ['employee', 'manager', 'president'];
   agent('work', 'مساعد الأعمال', 'Work agent', 'المشاريع والمهام والمواعيد والبحث والملخص اليومي', 'Projects, tasks, appointments, search, daily summary',
-    ['get_daily_summary', 'get_my_achievements', 'list_projects', 'get_project', 'find_project', 'list_tasks', 'list_events', 'search_workspace', 'list_assignable_users', 'create_project', 'update_project', 'create_task', 'update_task', 'create_event', 'delete_project', 'delete_task'], ALL,
-    'ينفّذ عمليات المشاريع والمهام ضمن نطاق المستخدم. لا يفترض نسب الإنجاز.');
+    ['get_daily_summary', 'get_my_achievements', 'list_projects', 'get_project', 'find_project', 'list_tasks', 'list_events', 'search_workspace', 'list_assignable_users', 'create_project', 'update_project', 'create_task', 'update_task', 'create_event', 'delete_project', 'delete_task',
+      'portfolio_overview', 'my_assignments', 'team_capacity', 'create_strategic_project', 'allocate_resource', 'decide_allocation', 'add_milestone', 'update_milestone', 'delete_milestone'], ALL,
+    'ينفّذ عمليات المشاريع والمهام والمحفظة الاستراتيجية ضمن نطاق المستخدم. لا يفترض نسب الإنجاز ولا نسب التخصيص.');
   agent('dashboard', 'مساعد الداشبورد', 'Dashboard agent', 'تخصيص عناصر الداشبورد وطريقة عرضها', 'Customise dashboard widgets and views',
     ['get_dashboard', 'add_widget', 'update_widget', 'reorder_widgets', 'remove_widget', 'restore_dashboard', 'get_kpis'], ALL,
     'يغيّر طريقة العرض فقط ولا يعدّل بيانات المصدر.');
@@ -37,7 +38,7 @@ export function seedConfig() {
     ['list_office_templates', 'list_office_agents', 'create_office_agent', 'schedule_office_agent', 'run_office_agent', 'list_office_runs'], ALL,
     'يحضّر المقترحات فقط؛ لا يُنفَّذ شيء إلا بعد موافقة المالك في الواجهة.');
   agent('monitor', 'مساعد المتابعة (ADAA I)', 'Monitoring agent (ADAA I)', 'مؤشرات المتابعة للمديرين والقيادة من مصادر خارج Vault', 'Monitoring indicators for managers & leadership (outside-Vault sources)',
-    ['get_kpis', 'list_projects', 'get_project'], ['manager', 'president'],
+    ['get_kpis', 'list_projects', 'get_project', 'portfolio_overview', 'team_capacity'], ['manager', 'president'],
     'يقرأ مؤشرات المتابعة فقط ضمن النطاق المصرّح، ولا يصل إلى Vault.');
 
   // ---- Skills ----
@@ -111,6 +112,7 @@ export function seedPeople() {
   person('u_ext_horizon', 'horizon', 'عبدالله الفلاسي', 'Abdulla Al Falasi', 'employee', 'ext_v_horizon', 'مدير الحسابات — شركة الأفق', 'Account Manager, Horizon', ['providers.portal'], { type: 'external' });
   person('u_ext_oasis', 'oasis', 'ليلى الشحي', 'Laila Al Shehhi', 'employee', 'ext_v_oasis', 'مسؤولة المبيعات — مؤسسة الواحة', 'Sales Lead, Oasis', ['providers.portal'], { type: 'external' });
   if (grantCaps) run("INSERT OR IGNORE INTO seed_marks (key) VALUES ('caps_v1')");
+  seedPortfolio();
 }
 
 export function seedOrgAndDemo() {
@@ -157,14 +159,126 @@ export function seedOrgAndDemo() {
   alert('u_ahmed', 'warning', 'اقتراب موعد ربط الهوية الموحدة', 'الموعد اليوم');
   alert('u_mariam', 'info', 'طلب اعتماد تقرير الربع', 'بانتظار مراجعتك');
   alert('u_president', 'info', 'تحديث مؤشرات الأداء الأسبوعية', 'متاح في ADAA I');
+  seedPortfolio();
+}
+
+// ---------------------------------------------------------------- strategic portfolio (demo)
+// The SPMO (لطيفة السويدي) steers a cross-department portfolio: two existing
+// projects become strategic, three new ones run in IT, HR and Finance, with
+// allocations (one pending مريم's confirmation, one person over-allocated),
+// milestones and tasks assigned across departments (some done, some overdue).
+// Applied once per database (seed mark), also to databases seeded earlier.
+// Under the node test runner the baseline API suites assert the original
+// fixture (e.g. exactly five projects), so the extended portfolio fixture is
+// opt-in there (SEED_PORTFOLIO=1); everywhere else it is on unless SEED_PORTFOLIO=0.
+export function portfolioSeedEnabled() {
+  if (process.env.SEED_DEMO === '0') return false;
+  if (process.env.SEED_PORTFOLIO != null && process.env.SEED_PORTFOLIO !== '') return process.env.SEED_PORTFOLIO !== '0';
+  return !process.env.NODE_TEST_CONTEXT;
+}
+export function seedPortfolio() {
+  if (!portfolioSeedEnabled()) return;
+  db.exec('CREATE TABLE IF NOT EXISTS seed_marks (key TEXT PRIMARY KEY, at TEXT NOT NULL DEFAULT (datetime(\'now\')))');
+  if (one("SELECT 1 FROM seed_marks WHERE key='portfolio_v1'")) return;
+  // needs the base demo projects and the SPMO persona
+  if (!one("SELECT 1 FROM projects WHERE id='pr_portal'") || !one("SELECT 1 FROM users WHERE id='u_latifa'")) return;
+  tx(() => {
+    const L = 'u_latifa';
+    const ts = (n, h = 9) => at(n, h);
+    // existing projects become strategic (progress stays manual: owners report it)
+    run("UPDATE projects SET is_strategic=1, sponsor_id=?, budget=?, initiative_ref=? WHERE id='pr_portal' AND is_strategic=0", L, 1200000, 'م.ت 2.1 — التحول الرقمي للخدمات');
+    run("UPDATE projects SET is_strategic=1, sponsor_id=?, budget=?, initiative_ref=? WHERE id='pr_service' AND is_strategic=0", L, 850000, 'م.ت 1.3 — تجربة المتعامل');
+    const proj = (id, name, desc, dept, owner, start, due, budget, ref) => {
+      run(`INSERT OR IGNORE INTO projects (id,name,description,department_id,owner_id,status,progress,start_date,due_date,created_by,is_demo,is_strategic,sponsor_id,budget,initiative_ref,progress_mode,created_at)
+           VALUES (?,?,?,?,?,'active',NULL,?,?,?,1,1,?,?,?,'tasks',?)`, id, name, desc, dept, owner, start, due, L, L, budget, ref, ts(-40));
+      run('INSERT OR IGNORE INTO project_members (project_id,user_id) VALUES (?,?)', id, owner);
+    };
+    proj('pr_proactive', 'منصة الخدمات الاستباقية', 'تقديم الخدمات للمتعاملين قبل طلبها اعتماداً على الأحداث الحياتية وربط البيانات بين الجهات', 'dept_it', 'u_mariam', day(-30), day(120), 2400000, 'م.ت 2.2 — الخدمات الاستباقية');
+    proj('pr_talent', 'برنامج تمكين الكفاءات الوطنية', 'تطوير مسارات قيادية وتخصصية للكفاءات الوطنية بالشراكة مع جهات التدريب', 'dept_hr', 'u_hessa', day(-45), day(150), 1650000, 'م.ت 3.1 — رأس المال البشري');
+    proj('pr_digitize', 'رقمنة دورة المشتريات', 'أتمتة دورة الشراء من الطلب إلى الدفع وربطها بالنظام المالي', 'dept_fin', 'u_majed', day(-60), day(90), 980000, 'م.ت 4.2 — كفاءة الإنفاق');
+
+    const task = (title, project, assignee, dept, status, priority, due, completedDaysAgo, assignedDaysAgo) => run(
+      `INSERT INTO tasks (id,title,project_id,assignee_id,department_id,status,priority,due_date,completed_at,created_by,assigned_by,assigned_at,is_demo,created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1,?)`, uid('tk_'), title, project, assignee, dept, status, priority, due,
+      completedDaysAgo == null ? null : at(-completedDaysAgo, 10), L, L, ts(-assignedDaysAgo), ts(-assignedDaysAgo));
+    const member = (p, u) => run('INSERT OR IGNORE INTO project_members (project_id,user_id) VALUES (?,?)', p, u);
+    // منصة الخدمات الاستباقية (IT) — tasks across IT, SPMO and Legal
+    task('تحليل رحلة المتعامل للخدمات الاستباقية', 'pr_proactive', 'u_sara', 'dept_it', 'done', 'high', day(-5), 6, 28);
+    task('تصميم محرك قواعد الاستباقية', 'pr_proactive', 'u_ahmed', 'dept_it', 'in_progress', 'high', day(10), null, 20);
+    task('ربط بيانات الهوية مع السجل السكاني', 'pr_proactive', 'u_ahmed', 'dept_it', 'todo', 'urgent', day(-3), null, 18);
+    task('اعتماد مؤشرات قياس أثر الخدمات الاستباقية', 'pr_proactive', 'u_hamad', 'dept_it', 'todo', 'medium', day(20), null, 12);
+    task('إعداد نموذج اتفاقيات تبادل البيانات', 'pr_proactive', 'u_yousef', 'dept_it', 'in_progress', 'medium', day(25), null, 12);
+    for (const u of ['u_sara', 'u_ahmed', 'u_hamad', 'u_yousef']) member('pr_proactive', u);
+    // برنامج تمكين الكفاءات الوطنية (HR) — HR, Finance, Procurement
+    task('تحديد الوظائف القيادية المستهدفة', 'pr_talent', 'u_salem', 'dept_hr', 'done', 'high', day(-14), 12, 40);
+    task('تصميم مسارات التطوير الفردية', 'pr_talent', 'u_salem', 'dept_hr', 'in_progress', 'high', day(7), null, 25);
+    task('إعداد ميزانية البرنامج التدريبي', 'pr_talent', 'u_noura', 'dept_hr', 'todo', 'high', day(-2), null, 16);
+    task('طرح منافسة شركاء التدريب', 'pr_talent', 'u_reem', 'dept_hr', 'todo', 'medium', day(30), null, 10);
+    for (const u of ['u_salem', 'u_noura', 'u_reem']) member('pr_talent', u);
+    // رقمنة دورة المشتريات (Finance) — Procurement, Finance, IT, Operations
+    task('حصر إجراءات الشراء الحالية', 'pr_digitize', 'u_reem', 'dept_fin', 'done', 'medium', day(-22), 20, 55);
+    task('ربط أوامر الشراء بالنظام المالي', 'pr_digitize', 'u_noura', 'dept_fin', 'in_progress', 'high', day(5), null, 30);
+    task('أتمتة موافقات لجنة المشتريات', 'pr_digitize', 'u_sara', 'dept_fin', 'in_progress', 'high', day(-4), null, 26);
+    task('دليل المستخدم وتدريب الموظفين', 'pr_digitize', 'u_fatima', 'dept_fin', 'todo', 'medium', day(40), null, 8);
+    for (const u of ['u_reem', 'u_noura', 'u_sara', 'u_fatima']) member('pr_digitize', u);
+    // task-driven progress for the new projects
+    for (const pid of ['pr_proactive', 'pr_talent', 'pr_digitize']) {
+      const c = one("SELECT COUNT(*) total, SUM(status='done') done FROM tasks WHERE project_id=? AND deleted_at IS NULL", pid);
+      run('UPDATE projects SET progress=?, progress_updated_at=?, progress_updated_by=? WHERE id=?', c.total ? Math.round(((c.done || 0) * 100) / c.total) : null, ts(-6, 11), L, pid);
+    }
+
+    const alloc = (project, user, percent, start, end, status, decidedBy, role, createdDaysAgo) => {
+      const id = uid('pa_');
+      run(`INSERT INTO project_allocations (id,project_id,user_id,role_ar,percent,proposed_percent,start_date,end_date,allocated_by,status,decided_by,decided_at,is_demo,created_at,updated_at)
+           VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`, id, project, user, role, percent, percent, start, end, L, status, decidedBy, decidedBy ? ts(-createdDaysAgo + 1) : null, ts(-createdDaysAgo), ts(-createdDaysAgo));
+      return id;
+    };
+    alloc('pr_proactive', 'u_sara', 50, day(-30), day(120), 'active', 'u_mariam', 'محللة أعمال رئيسية', 30);
+    const pendingAhmed = alloc('pr_proactive', 'u_ahmed', 40, day(0), day(90), 'pending_manager', null, 'مهندس تكامل الأنظمة', 1);
+    alloc('pr_proactive', 'u_hamad', 20, day(-20), day(120), 'active', 'u_latifa', 'قياس الأثر', 20);
+    alloc('pr_talent', 'u_salem', 60, day(-45), day(150), 'active', 'u_hessa', 'منسق البرنامج', 44);
+    alloc('pr_talent', 'u_noura', 30, day(-20), day(60), 'active', 'u_majed', 'محاسبة البرنامج', 19);
+    alloc('pr_talent', 'u_sara', 30, day(-10), day(80), 'active', 'u_mariam', 'تحليل الاحتياجات التدريبية', 10);
+    alloc('pr_digitize', 'u_reem', 50, day(-60), day(90), 'active', 'u_majed', 'مالكة إجراءات الشراء', 58);
+    alloc('pr_digitize', 'u_sara', 40, day(-25), day(45), 'active', 'u_mariam', 'تحليل وأتمتة الموافقات', 25);
+    alloc('pr_digitize', 'u_noura', 20, day(-30), day(90), 'active', 'u_majed', 'التكامل المالي', 29);
+    alloc('pr_portal', 'u_ahmed', 30, day(-60), day(30), 'active', 'u_mariam', 'مهندس الهوية الموحدة', 60);
+    alloc('pr_service', 'u_fatima', 60, day(-20), day(45), 'active', 'u_omar', 'قائدة التأسيس', 20);
+
+    const ms = (project, title, due, done, owner) => run('INSERT INTO project_milestones (id,project_id,title,due_date,owner_id,done_at,created_by,is_demo,created_at) VALUES (?,?,?,?,?,?,?,1,?)',
+      uid('ms_'), project, title, due, owner, done ? at(-done, 12) : null, L, ts(-40));
+    ms('pr_proactive', 'اعتماد نطاق المنصة', day(-20), 21, 'u_mariam');
+    ms('pr_proactive', 'إطلاق النسخة التجريبية', day(45), null, 'u_mariam');
+    ms('pr_proactive', 'التشغيل الكامل', day(120), null, 'u_mariam');
+    ms('pr_talent', 'اعتماد إطار الكفاءات', day(-10), 11, 'u_hessa');
+    ms('pr_talent', 'إطلاق الدفعة الأولى', day(60), null, 'u_hessa');
+    ms('pr_digitize', 'اعتماد الإجراءات الموحدة', day(-25), 26, 'u_majed');
+    ms('pr_digitize', 'تشغيل تجريبي للموافقات الإلكترونية', day(-3), null, 'u_reem');
+    ms('pr_digitize', 'التعميم على الإدارات', day(75), null, 'u_majed');
+    ms('pr_portal', 'إطلاق النسخة التجريبية للبوابة', day(-15), 15, 'u_mariam');
+    ms('pr_portal', 'الإطلاق الرسمي', day(30), null, 'u_mariam');
+    ms('pr_service', 'اختيار نظام التذاكر', day(3), null, 'u_fatima');
+    ms('pr_service', 'افتتاح المركز', day(45), null, 'u_omar');
+
+    const alert = (userId, level, title, body, entity, entityId, readDaysAgo) => run('INSERT INTO alerts (id,user_id,level,title,body,entity,entity_id,read_at,is_demo,created_at) VALUES (?,?,?,?,?,?,?,?,1,?)',
+      uid('al_'), userId, level, title, body, entity, entityId, readDaysAgo == null ? null : at(-readDaysAgo, 12), ts(-(readDaysAgo ?? 0)));
+    alert('u_mariam', 'warning', 'طلب تخصيص 40% من وقت أحمد الشامسي لمشروع «منصة الخدمات الاستباقية» بانتظار موافقتك', 'اقترحته لطيفة السويدي · لمدة 90 يوماً', 'allocation', pendingAhmed, null);
+    alert('u_ahmed', 'info', 'طُلب تخصيص 40% من وقتك لمشروع «منصة الخدمات الاستباقية»', 'اقترحته لطيفة السويدي · بانتظار اعتماد مديرك', 'allocation', pendingAhmed, null);
+    alert('u_hamad', 'info', 'تكليف جديد من لطيفة السويدي: «اعتماد مؤشرات قياس أثر الخدمات الاستباقية»', 'ضمن المشروع الاستراتيجي «منصة الخدمات الاستباقية»', 'task', null, 10);
+    alert('u_fatima', 'info', 'تكليف جديد من لطيفة السويدي: «دليل المستخدم وتدريب الموظفين»', 'ضمن المشروع الاستراتيجي «رقمنة دورة المشتريات»', 'task', null, null);
+    alert('u_latifa', 'warning', 'حمل سارة النعيمي يبلغ 120% من وقتها', 'موزع على ثلاثة مشاريع استراتيجية — راجع السعة', 'allocation', null, null);
+    run("INSERT OR IGNORE INTO seed_marks (key) VALUES ('portfolio_v1')");
+  });
 }
 
 export function seedAll({ reset = false } = {}) {
   if (reset) {
     db.exec(`DELETE FROM messages; DELETE FROM conversations; DELETE FROM actions; DELETE FROM confirmations; DELETE FROM idempotency;
       DELETE FROM document_shares; DELETE FROM document_versions; DELETE FROM documents; DELETE FROM dashboard_versions; DELETE FROM dashboards;
-      DELETE FROM alerts; DELETE FROM event_attendees; DELETE FROM events; DELETE FROM tasks; DELETE FROM project_members; DELETE FROM projects;
+      DELETE FROM alerts; DELETE FROM event_attendees; DELETE FROM events; DELETE FROM tasks; DELETE FROM project_members;
+      DELETE FROM project_allocations; DELETE FROM project_milestones; DELETE FROM dashboard_migrations; DELETE FROM projects;
       DELETE FROM uploads; DELETE FROM su_receipts; DELETE FROM sessions; DELETE FROM api_tokens;`);
+    db.exec("CREATE TABLE IF NOT EXISTS seed_marks (key TEXT PRIMARY KEY, at TEXT NOT NULL DEFAULT (datetime('now'))); DELETE FROM seed_marks WHERE key LIKE 'portfolio%';");
   }
   tx(() => {
     seedConfig();

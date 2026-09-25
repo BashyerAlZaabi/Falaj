@@ -43,8 +43,13 @@ async function login(page, user) {
   await page.click('#login-form button[type=submit]');
   await page.waitForSelector('.greet h1');
 }
+// The assistant is opened through its orb (#ai-orb → immersive conversation on
+// desktop; the Chat tab on mobile). If the conversation is already on screen
+// (docked side panel, immersive view or the mobile tab), nothing to do.
 async function openChat(page) {
-  if (await page.locator('#chat.collapsed').count() && await page.locator('#ask-dock').isVisible()) await page.click('#ask-dock');
+  if (await page.locator('#chat-input').isVisible()) return;
+  await page.click('#ai-orb');
+  await page.waitForSelector('#chat-input', { state: 'visible' });
 }
 async function chat(page, text) {
   await openChat(page);
@@ -281,9 +286,90 @@ await step('19. جهة خارجية (مقدم خدمة): بوابة معزولة
   assert.deepEqual(routes.sort(), ['sys:procurement', 'sys:providers']);
   assert.equal(await vp.locator('#btn-ask').isVisible(), false);
   assert.equal(await vp.locator('#ask-dock').isVisible(), false);
+  assert.equal(await vp.locator('#ai-orb').isVisible(), false); // no assistant orb for external parties
   await vp.goto(S.portal + '/#/projects');
   await vp.waitForFunction(() => location.hash.startsWith('#/sys/'), null, { timeout: 8000 });
   await shot(vp, '16-provider-portal');
+  await vp.context().close();
+});
+
+await step('20. أيقونة المساعد تفتح محادثة كاملة الشاشة، وبطاقة اقتراح تنفّذ طلباً، وEsc يغلق ويعيد التركيز', async () => {
+  const ip = await newPage();
+  await login(ip, 'fatima');
+  await ip.waitForSelector('#ai-orb');
+  assert.equal(await ip.locator('#ask-dock').isVisible(), false); // the orb replaces the old bar
+  assert.equal(await ip.getAttribute('#ai-orb', 'aria-label'), 'تحدّث مع المساعد (/)');
+  await ip.focus('#ai-orb');
+  await ip.keyboard.press('Enter');
+  await ip.waitForSelector('body.ai-immersive #chat.immersive.is-empty');
+  assert.equal(await ip.evaluate(() => document.activeElement?.id), 'chat-input');
+  assert.equal(await ip.locator('#chat').getAttribute('role'), 'dialog');
+  assert.ok(await ip.evaluate(() => document.querySelector('#main').inert), 'the page behind is inert');
+  const cards = ip.locator('#ai-starters .starter');
+  assert.equal(await cards.count(), 4); // role-aware starters (employee)
+  await shot(ip, '17-immersive-empty');
+  await cards.filter({ hasText: 'ما مهامي اليوم؟' }).click();
+  await ip.waitForFunction(() => document.querySelectorAll('#chat-body .msg.assistant:not(.welcome)').length > 0, null, { timeout: 20000 });
+  assert.match(await ip.locator('#chat-body .msg.user').last().innerText(), /ما مهامي اليوم/);
+  const answer = await ip.locator('#chat-body .msg.assistant').last().innerText();
+  assert.doesNotMatch(answer, /لم أتمكن من تحديد|تعذّر التنفيذ/); assert.ok(answer.length > 20, answer);
+  await ip.waitForSelector('#ai-rail .rail-item[aria-current="true"]');
+  assert.match(await ip.locator('#ai-title').innerText(), /ما مهامي اليوم/);
+  await shot(ip, '18-immersive-conversation');
+  await ip.keyboard.press('Escape');
+  await ip.waitForFunction(() => !document.body.classList.contains('ai-immersive'));
+  assert.equal(await ip.evaluate(() => document.activeElement?.id), 'ai-orb'); // focus restored to where it was
+  assert.ok(await ip.locator('#chat.collapsed').count());
+  assert.equal(await ip.evaluate(() => document.querySelector('#main').inert), false);
+  // "/" opens it again; the conversation is still there; «إرساء بجانب الصفحة» docks it beside the page
+  await ip.keyboard.press('/');
+  await ip.waitForSelector('body.ai-immersive');
+  assert.ok(await ip.locator('#chat-body .msg.user').count() >= 1);
+  await ip.click('#ai-dock');
+  await ip.waitForFunction(() => !document.body.classList.contains('ai-immersive') && !document.querySelector('#chat').classList.contains('collapsed'));
+  await ip.context().close();
+});
+
+await step('21. الصفحة الرئيسية تبدأ بالمحادثة: الطلب من البطاقة العلوية يفتح المحادثة وينفّذه', async () => {
+  const hp = await newPage();
+  await login(hp, 'omar');
+  await hp.waitForSelector('.home-ask #home-ask-input');
+  assert.match(await hp.locator('.greet h1').innerText(), /كيف أساعدك اليوم يا عمر/);
+  assert.ok(await hp.locator('.home-ask .ha-chip').count() >= 3);
+  await hp.fill('#home-ask-input', 'ما المهام المتأخرة في فريقي؟');
+  await hp.keyboard.press('Enter');
+  await hp.waitForSelector('body.ai-immersive');
+  await hp.waitForFunction(() => document.querySelectorAll('#chat-body .msg.assistant:not(.welcome)').length > 0, null, { timeout: 20000 });
+  const answer = await hp.locator('#chat-body .msg.assistant').last().innerText();
+  assert.doesNotMatch(answer, /لم أتمكن من تحديد|تعذّر التنفيذ/); assert.ok(answer.length > 20, answer);
+  assert.equal(await hp.inputValue('#home-ask-input'), ''); // sent, not left behind
+  await hp.keyboard.press('Escape');
+  await hp.waitForFunction(() => !document.body.classList.contains('ai-immersive'));
+  await hp.waitForSelector('.dash-grid .card'); // the dashboard is still there underneath
+  await hp.context().close();
+});
+
+await step('22. المحادثة الصوتية: فتح الوضع الصوتي (تعرّف محاكى)، ترجمة حية للكلام والرد، ثم إنهاء نظيف', async () => {
+  const vp = await newPage(undefined, { voice: 'ما مهامي؟' });
+  await vp.addInitScript(() => { try { localStorage.setItem('swp.mute', '1'); } catch {} }); // keep headless quiet
+  await login(vp, 'ahmed');
+  await vp.click('#ai-orb-mic');
+  await vp.waitForSelector('#ai-voice[role=dialog]');
+  assert.equal(await vp.evaluate(() => document.querySelector('#main').inert && document.querySelector('#chat').inert), true);
+  await vp.waitForFunction(() => /ما مهامي/.test(document.querySelector('#ai-voice .vo-line.you .vo-text')?.textContent || ''), null, { timeout: 10000 });
+  await vp.waitForFunction(() => (document.querySelector('#ai-voice .vo-line.ai .vo-text')?.textContent || '').length > 10, null, { timeout: 20000 });
+  assert.doesNotMatch(await vp.locator('#ai-voice .vo-line.ai').innerText(), /لم أتمكن من تحديد|تعذّر التنفيذ/);
+  await shot(vp, '19-voice-mode');
+  await vp.click('#ai-voice-end');
+  await vp.waitForSelector('#ai-voice', { state: 'detached' });
+  assert.equal(await vp.evaluate(() => document.activeElement?.id), 'ai-orb-mic');
+  assert.equal(await vp.evaluate(() => document.querySelector('#main').inert), false);
+  // the spoken turn is in the conversation, marked as voice input — and the loop stopped
+  const n = await vp.locator('#chat-body .msg.user').count();
+  assert.ok(n >= 1);
+  assert.match(await vp.locator('#chat-body .msg.user').first().innerText(), /إدخال صوتي/);
+  await vp.waitForTimeout(2500);
+  assert.equal(await vp.locator('#chat-body .msg.user').count(), n);
   await vp.context().close();
 });
 

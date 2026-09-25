@@ -38,7 +38,7 @@ export const CONNECTORS = [
   },
   {
     key: 'm365',
-    name_ar: 'Microsoft 365 — Outlook وTeams', name_en: 'Microsoft 365 — Outlook & Teams',
+    name_ar: 'Outlook وTeams من Microsoft 365', name_en: 'Microsoft 365 — Outlook & Teams',
     vendor: 'Microsoft Graph',
     icon: 'mail', direction: 'both',
     desc_ar: 'مزامنة الاجتماعات مع تقويم Outlook وإنشاء روابط Teams للاجتماعات عن بُعد.',
@@ -131,6 +131,7 @@ export const GRANT_HINTS = {
 };
 
 export const quarterOf = (iso = new Date().toISOString()) => { const d = new Date(iso); return `${d.getUTCFullYear()}-Q${Math.floor(d.getUTCMonth() / 3) + 1}`; };
+export const quarterLabel = (period, lang = 'ar') => { const q = Number(String(period).slice(-1)); return lang === 'en' ? `Q${q} ${String(period).slice(0, 4)}` : `الربع ${['الأول', 'الثاني', 'الثالث', 'الرابع'][q - 1] || q}`; };
 export function quarterBounds(period) {
   const [y, q] = String(period).split('-Q').map(Number);
   const start = new Date(Date.UTC(y, (q - 1) * 3, 1));

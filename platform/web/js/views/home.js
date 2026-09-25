@@ -1,4 +1,7 @@
-// Unified Portal home: greeting, daily summary and the customisable widget grid.
+// Unified Portal home: a conversation-first hero (the assistant orb, «كيف
+// أساعدك اليوم؟», a large prompt with dictation, voice mode and send, and
+// role-aware suggestion chips — submitting opens the immersive conversation),
+// then the excellence journey, my-systems strip and the customisable widget grid.
 //
 // Cards are keyed by widget id and their DOM is kept across renders in a
 // module-level cache. A background refresh (soft=true) re-reads the layout,
@@ -13,6 +16,7 @@ import { L, t, fmtTime, fmtNum, getLang } from '../i18n.js';
 import { state, on } from '../state.js';
 import { renderWidgetView, fetchWidgetData, widgetSkeleton, widgetError, widgetTitle, widgetIcon, sourceLabel, VIEW_META, TYPE_META, runTool, undo } from '../widgets.js';
 import * as Chat from '../chat.js';
+import * as Assistant from '../assistant-orb.js';
 import { gameHero, loadGame } from '../game.js';
 import { wsCard } from '../systems.js';
 
@@ -162,10 +166,13 @@ function buildShell() {
   C.syncEl = h('span.dash-sync');
   C.refreshBtn = h('button.icon-btn.dash-refresh', { type: 'button', onclick: manualRefresh }, icon('refresh'));
   C.editBtn = h('button.btn.dash-edit-btn', { type: 'button', 'aria-pressed': 'false', onclick: () => setEditing(!state.arranging) }, icon('sliders'), h('span.lbl'));
-  C.aiBtn = h('button.btn.dash-ai', { type: 'button', onclick: () => Chat.send(L('جهّز لي ملخص اليوم', 'Prepare my daily summary')) }, icon('spark'), h('span.lbl', L('ملخص اليوم', 'Daily summary')));
-  C.head = h('header.greet.dash-head',
-    h('div.dash-hello', C.headDate, C.headTitle, h('div.dash-meta', C.headRole, h('span.sep', { 'aria-hidden': 'true' }, '·'), C.headScope, h('span.sep.sync-sep', { 'aria-hidden': 'true' }, '·'), C.syncEl)),
-    h('div.dash-actions', C.aiBtn, C.refreshBtn, C.editBtn));
+  C.head = h('header.greet.dash-head.home-ask',
+    h('div.ha-top', C.headDate, h('div.dash-actions', C.refreshBtn, C.editBtn)),
+    h('div.dash-hello.ha-center',
+      Chat.orbEl('home'),
+      C.headTitle,
+      h('div.dash-meta', C.headRole, h('span.sep', { 'aria-hidden': 'true' }, '·'), C.headScope, h('span.sep.sync-sep', { 'aria-hidden': 'true' }, '·'), C.syncEl),
+      buildAsk()));
 
   C.editbar = h('div.dash-editbar.glass-3', { role: 'region', 'aria-label': L('أدوات تخصيص الواجهة', 'Customize tools'), hidden: true },
     h('span.eb-icon', { 'aria-hidden': 'true' }, icon('sliders')),
@@ -180,12 +187,57 @@ function buildShell() {
   C.wrap = h('div.dash-wrap', C.editbar, C.grid, C.emptyEl, C.live);
 }
 
+// ============================== conversation-first prompt ==============================
+// ChatGPT-like prompt: typing + Enter (or send) opens the immersive conversation
+// and sends; the mic dictates (a spoken request); the wave button starts the
+// voice conversation; chips are role-aware starters. The DOM lives in the
+// cached head, so a soft refresh never clears what the person is typing.
+function buildAsk() {
+  const input = h('textarea.ha-input#home-ask-input', { rows: 1, maxlength: 2000, enterkeyhint: 'send', autocomplete: 'off' });
+  const send = h('button.ha-send', { type: 'submit', disabled: true }, icon('send'));
+  const mic = h('button.icon-btn.ha-mic', { type: 'button', 'aria-pressed': 'false' }, icon('mic'));
+  const voice = h('button.ha-voice', { type: 'button' }, Chat.waveIcon(), h('span.ha-voice-l'));
+  const grow = () => { input.style.height = 'auto'; input.style.height = `${Math.min(168, input.scrollHeight)}px`; const empty = !input.value.trim(); send.disabled = empty; C.askForm.classList.toggle('has-text', !empty); };
+  const submit = () => {
+    const text = input.value.trim(); if (!text) { input.focus(); return; }
+    if (Chat.isBusy()) { toast(L('طلب آخر قيد التنفيذ — نصّك محفوظ، أرسله بعد اكتماله.', 'Another request is running — your text is kept; send it once that finishes.'), { kind: 'info' }); return; }
+    input.value = ''; grow();
+    Assistant.ask(text, { from: input });
+  };
+  input.addEventListener('input', grow);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } });
+  mic.addEventListener('click', () => Assistant.dictate({ input, button: mic, onText: grow }));
+  voice.addEventListener('click', () => Assistant.openVoice({ from: voice }));
+  C.askInput = input; C.askSend = send; C.askMic = mic; C.askVoice = voice;
+  C.askForm = h('form.ha-box', { role: 'search', onsubmit: (e) => { e.preventDefault(); submit(); } },
+    h('span.ha-lead', { 'aria-hidden': 'true' }, icon('spark')), input, h('div.ha-tools', mic, voice, send));
+  C.askChips = h('div.ha-chips', { role: 'group' });
+  return h('div.ha-prompt', C.askForm, C.askChips);
+}
+function paintAsk() {
+  const u = state.me.user;
+  C.askInput.placeholder = t('ai.ask.ph');
+  C.askInput.setAttribute('aria-label', L(`اكتب طلبك للمساعد يا ${L(u.name_ar, u.name_en).split(' ')[0]}`, 'Type your request to the assistant'));
+  C.askSend.setAttribute('aria-label', L('إرسال إلى المساعد', 'Send to the assistant')); C.askSend.title = L('إرسال (Enter)', 'Send (Enter)');
+  if (!C.askMic.classList.contains('rec')) { C.askMic.setAttribute('aria-label', L('تحدّث', 'Speak')); C.askMic.title = L('تحدّث — يبدأ التسجيل عند الضغط فقط', 'Speak — recording starts only when pressed'); }
+  C.askVoice.setAttribute('aria-label', t('ai.voice')); C.askVoice.title = L('محادثة صوتية — تحدّث واستمع دون كتابة', 'Voice conversation — talk and listen hands-free');
+  C.askVoice.querySelector('.ha-voice-l').textContent = L('صوت', 'Voice');
+  C.askChips.setAttribute('aria-label', L('اقتراحات تناسب دورك', 'Suggestions for your role'));
+  const list = Chat.roleSuggestions(4);
+  const key = list.map((s) => s.prompt).join('|');
+  if (C.askChips.dataset.key !== key) {
+    C.askChips.dataset.key = key;
+    C.askChips.replaceChildren(...list.map((s) => h('button.ha-chip', { type: 'button', title: s.hint, onclick: (e) => Assistant.ask(s.prompt, { from: e.currentTarget }) }, icon(s.ic), h('span', s.label))));
+  }
+}
+
 function updateHead() {
   const u = state.me.user;
   const hr = new Date().getHours();
   const greet = hr < 12 ? t('greet.morning') : hr < 17 ? L('نهارك سعيد', 'Good afternoon') : t('greet.evening');
-  C.headDate.textContent = new Date().toLocaleDateString(L('ar-AE', 'en-GB'), { weekday: 'long', day: 'numeric', month: 'long' });
-  C.headTitle.textContent = `${greet}${L('، ', ', ')}${L(u.name_ar, u.name_en).split(' ')[0]}`;
+  C.headDate.textContent = `${new Date().toLocaleDateString(L('ar-AE', 'en-GB'), { weekday: 'long', day: 'numeric', month: 'long' })} · ${greet}`;
+  C.headTitle.textContent = L(`كيف أساعدك اليوم يا ${u.name_ar.split(' ')[0]}؟`, `How can I help you today, ${(u.name_en || u.name_ar).split(' ')[0]}?`);
+  paintAsk();
   C.headRole.textContent = [t(`role.${u.role}`), L(u.dept_ar, u.dept_en)].filter(Boolean).join(' · ');
   C.headScope.textContent = `${L('نطاق العرض', 'Scope')}: ${u.role === 'president' ? L('المؤسسة (خارج Vault)', 'Organisation (outside Vault)') : u.role === 'manager' ? L('إدارتك', 'Your department') : L('أعمالك', 'Your work')}`;
   C.refreshBtn.setAttribute('aria-label', L('تحديث البيانات', 'Refresh data'));

@@ -7,6 +7,8 @@
 // barChart(data, opts)   data: [{ label, value, missing?, color?, title?, emphasis?, muted? }]
 //   opts: { unit, max, label, color, height, orientation: 'auto'|'vertical'|'horizontal', integer }
 // donutChart(data, opts) data: [{ label, value, color? }]  opts: { label, totalLabel, size }
+// compareBars(data, opts) data: [{ label, value (0–100 | null), expected?, tone?, href? }]  opts: { label }
+//   progress vs a time-elapsed expectation tick (strategic portfolio)
 import { h } from './ui.js';
 import { fmtNum, L } from './i18n.js';
 
@@ -272,4 +274,22 @@ export function donutChart(data, opts = {}) {
   for (const [i, seg] of segs) { seg.addEventListener('pointerenter', () => activate(i)); seg.addEventListener('pointerleave', () => activate(null)); }
   wrap.append(h('div.donut-figure', svg), legend);
   return wrap;
+}
+
+// ---------- compare bars: progress with an "expected" tick ----------
+// DOM rather than SVG so long Arabic names wrap and stay selectable; each row
+// has a full text equivalent; "not reported" is drawn as a dashed empty track.
+export function compareBars(data, { label } = {}) {
+  const clamp = (v) => Math.max(0, Math.min(100, Number(v) || 0));
+  const list = h('ul.cmp', { 'aria-label': label || null });
+  for (const d of data) {
+    const missing = d.value == null;
+    const txt = `${d.label}: ${missing ? L('غير مسجّلة', 'not reported') : `${fmtNum(d.value)}%`}${d.expected != null ? L(` مقابل ${fmtNum(d.expected)}% متوقعاً`, ` vs ${d.expected}% expected`) : ''}`;
+    const track = h(`div.cmp-track${missing ? '.is-missing' : ''}`, { role: 'img', 'aria-label': txt, title: txt },
+      missing ? null : h(`i.cmp-fill${d.tone ? `.${d.tone}` : ''}`, { style: { width: `${clamp(d.value)}%` } }),
+      d.expected != null ? h('i.cmp-exp', { style: { insetInlineStart: `${clamp(d.expected)}%` } }) : null);
+    list.append(h('li.cmp-row', d.href ? h('a.cmp-name', { href: d.href }, d.label) : h('span.cmp-name', d.label), track,
+      h('span.cmp-val', missing ? '—' : `${fmtNum(d.value)}%`)));
+  }
+  return h('div.chart.cmp-chart', list);
 }

@@ -12,6 +12,7 @@ const dict = {
     'dash.customize': 'تخصيص', 'dash.arrange': 'ترتيب', 'dash.done': 'تم', 'dash.add': 'إضافة بطاقة', 'dash.restore': 'استعادة السابق', 'dash.reset': 'الافتراضي', 'dash.source': 'المصدر', 'dash.updated': 'حُدّث',
     'rt.live': 'متصل', 'rt.offline': 'غير متصل',
     'ai.local': 'فهم محلي', 'ai.model': 'نموذج متصل',
+    'ai.orb': 'تحدّث مع المساعد', 'ai.voice': 'محادثة صوتية', 'ai.new': 'محادثة جديدة', 'ai.dock': 'إرساء بجانب الصفحة', 'ai.full': 'ملء الشاشة', 'ai.history': 'المحادثات السابقة', 'ai.greet': 'كيف أساعدك اليوم يا {name}؟', 'ai.ask.ph': 'اسأل أو اطلب أي شيء…',
   },
   en: {
     brand: 'Smart Work Platform', demo: 'Demo',
@@ -26,6 +27,7 @@ const dict = {
     'dash.customize': 'Customize', 'dash.arrange': 'Arrange', 'dash.done': 'Done', 'dash.add': 'Add card', 'dash.restore': 'Restore previous', 'dash.reset': 'Default', 'dash.source': 'Source', 'dash.updated': 'Updated',
     'rt.live': 'Live', 'rt.offline': 'Offline',
     'ai.local': 'Local', 'ai.model': 'Model',
+    'ai.orb': 'Talk to the assistant', 'ai.voice': 'Voice conversation', 'ai.new': 'New conversation', 'ai.dock': 'Dock beside the page', 'ai.full': 'Full screen', 'ai.history': 'Previous conversations', 'ai.greet': 'How can I help you today, {name}?', 'ai.ask.ph': 'Ask or request anything…',
   },
 };
 

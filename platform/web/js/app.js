@@ -1,10 +1,14 @@
 // App shell: authentication, sidebar, contextual toolbar, command palette,
-// notifications, router, realtime, mobile tab bar.
+// notifications, router, realtime, mobile tab bar, and the assistant's
+// presentation (orb, docked panel, immersive view, voice mode — assistant-orb.js).
+// Shortcuts: ⌘K/Ctrl K palette · / talk to the assistant (immersive) ·
+// ⇧⌘O/Ctrl ⇧ O new conversation · ⇧⌘S/Ctrl ⇧ S history rail · Esc close.
 import { api, realtime } from './api.js';
 import { t, L, setLang, getLang } from './i18n.js';
 import { h, $, $$, icon, toast, initials, debounce, menu, isMac, errorState, avatar } from './ui.js';
 import { state, on, emit } from './state.js';
 import * as Chat from './chat.js';
+import * as Assistant from './assistant-orb.js';
 import * as Editor from './editor.js';
 import { openPalette, configure as configurePalette, bindShortcut, remember } from './palette.js';
 import { renderHome } from './views/home.js';
@@ -166,7 +170,7 @@ function userMenu() {
   ], { align: 'start', width: 250 });
 }
 async function logout() { await api('/api/auth/logout', { method: 'POST' }).catch(() => {}); location.hash = ''; location.reload(); }
-function switchLang() { setLang(getLang() === 'ar' ? 'en' : 'ar'); buildNav(); route(); Chat.refreshContext(); refreshBadges(); }
+function switchLang() { setLang(getLang() === 'ar' ? 'en' : 'ar'); buildNav(); route(); Chat.refreshContext(); Assistant.relabel(); refreshBadges(); }
 
 async function alertsMenu() {
   const list = await api('/api/alerts').catch(() => []);
@@ -188,23 +192,29 @@ function newMenu() { menu($('#btn-new'), [{ title: L('إنشاء', 'Create') }, 
 export function setTab(tab) {
   document.body.dataset.tab = tab;
   $$('#tabbar button').forEach((b) => { const on = b.dataset.tab === tab; b.classList.toggle('on', on); on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'); });
+  if (tab !== 'chat') $('#chat')?.classList.remove('rail-open');
   if (tab === 'chat') setTimeout(() => $('#chat-input').focus(), 50);
+  Assistant.sync();
 }
 function toggleNav(open) { $('#nav').classList.toggle('open', open); $('#scrim').classList.toggle('hidden', !open); $('#btn-menu').setAttribute('aria-expanded', String(!!open)); if (open && innerWidth <= 900) setTimeout(() => ($('#nav a.item.on') || $('#nav a.item'))?.focus(), 60); }
-function setChatVisible(v, { remember = true } = {}) {
+// Docked side panel on/off (desktop). Leaving the immersive view through here
+// docks the conversation (v) or closes it (!v). Mobile: the Chat tab.
+function setChatVisible(v, { remember = true, focus = true } = {}) {
   if (innerWidth <= 900) { setTab(v ? 'chat' : 'home'); return; }
+  if (Assistant.isImmersive()) Assistant.leaveImmersive();
   $('#chat').classList.toggle('collapsed', !v);
   $('#btn-ask').setAttribute('aria-pressed', String(v));
-  $('#ask-dock').classList.toggle('hidden', v);
+  $('#ask-dock').classList.add('hidden'); // legacy bar: the orb replaces it
   if (remember) store.set('swp.chat', v ? 'shown' : 'hidden');
-  if (v) setTimeout(() => $('#chat-input').focus(), 60);
+  if (v && focus) setTimeout(() => $('#chat-input').focus(), 60);
+  Assistant.sync();
 }
-$('#ask-dock').onclick = () => setChatVisible(true);
-// "/" opens Ask AI from anywhere (unless typing)
+$('#ask-dock').onclick = () => Assistant.openImmersive();
+// "/" talks to the assistant from anywhere (unless typing): the immersive conversation.
 document.addEventListener('keydown', (e) => {
-  if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || !state.me) return;
-  if (e.target.closest('input, textarea, select, [contenteditable="true"]')) return;
-  e.preventDefault(); setChatVisible(true);
+  if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || !state.me || state.me.external) return;
+  if (e.target.closest('input, textarea, select, [contenteditable="true"]') || Assistant.voiceOpen()) return;
+  e.preventDefault(); Assistant.openImmersive();
 });
 $('#btn-menu').onclick = () => toggleNav(true);
 $('#scrim').onclick = () => toggleNav(false);
@@ -320,7 +330,7 @@ function openResult(r) {
   else if (r.type === 'task') location.hash = '#/tasks';
   else location.hash = '#/home';
 }
-configurePalette({ openResult, ask: (q) => { setChatVisible(true); Chat.send(q); } });
+configurePalette({ openResult, ask: (q) => Assistant.ask(q) });
 bindShortcut();
 
 // ---------------- boot ----------------
@@ -343,15 +353,18 @@ async function boot() {
     ],
     actions: [
       ...newActions(),
-      { label: L('جهّز ملخص اليوم', 'Prepare my daily summary'), icon: 'spark', keywords: 'summary ملخص', run: () => { setChatVisible(true); Chat.send(L('جهّز لي ملخص اليوم', 'Prepare my daily summary')); } },
+      { label: L('جهّز ملخص اليوم', 'Prepare my daily summary'), icon: 'spark', keywords: 'summary ملخص', run: () => Assistant.ask(L('جهّز لي ملخص اليوم', 'Prepare my daily summary')) },
+      { label: L('تحدّث مع المساعد (ملء الشاشة)', 'Talk to the assistant (full screen)'), icon: 'chat', hint: '/', keywords: 'ask ai assistant مساعد محادثة chat', run: () => Assistant.openImmersive() },
+      { label: L('محادثة صوتية مع المساعد', 'Voice conversation with the assistant'), icon: 'mic', keywords: 'voice صوت صوتية تحدث mic', run: () => Assistant.openVoice() },
+      { label: L('محادثة جديدة', 'New conversation'), icon: 'messagePlus', hint: isMac ? '⇧⌘O' : 'Ctrl ⇧ O', keywords: 'new chat محادثة جديدة', run: () => { Assistant.openImmersive(); Chat.newConversation(); } },
       { label: L('تبديل المظهر الفاتح/الداكن', 'Toggle light/dark'), icon: 'moon', keywords: 'theme dark light مظهر داكن', run: () => { const d = document.documentElement.dataset.theme === 'dark' || (!document.documentElement.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches); applyTheme(d ? 'light' : 'dark'); } },
       { label: getLang() === 'ar' ? 'Switch to English' : 'التبديل إلى العربية', icon: 'languages', keywords: 'language لغة', run: switchLang },
-      { label: L('إظهار/إخفاء Ask AI', 'Show/hide Ask AI'), icon: 'chat', keywords: 'chat محادثة ai', run: () => setChatVisible($('#chat').classList.contains('collapsed')) },
+      { label: L('إظهار/إخفاء Ask AI بجانب الصفحة', 'Show/hide Ask AI beside the page'), icon: 'sidebarR', keywords: 'chat محادثة ai panel لوحة', run: () => setChatVisible($('#chat').classList.contains('collapsed') || Assistant.isImmersive()) },
       { label: L('تسجيل الخروج', 'Sign out'), icon: 'logout', keywords: 'logout خروج', run: logout },
     ].filter((a) => !me.external || ['moon', 'languages', 'logout'].includes(a.icon)),
   });
-  if (!me.external) { Chat.init(); Editor.init(); initGame($('#level-chip-host')); }
-  else { setChatVisible(false, { remember: false }); $('#level-chip-host').replaceChildren(); }
+  if (!me.external) { Chat.init(); Assistant.init({ setTab, setChatVisible }); Editor.init(); initGame($('#level-chip-host')); }
+  else { setChatVisible(false, { remember: false }); $('#ai-orb-wrap')?.remove(); $('#level-chip-host').replaceChildren(); }
   // Mobile "Document" tab reflects whether a document is open
   const syncDocTab = () => { const b = $('#tabbar button[data-tab="doc"]'); if (b) { const off = $('#editor').classList.contains('collapsed'); b.classList.toggle('dim', off); b.setAttribute('aria-disabled', String(off)); if (off && document.body.dataset.tab === 'doc') setTab('home'); } };
   new MutationObserver(syncDocTab).observe($('#editor'), { attributes: true, attributeFilter: ['class'] });

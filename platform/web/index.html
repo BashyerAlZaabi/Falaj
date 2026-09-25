@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="/css/pages/admin.css">
 <link rel="stylesheet" href="/css/pages/game.css">
 <link rel="stylesheet" href="/css/pages/systems.css">
+<link rel="stylesheet" href="/css/pages/assistant.css">
 </head>
 <body>
 <div class="ambient" aria-hidden="true"></div>
@@ -92,39 +93,52 @@
       </div>
     </header>
     <div class="view" id="view" tabindex="-1"></div>
-    <button class="ask-dock glass-4 hidden" id="ask-dock" type="button" aria-controls="chat">
+    <!-- Legacy floating Ask AI bar: kept (always hidden) for compatibility; the assistant orb (#ai-orb) replaces it. -->
+    <button class="ask-dock glass-4 hidden" id="ask-dock" type="button" aria-controls="chat" tabindex="-1" aria-hidden="true">
       <span class="ad-orb" aria-hidden="true"></span>
       <span class="ad-text" data-i18n="ask.dock">اسأل Ask AI أو اطلب أي شيء…</span>
       <kbd class="kbd">/</kbd>
     </button>
   </main>
 
+  <!-- Ask AI: one conversation engine, three presentations — docked side panel,
+       full-screen immersive view (.immersive: history rail + centred thread) and
+       the mobile Chat tab. See js/assistant-orb.js and js/chat.js. -->
   <section class="panel glass-3" id="chat" aria-label="Ask AI">
-    <div class="panel-head">
-      <h3><span class="icon-slot"></span>Ask AI <span class="chip tiny" id="ai-mode"></span></h3>
-      <button class="icon-btn hide-collapsed" id="chat-new" type="button"></button>
-      <button class="icon-btn hide-collapsed" id="chat-history" type="button"></button>
-      <button class="icon-btn hide-collapsed" id="chat-expand" type="button"></button>
-      <button class="icon-btn collapse-btn" id="chat-collapse" type="button"></button>
-    </div>
-    <div class="panel-body" id="chat-body" aria-live="polite"></div>
-    <div class="composer">
-      <div class="context-bar" id="context-bar"></div>
-      <div class="voice-bar hidden" id="voice-bar" role="status">
-        <span class="rec-dot" aria-hidden="true"></span><span id="voice-state">يستمع…</span><span class="interim" id="voice-interim"></span>
-        <button class="btn sm" id="voice-stop" type="button">إيقاف</button>
+    <aside class="ai-rail" id="ai-rail" aria-label="المحادثات"></aside>
+    <div class="chat-main">
+      <div class="panel-head">
+        <button class="icon-btn ai-rail-toggle" id="ai-rail-toggle" type="button"></button>
+        <h3><span class="icon-slot"></span><span class="ai-title" id="ai-title">Ask AI</span><span class="chip tiny" id="ai-mode"></span></h3>
+        <button class="icon-btn hide-collapsed" id="chat-new" type="button"></button>
+        <button class="icon-btn hide-collapsed" id="chat-history" type="button"></button>
+        <button class="icon-btn hide-collapsed" id="chat-expand" type="button"></button>
+        <button class="icon-btn ai-full" id="ai-full" type="button"></button>
+        <button class="icon-btn ai-dock" id="ai-dock" type="button"></button>
+        <button class="icon-btn collapse-btn" id="chat-collapse" type="button"></button>
+        <button class="icon-btn ai-close" id="ai-close" type="button"></button>
       </div>
-      <div class="composer-box">
-        <textarea id="chat-input" rows="1" data-i18n-ph="chat.ph" placeholder="اكتب طلبك… مثال: جهّز لي ملخص اليوم" aria-label="رسالة إلى المساعد"></textarea>
-        <div class="composer-row">
-          <button class="icon-btn" id="btn-attach" type="button"></button>
-          <input type="file" id="file-input" class="hidden" accept=".txt,.md,.csv,.json,.docx">
-          <span class="spacer"></span>
-          <button class="icon-btn" id="btn-mute" type="button" aria-pressed="false"></button>
-          <button class="icon-btn mic" id="btn-mic" type="button" aria-pressed="false"></button>
-          <button class="send-btn" id="btn-send" type="button"></button>
+      <div class="panel-body" id="chat-body" aria-live="polite"></div>
+      <div class="composer">
+        <div class="context-bar" id="context-bar"></div>
+        <div class="voice-bar hidden" id="voice-bar" role="status">
+          <span class="rec-dot" aria-hidden="true"></span><span id="voice-state">يستمع…</span><span class="interim" id="voice-interim"></span>
+          <button class="btn sm" id="voice-stop" type="button">إيقاف</button>
+        </div>
+        <div class="composer-box">
+          <textarea id="chat-input" rows="1" data-i18n-ph="chat.ph" placeholder="اكتب طلبك… مثال: جهّز لي ملخص اليوم" aria-label="رسالة إلى المساعد"></textarea>
+          <div class="composer-row">
+            <button class="icon-btn" id="btn-attach" type="button"></button>
+            <input type="file" id="file-input" class="hidden" accept=".txt,.md,.csv,.json,.docx">
+            <span class="spacer"></span>
+            <button class="icon-btn" id="btn-mute" type="button" aria-pressed="false"></button>
+            <button class="icon-btn mic" id="btn-mic" type="button" aria-pressed="false"></button>
+            <button class="voice-mode-btn" id="btn-voice-mode" type="button"></button>
+            <button class="send-btn" id="btn-send" type="button"></button>
+          </div>
         </div>
       </div>
+      <div class="ai-starters" id="ai-starters" hidden></div>
     </div>
   </section>
 

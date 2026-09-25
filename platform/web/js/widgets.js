@@ -3,12 +3,12 @@
 // split from rendering so the home view can repaint a card from its cached
 // payload (stale-while-revalidate) without a round-trip or a skeleton flash.
 import { api } from './api.js';
-import { h, icon, toast, emptyState, dataTable, skeleton } from './ui.js';
+import { h, icon, toast, emptyState, dataTable, skeleton, avatar } from './ui.js';
 import { L, t, fmtDate, fmtTime, fmtNum, getLang } from './i18n.js';
-import { barChart, donutChart } from './charts.js';
-import { state, emit } from './state.js';
+import { barChart, donutChart, compareBars } from './charts.js';
+import { state, emit, on } from './state.js';
 import * as Editor from './editor.js';
-import { statusLabel, priorityChip, runTool, undo, progressBar, taskRow, projectCard, STATUS, PRIORITY } from './work-items.js';
+import { statusLabel, priorityChip, runTool, undo, progressBar, taskRow, projectCard, STATUS, PRIORITY, projectState, stateChip, projectTone, allocChip, loadMeter, fmtAED, fteText, pctText, periodText, isSpmoUser } from './work-items.js';
 export { statusLabel, priorityChip, runTool, undo, progressBar, taskRow, projectCard };
 
 // ---------------- metadata ----------------
@@ -21,7 +21,22 @@ export const TYPE_META = {
   events: { icon: 'calendarDays', name: ['المواعيد', 'Appointments'] },
   alerts: { icon: 'bell', name: ['التنبيهات', 'Alerts'] },
   documents: { icon: 'fileText', name: ['آخر المستندات', 'Recent documents'] },
+  assigned: { icon: 'userCheck', name: ['كُلّفت به', 'Assigned to me'] },
+  portfolio: { icon: 'compass', name: ['المحفظة الاستراتيجية', 'Strategic portfolio'] },
+  capacity: { icon: 'gauge', name: ['سعة الفريق', 'Team capacity'] },
 };
+
+// Live repaint of the portfolio cards. The Home grid refetches a card only when
+// one of its declared sources changed; "assigned", "portfolio" and "capacity"
+// read tasks, projects and allocations, so while one of them is on screen a
+// task/project change revalidates the whole grid (cards whose data did not
+// change are not repainted). This listener is registered before the Home view's.
+let portfolioCardsSeen = 0;
+on('data-changed', (ev) => {
+  if (!ev || typeof ev !== 'object' || !portfolioCardsSeen || state.route !== 'home') return;
+  const ent = String(ev.entity ?? 'all');
+  if (/(^|,)\s*(task|project|allocation|alert)s?\s*(,|$)/.test(ent) && !/(^|,)\s*all\s*(,|$)/.test(ent)) ev.entity = `${ent},all`;
+});
 export const VIEW_META = {
   cards: { icon: 'rows', name: ['بطاقات', 'Cards'] }, list: { icon: 'list', name: ['قائمة', 'List'] }, table: { icon: 'table', name: ['جدول', 'Table'] },
   bar: { icon: 'chartBar', name: ['أعمدة', 'Bars'] }, donut: { icon: 'pie', name: ['دائري', 'Donut'] }, stat: { icon: 'gauge', name: ['رقم', 'Number'] },
@@ -81,6 +96,7 @@ export async function renderWidgetBody(w, ctx) {
 // ctx: { expanded: Set, rerender(), onLocalChange() }
 export function renderWidgetView(w, res, ctx = {}) {
   const c = { expanded: ctx.expanded || new Set(), rerender: ctx.rerender || (() => {}), local: ctx.onLocalChange || (() => {}), key: w.id };
+  if (['assigned', 'portfolio', 'capacity'].includes(w.type)) portfolioCardsSeen = Date.now();
   switch (w.type) {
     case 'summary': return renderSummary(res.data, c);
     case 'kpi': return renderKpi(w, res.data);
@@ -90,6 +106,9 @@ export function renderWidgetView(w, res, ctx = {}) {
     case 'events': return renderEvents(res.data || [], c);
     case 'alerts': return renderAlerts(res.data || [], c);
     case 'documents': return renderDocuments(res.data || []);
+    case 'assigned': return renderAssigned(w, res.data, c);
+    case 'portfolio': return renderPortfolio(w, res, c);
+    case 'capacity': return renderCapacity(w, res.data, c);
     default: return { body: emptyState({ compact: true, title: L('نوع بطاقة غير مدعوم', 'Unsupported card') }), empty: true };
   }
 }
@@ -100,6 +119,7 @@ export function widgetSkeleton(w) {
   if (w.type === 'kpi') return h('div.dash-skel', busy, h('div.sk.sk-num'), h('div.sk.sk-line.w-60'));
   if (w.type === 'summary') return h('div.dash-skel.sum-skel', busy, h('div.skel-cells', Array.from({ length: 6 }, () => h('div.sk.skel-cell'))), h('div', h('div.sk.sk-line.w-40'), h('div.sk.sk-row'), h('div.sk.sk-row')));
   if (w.type === 'week_progress') return h('div.dash-skel', busy, h('div.sk.sk-num'), h('div.sk.sk-block.skel-chart'));
+  if (w.type === 'portfolio' && w.view !== 'bar') return h('div.dash-skel', busy, h('div.skel-cells.pw-skel', Array.from({ length: 4 }, () => h('div.sk.skel-cell'))), h('div.sk.sk-row'), h('div.sk.sk-row'), h('div.sk.sk-row'));
   if (w.view === 'bar' || w.view === 'donut') return h('div.dash-skel', busy, h('div.sk.sk-block.skel-chart'));
   return skeleton('list', 3);
 }
@@ -145,6 +165,10 @@ const REASON = {
   delayed: { icon: 'calendarClock', tone: 'crit', label: ['مشروع متأخر', 'Delayed project'] },
   missing_progress: { icon: 'gauge', tone: null, label: ['بلا نسبة إنجاز', 'No progress reported'] },
   review: { icon: 'userCheck', tone: 'warn', label: ['بانتظار موافقتك', 'Needs your approval'] },
+  allocation_decision: { icon: 'userCheck', tone: 'warn', label: ['تخصيص بانتظار موافقتك', 'Allocation to approve'] },
+  assigned: { icon: 'send', tone: 'accent', label: ['تكليف جديد', 'New assignment'] },
+  allocation_pending: { icon: 'hourglass', tone: null, label: ['بانتظار اعتماد مديرك', 'Awaiting your manager'] },
+  allocation_new: { icon: 'people', tone: 'accent', label: ['تخصيص جديد لوقتك', 'New allocation'] },
 };
 function renderSummary(d, c) {
   const counts = d?.counts || {};
@@ -159,9 +183,10 @@ function renderSummary(d, c) {
   const list = na.length
     ? h('ul.dash-list', na.slice(0, ex.limit).map((a) => {
       const r = REASON[a.reason] || REASON.missing_progress;
-      const href = a.type === 'project' ? `#/projects/${a.id}` : a.type === 'office_run' ? '#/office' : '#/tasks';
-      return h('li', h('a.dash-row', { href, 'data-key': `na:${a.type}:${a.id}:${a.reason}`, onclick: () => { if (a.type === 'project') state.selectedProjectId = a.id; if (a.type === 'task') state.selectedTaskId = a.id; } },
-        glyph(r.icon, r.tone), h('span.row-main', h('span.row-line', h('span.row-title', a.title), chip(r.tone, L(...r.label)))), chev()));
+      const href = a.type === 'project' ? `#/projects/${a.id}` : a.type === 'office_run' ? '#/office' : a.type === 'allocation' ? `#/projects/${a.project_id}` : a.reason === 'assigned' ? '#/tasks/assigned' : '#/tasks';
+      const by = a.by_ar ? L(`من ${a.by_ar}`, `from ${a.by_en}`) : null;
+      return h('li', h('a.dash-row', { href, 'data-key': `na:${a.type}:${a.id}:${a.reason}`, onclick: () => { if (a.type === 'project') state.selectedProjectId = a.id; if (a.project_id) state.selectedProjectId = a.project_id; if (a.type === 'task') state.selectedTaskId = a.id; } },
+        glyph(r.icon, r.tone), h('span.row-main', h('span.row-line', h('span.row-title', a.title_en ? L(a.title, a.title_en) : a.title), chip(r.tone, L(...r.label))), by ? h('span.row-meta', by) : null), chev()));
     }))
     : h('p.na-clear', icon('circleCheck'), L('لا شيء يحتاج إجراءً منك الآن.', 'Nothing needs your action right now.'));
   const body = h('div.sum',
@@ -367,4 +392,166 @@ function renderDocuments(d) {
   const rows = d.map((x) => h('li', h('button.dash-row', { type: 'button', 'data-key': `doc:${x.id}`, onclick: () => Editor.open(x.id) }, glyph('fileText', 'accent'),
     h('span.row-main', h('span.row-title', x.title), h('span.row-meta', `${L('الإصدار', 'Version')} ${fmtNum(x.current_version)} · ${fmtDate(x.updated_at)}`)), chev())));
   return { body: h('ul.dash-list.doc-list', rows), foot: viewAll('#/documents'), demo: d.some((x) => x.is_demo) };
+}
+
+// ---------------- Assigned to me (tasks + allocations others gave me) ----------------
+function assignedTask(tk, c) {
+  let done = tk.status === 'done';
+  const li = h('li.task-item.as-task');
+  const check = h('button.check', { type: 'button', 'data-key': `acheck:${tk.id}` });
+  const paint = () => {
+    li.classList.toggle('is-done', done); check.classList.toggle('on', done);
+    check.setAttribute('aria-pressed', String(done));
+    check.setAttribute('aria-label', done ? L(`إعادة فتح «${tk.title}»`, `Reopen “${tk.title}”`) : L(`تعليم «${tk.title}» كمنجزة`, `Mark “${tk.title}” as done`));
+    check.replaceChildren(...(done ? [icon('check')] : []));
+  };
+  check.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    const next = done ? 'todo' : 'done';
+    done = next === 'done'; paint(); c.local();
+    const r = await runTool('update_task', { id: tk.id, status: next }, { quiet: true });
+    if (!r || r.status !== 'ok') { done = !done; paint(); return; }
+    tk.status = next;
+    toast(next === 'done' ? L(`أُنجزت «${tk.title}» — أُبلغ ${tk.assigner_ar || 'المكلِّف'}`, `Completed “${tk.title}” — ${tk.assigner_en || 'the assigner'} can see it`) : L(`أُعيد فتح «${tk.title}»`, `Reopened “${tk.title}”`), undoOpts(r));
+  });
+  paint();
+  const since = Date.now() - 3 * 864e5;
+  const isNew = tk.status === 'todo' && tk.assigned_at && parseTs(tk.assigned_at).getTime() >= since;
+  const meta = [tk.assigner_ar ? L(`من ${tk.assigner_ar}`, `from ${tk.assigner_en}`) : null, tk.project_name, tk.due_date ? `${L('الاستحقاق', 'Due')} ${fmtDate(tk.due_date)}` : null].filter(Boolean).join(' · ');
+  const tag = tk.overdue && tk.status !== 'done' ? chip('crit', L('متأخرة', 'Overdue')) : isNew ? chip('accent', L('جديدة', 'New')) : tk.status === 'in_progress' ? chip(null, L('قيد التنفيذ', 'In progress')) : null;
+  li.append(...[check, h('a.row-main.task-link', { href: tk.project_id ? `#/projects/${tk.project_id}` : '#/tasks/assigned', 'data-key': `atask:${tk.id}`, onclick: () => { state.selectedTaskId = tk.id; } },
+    h('span.row-title', tk.project_is_strategic ? h('span.as-strat', { title: L('مشروع استراتيجي', 'Strategic project') }, icon('compass')) : null, tk.title), meta ? h('span.row-meta', meta) : null), tag].filter(Boolean));
+  return li;
+}
+function assignedAlloc(a) {
+  const s = a.status === 'pending_manager';
+  const deciders = (a.deciders || []).map((d) => L(d.name_ar, d.name_en)).join(L('، ', ', '));
+  return h('li', h('a.dash-row.as-alloc', { href: `#/projects/${a.project_id}`, 'data-key': `alloc:${a.id}`, onclick: () => { state.selectedProjectId = a.project_id; } },
+    h('span.as-pct', { 'data-tone': s ? 'warn' : 'good', 'aria-hidden': 'true' }, h('bdi', `${fmtNum(a.percent)}%`)),
+    h('span.row-main',
+      h('span.row-line', h('span.row-title', L(`من وقتك لمشروع «${a.project_name}»`, `of your time on “${a.project_name}”`)), allocChip(a)),
+      h('span.row-meta', [L(`اقترحه ${a.allocated_by_ar}`, `by ${a.allocated_by_en}`), periodText(a.start_date, a.end_date), s && deciders ? L(`لدى ${deciders}`, `with ${deciders}`) : null].filter(Boolean).join(' · '))),
+    chev()));
+}
+function renderAssigned(w, d, c) {
+  const tasks = d?.tasks || []; const allocs = d?.allocations || [];
+  const open = tasks.filter((x) => x.status !== 'done');
+  const demo = tasks.some((x) => x.is_demo) || allocs.some((x) => x.is_demo);
+  if (!open.length && !allocs.length) {
+    return { empty: true, body: emptyState({ compact: true, icon: 'userCheck', title: L('لا تكليفات من الآخرين', 'Nothing assigned to you by others'),
+      body: L('تظهر هنا فوراً المهام وتخصيصات الوقت التي يسندها إليك زملاؤك ومديروك، مع اسم من كلّفك.', 'Tasks and time allocations your colleagues and managers give you appear here the moment they do — with who gave them.') }) };
+  }
+  const k = d.counts || {};
+  const stats = h('div.as-stats',
+    h('span', h('b', fmtNum(open.length)), L(' مهام مفتوحة', ' open tasks')),
+    k.overdue ? h('span', { 'data-tone': 'crit' }, h('b', fmtNum(k.overdue)), L(' متأخرة', ' overdue')) : null,
+    k.pending_allocations ? h('span', { 'data-tone': 'warn' }, h('b', fmtNum(k.pending_allocations)), L(' تخصيص بانتظار الاعتماد', ' allocation pending')) : null,
+    h('span.as-load', L('حملك الآن', 'Your load now'), ' ', h('b', `${fmtNum(k.load_now || 0)}%`)));
+  const ex = expander(c, 'assigned', open.length, 5);
+  const body = h('div.as-body', stats,
+    allocs.length ? h('ul.dash-list.as-allocs', allocs.map(assignedAlloc)) : null,
+    open.length ? h('ul.dash-list.task-list.as-tasks', open.slice(0, ex.limit).map((x) => assignedTask(x, c))) : h('p.na-clear', icon('circleCheck'), L('أنجزت كل ما كُلّفت به.', 'You’ve completed everything you were given.')));
+  return { body, foot: ex.toggle || (open.length ? viewAll('#/tasks/assigned', open.length > 5 ? open.length : null) : null), count: open.length + allocs.filter((a) => a.status === 'pending_manager').length, demo };
+}
+
+// ---------------- Strategic portfolio ----------------
+function renderPortfolio(w, res, c) {
+  const d = res.data || { projects: [], totals: {}, by_department: [] };
+  const list = d.projects || [];
+  const demo = list.some((p) => p.is_demo);
+  if (!list.length) {
+    return { empty: true, body: emptyState({ compact: true, icon: 'compass', title: L('لا مشاريع استراتيجية ضمن نطاقك', 'No strategic projects in your scope'),
+      body: isSpmoUser() ? L('أنشئ مشروعاً استراتيجياً ووزّع مهامه وموارده؛ سيظهر هنا وعلى داشبورد المعنيين فوراً.', 'Create a strategic project and hand out its work; it shows up here and on everyone’s dashboard at once.') : L('تظهر هنا المشاريع الاستراتيجية التي تخص إدارتك.', 'Strategic projects that involve your department appear here.'),
+      actions: isSpmoUser() ? [{ label: L('مشروع استراتيجي جديد', 'New strategic project'), icon: 'plus', tertiary: true, onClick: () => import('./views/projects.js').then((m) => m.newStrategicProject()) }] : [] }) };
+  }
+  const t = d.totals;
+  if (w.view === 'bar') {
+    const series = list.map((p) => ({ label: p.name, value: p.progress, expected: p.status === 'active' ? p.expected_progress : null, missing: p.progress == null, tone: projectTone(p), href: `#/projects/${p.id}` }));
+    return { count: list.length, demo, body: h('div.dash-chart', compareBars(series, { label: L('الإنجاز مقابل المتوقع زمنياً', 'Progress vs time-elapsed expectation') }),
+      h('div.chart-key', h('span', h('i.key-sw', { 'data-tone': 'accent' }), L('ضمن الخطة', 'On plan')), h('span', h('i.key-sw', { 'data-tone': 'warn' }), L('معرّض للتأخر', 'At risk')), h('span', h('i.key-sw', { 'data-tone': 'crit' }), L('متأخر', 'Delayed')), h('span', h('i.key-exp'), L('المتوقع زمنياً', 'Expected')))),
+      foot: viewAll('#/projects?view=portfolio') };
+  }
+  if (w.view === 'table') {
+    return { count: list.length, demo, foot: viewAll('#/projects?view=portfolio'), body: dataTable({
+      rows: list, caption: widgetTitle(w), onRow: (p) => { state.selectedProjectId = p.id; location.hash = `#/projects/${p.id}`; },
+      columns: [
+        { key: 'name', label: L('المشروع', 'Project'), sort: (p) => p.name, render: (p) => h('span.pw-cell-name', h('b', p.name), h('small', L(p.dept_ar, p.dept_en))) },
+        { key: 'progress', label: L('الإنجاز', 'Progress'), num: true, sort: (p) => p.progress ?? -1, render: (p) => (p.progress == null ? chip(null, L('غير مسجّلة', 'n/a')) : pct(p.progress)) },
+        { key: 'expected', label: L('المتوقع', 'Expected'), num: true, sort: (p) => p.expected_progress ?? -1, render: (p) => (p.expected_progress == null ? '—' : pct(p.expected_progress)) },
+        { key: 'fte', label: 'FTE', num: true, sort: (p) => p.fte || 0, render: (p) => fmtNum(p.fte || 0) },
+        { key: 'budget', label: L('الميزانية', 'Budget'), num: true, sort: (p) => p.budget ?? -1, render: (p) => fmtAED(p.budget, { compact: true }) },
+        { key: 'state', label: L('الحالة', 'Status'), sort: (p) => ['delayed', 'at_risk', 'missing', 'on_track'].indexOf(p.state), render: (p) => stateChip(projectState(p)) },
+      ] }) };
+  }
+  const attn = (t.delayed || 0) + (t.at_risk || 0);
+  const cell = (label, value, tone, href) => h(href ? 'a.sum-cell' : 'div.sum-cell', { href: href || null, 'data-tone': tone || null, class: value === 0 || value === '—' ? 'is-zero' : '' }, h('span.sum-v', value), h('span.sum-k', tone ? h('span.dot', { 'aria-hidden': 'true' }) : null, label));
+  const stats = h('div.stats-row.pw-stats',
+    cell(L('مشاريع', 'Projects'), fmtNum(list.length), null, '#/projects?view=portfolio'),
+    cell(L(`متوسط الإنجاز (المتوقع ${t.avg_expected ?? '—'}%)`, `Avg progress (exp. ${t.avg_expected ?? '—'}%)`), t.avg_progress == null ? '—' : pct(t.avg_progress), t.avg_progress != null && t.avg_expected != null && t.avg_progress < t.avg_expected - 5 ? 'warn' : 'accent'),
+    cell(L('تحتاج انتباهاً', 'Need attention'), fmtNum(attn), attn ? (t.delayed ? 'crit' : 'warn') : null),
+    cell(L('الموارد المعتمدة', 'Confirmed people'), fteText(t.fte || 0), t.pending_allocations ? 'warn' : null));
+  const byDept = new Map();
+  for (const p of list) { if (!byDept.has(p.department_id)) byDept.set(p.department_id, { name: L(p.dept_ar, p.dept_en), rows: [] }); byDept.get(p.department_id).rows.push(p); }
+  const ex = expander(c, 'pf', list.length, 6);
+  let shown = 0;
+  const groups = [];
+  for (const g of byDept.values()) {
+    if (shown >= ex.limit) break;
+    const rows = g.rows.slice(0, ex.limit - shown); shown += rows.length;
+    groups.push(h('div.pw-group', h('h3.pw-dept', icon('building', 'sm'), h('span', g.name), h('span.dash-count', fmtNum(g.rows.length))), h('ul.dash-list.pw-list', rows.map(pwRow))));
+  }
+  return { count: list.length, demo, body: h('div.pw', stats, h('div.pw-groups', groups)), foot: ex.toggle ? h('div.foot-actions', ex.toggle, viewAll('#/projects?view=portfolio')) : viewAll('#/projects?view=portfolio') };
+}
+function pwRow(p) {
+  const s = projectState(p);
+  const exp = p.status === 'active' ? p.expected_progress : null;
+  const gap = p.progress != null && exp != null ? p.progress - exp : null;
+  const pending = (p.team || []).filter((m) => m.status === 'pending_manager').length;
+  return h('li', h('a.dash-row.pw-row', { href: `#/projects/${p.id}`, 'data-key': `pw:${p.id}`, onclick: () => { state.selectedProjectId = p.id; } },
+    h('div.row-main',
+      h('div.row-line', h('span.row-title', p.name), s.key !== 'on_track' ? stateChip(s) : null),
+      h('div.row-line.pw-prog', progressBar(p.progress, { tone: projectTone(p), expected: exp }),
+        h('span.pw-pct', p.progress == null ? L('غير مسجّلة', 'n/a') : pctText(p.progress)),
+        gap != null ? h(`span.pw-gap${gap <= -15 ? '.crit' : gap <= -5 ? '.warn' : ''}`, gap >= 0 ? L(`+${fmtNum(gap)}`, `+${gap}`) : L(`−${fmtNum(-gap)}`, `−${-gap}`)) : null),
+      h('div.row-meta', [L(p.owner_name_ar, p.owner_name_en), `${fteText(p.fte || 0)}${pending ? L(` (+${fmtNum(pending)} بانتظار)`, ` (+${pending} pending)`) : ''}`, p.next_milestone ? `${L('المعلم القادم', 'Next')}: ${p.next_milestone.title} · ${fmtDate(p.next_milestone.due_date)}` : null].filter(Boolean).join(' · '))),
+    chev()));
+}
+
+// ---------------- Team capacity ----------------
+async function quickConfirm(a, btn, c) {
+  c.local(); btn.classList.add('is-loading');
+  const r = await runTool('decide_allocation', { id: a.id, decision: 'confirm' }, { quiet: true });
+  btn.classList.remove('is-loading');
+  if (!r) return;
+  toast(L(`اعتُمد تخصيص ${a.percent}% من وقت ${a.person_ar}`, `Confirmed ${a.percent}% of ${a.person_en}’s time`));
+  emit('data-changed', { entity: 'project', id: a.project_id });
+}
+function renderCapacity(w, d, c) {
+  const people = d?.people || [];
+  const pending = d?.pending || [];
+  if (!people.length && !pending.length) {
+    return { empty: true, body: emptyState({ compact: true, icon: 'gauge', title: d?.scope === 'self' ? L('لا تخصيصات على وقتك', 'No allocations on your time') : L('لا بيانات سعة بعد', 'No capacity data yet'), body: L('تظهر هنا نسب وقت الفريق المخصصة للمشاريع الاستراتيجية.', 'The share of your team’s time allocated to strategic projects appears here.') }) };
+  }
+  const s = d.summary;
+  if (w.view === 'bar') {
+    const series = people.filter((p) => p.peak_with_pending > 0).slice(0, 12).map((p) => ({ label: L(p.name_ar, p.name_en), value: p.peak, color: p.over ? 'var(--red)' : p.peak >= 90 ? 'var(--orange)' : 'var(--series-1)' }));
+    return { count: s.over || null, body: h('div.dash-chart', series.length ? barChart(series, { unit: '%', max: Math.max(100, ...series.map((x) => x.value)), label: L('ذروة الحمل خلال 90 يوماً', 'Peak load over 90 days'), orientation: 'horizontal' }) : h('p.chart-note', icon('circleCheck', 'sm'), L('لا تخصيصات معتمدة على الفريق.', 'No confirmed allocations on the team.')),
+      h('div.chart-key', h('span', h('i.key-sw', { 'data-tone': 'accent' }), L('ضمن السعة', 'Within capacity')), h('span', h('i.key-sw', { 'data-tone': 'warn' }), L('90% فأكثر', '90% or more')), h('span', h('i.key-sw', { 'data-tone': 'crit' }), L('فوق 100%', 'Over 100%')))), foot: viewAll('#/projects?view=capacity') };
+  }
+  const head = h('p.cw-sum', L(`${fmtNum(s.people)} موظفاً · متوسط الحمل ${fmtNum(s.avg_load)}%`, `${s.people} people · avg load ${s.avg_load}%`),
+    s.over ? chip('crit', icon('alert'), L(`${fmtNum(s.over)} فوق السعة`, `${s.over} over capacity`)) : chip('good', icon('circleCheck'), L('لا تجاوز للسعة', 'No one over capacity')));
+  const pend = pending.length ? h('section.cw-pending', h('h3.dash-subhead', L('بانتظار اعتمادك', 'Awaiting your decision'), h('span.dash-count', fmtNum(pending.length))),
+    h('ul.dash-list.cw-plist', pending.slice(0, 3).map((a) => {
+      const btn = h('button.btn.sm.primary', { type: 'button', 'data-key': `conf:${a.id}`, onclick: (e) => quickConfirm(a, e.currentTarget, c) }, icon('check'), L('اعتماد', 'Confirm'));
+      return h('li.cw-prow', h('div.row-main', h('span.row-title.wrap', L(`${a.person_ar} — ${a.percent}% لمشروع «${a.project_name}»`, `${a.person_en} — ${a.percent}% on “${a.project_name}”`)),
+        h('span.row-meta', [L(`اقترحه ${a.allocated_by_ar}`, `by ${a.allocated_by_en}`), periodText(a.start_date, a.end_date), a.over ? L(`سيبلغ حمله ${a.load_with}%`, `load would be ${a.load_with}%`) : null].filter(Boolean).join(' · '))),
+        h('div.cw-pact', btn, h('a.btn.sm.ghost', { href: `#/projects/${a.project_id}`, 'data-key': `rev:${a.id}` }, L('مراجعة', 'Review'))));
+    }))) : null;
+  const ex = expander(c, 'cap', people.length, 6);
+  const rows = h('ul.dash-list.cw-list', people.slice(0, ex.limit).map((p) => h('li.cw-row', { 'data-key': `cap:${p.id}`, 'data-over': p.over ? 'yes' : null },
+    avatar(p.name_ar),
+    h('div.row-main', h('div.row-line', h('span.row-title', L(p.name_ar, p.name_en)), p.over ? chip('crit', L('فوق السعة', 'Over')) : p.pending ? chip('warn', icon('hourglass'), `+${fmtNum(p.pending)}%`) : null),
+      loadMeter(p.peak, { pending: Math.max(0, p.peak_with_pending - p.peak) })),
+    h('span.cw-pct', { 'data-tone': p.over ? 'crit' : null }, pct(p.peak)))));
+  return { count: pending.length || null, body: h('div.cw', head, pend, rows), foot: ex.toggle ? h('div.foot-actions', ex.toggle, viewAll('#/projects?view=capacity')) : viewAll('#/projects?view=capacity') };
 }

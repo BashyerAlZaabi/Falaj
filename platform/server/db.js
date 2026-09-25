@@ -275,3 +275,42 @@ CREATE TABLE IF NOT EXISTS access_log (
 );
 CREATE INDEX IF NOT EXISTS ix_access_log_rec ON access_log(system, record_type, record_id);
 `);
+
+// ---------------- strategic portfolio execution (additive, idempotent) ----------------
+// Projects may be designated strategic by the SPMO (strategy.admin): sponsor,
+// budget (AED), a free reference to a strategy initiative, and a progress mode
+// ('manual' keeps the null = "not reported" semantics; 'tasks' derives progress
+// from task completion). People are allocated to projects as a % of their time
+// (pending the person's line manager unless the proposer is that manager).
+ensureColumn('projects', 'is_strategic', 'is_strategic INTEGER NOT NULL DEFAULT 0');
+ensureColumn('projects', 'sponsor_id', 'sponsor_id TEXT');
+ensureColumn('projects', 'budget', 'budget REAL');
+ensureColumn('projects', 'initiative_ref', 'initiative_ref TEXT');
+ensureColumn('projects', 'progress_mode', "progress_mode TEXT NOT NULL DEFAULT 'manual'");
+// Who gave the task to its current assignee (created_by stays the creator).
+ensureColumn('tasks', 'assigned_by', 'assigned_by TEXT');
+ensureColumn('tasks', 'assigned_at', 'assigned_at TEXT');
+db.exec(`
+CREATE TABLE IF NOT EXISTS project_allocations (
+  id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, role_ar TEXT NOT NULL DEFAULT '',
+  percent INTEGER NOT NULL CHECK (percent BETWEEN 5 AND 100), proposed_percent INTEGER,
+  start_date TEXT NOT NULL, end_date TEXT NOT NULL, allocated_by TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending_manager' CHECK (status IN ('pending_manager','active','declined','ended')),
+  decided_by TEXT, decided_at TEXT, note TEXT, decision_note TEXT,
+  is_demo INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_alloc_user ON project_allocations(user_id, status);
+CREATE INDEX IF NOT EXISTS ix_alloc_project ON project_allocations(project_id, status);
+CREATE TABLE IF NOT EXISTS project_milestones (
+  id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+  title TEXT NOT NULL, due_date TEXT NOT NULL, owner_id TEXT REFERENCES users(id), done_at TEXT,
+  created_by TEXT, deleted_at TEXT, is_demo INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_milestones_project ON project_milestones(project_id);
+CREATE TABLE IF NOT EXISTS dashboard_migrations (
+  user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, key TEXT NOT NULL,
+  applied_at TEXT NOT NULL DEFAULT (datetime('now')), PRIMARY KEY (user_id, key)
+);
+CREATE INDEX IF NOT EXISTS idx_projects_strategic ON projects(is_strategic);
+`);

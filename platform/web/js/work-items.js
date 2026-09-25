@@ -124,7 +124,7 @@ export function projectCard(p) {
     h('a.card.interactive.wk-proj', { href: `#/projects/${p.id}`, onclick: () => { state.selectedProjectId = p.id; state.projectName = p.name; } },
       h('div.wk-proj-top',
         h('span.wk-proj-dept', icon('building', 'sm'), h('span.truncate', L(p.dept_ar, p.dept_en) || '—')),
-        showState ? stateChip(s) : null),
+        h('span.wk-proj-chips', p.is_strategic ? strategicChip() : null, showState ? stateChip(s) : null)),
       h('h2.wk-proj-name', p.name),
       h('div.wk-proj-figure',
         p.progress == null
@@ -168,7 +168,16 @@ export function taskRow(tk, { onToggle, hideProject = false, onOpen } = {}) {
   });
   const due = dueInfo(tk);
   const who = L(tk.assignee_ar, tk.assignee_en);
-  const meta = [!hideProject && tk.project_name ? h('span.wk-meta-proj', icon('folder', 'sm'), h('span.truncate', tk.project_name)) : null, who ? h('span.wk-meta-who', who) : null].filter(Boolean);
+  const meId = state.me?.user?.id;
+  const by = tk.assigner_ar ? L(tk.assigner_ar, tk.assigner_en) : null;
+  // «من كلّفني»: work given to me by someone else is marked with who gave it
+  const byMe = by && tk.assignee_id === meId;
+  const meta = [
+    byMe ? h('span.wk-meta-by', { title: L(`كلّفك بها ${by}`, `Assigned to you by ${by}`) }, icon('userCheck', 'sm'), L(`من ${by}`, `From ${by}`)) : null,
+    !hideProject && tk.project_name ? h('span.wk-meta-proj', icon(tk.project_is_strategic ? 'compass' : 'folder', 'sm'), h('span.truncate', tk.project_name)) : null,
+    who && !byMe ? h('span.wk-meta-who', who) : null,
+    by && !byMe ? h('span.wk-meta-assigner', L(`أسندها ${by}`, `by ${by}`)) : null,
+  ].filter(Boolean);
   const urgent = ['urgent', 'high'].includes(tk.priority) && !done;
   const kids = [check,
     h('button.wk-task-main', { type: 'button', 'aria-haspopup': 'dialog', onclick: () => { state.selectedTaskId = tk.id; (onOpen || openTask)(tk); } },
@@ -471,4 +480,81 @@ async function delTask(tk, ctl) {
     toast(L(`حُذفت المهمة ${quote(tk.title)}`, `Deleted ${quote(tk.title)}`));
     emit('data-changed', { entity: 'task', id: tk.id });
   } else toast(res?.error || L('تعذّر الحذف', 'Could not delete'), { kind: 'error' });
+}
+
+// ---------------------------------------------------------------- strategic portfolio helpers
+// Presentation for strategic projects, allocations and capacity (server decides
+// who may see or change what; these helpers never infer permissions).
+export const isSpmoUser = () => !!state.me?.user?.caps?.includes('strategy.admin');
+export const canSeePortfolio = () => isSpmoUser() || (!!state.me?.user && state.me.user.role !== 'employee');
+export const canSeeCapacity = () => isSpmoUser() || ['manager', 'president'].includes(state.me?.user?.role);
+export const strategicChip = (tiny = true) => h(`span.chip.purple.wk-strategic${tiny ? '.tiny' : ''}`, icon('compass'), L('استراتيجي', 'Strategic'));
+
+// AED amounts: full ("2,400,000 درهم") or compact ("2.4 مليون درهم" / "AED 2.4M")
+export function fmtAED(n, { compact = false } = {}) {
+  if (n == null || n === '') return '—';
+  const v = Number(n);
+  if (!compact || Math.abs(v) < 1e5) return L(`${fmtNum(Math.round(v))} درهم`, `AED ${fmtNum(Math.round(v))}`);
+  const loc = getLang() === 'ar' ? 'ar-AE' : 'en-US';
+  const m = v / 1e6;
+  const num = m.toLocaleString(loc, { maximumFractionDigits: m >= 10 ? 0 : 1 });
+  return L(`${num} مليون درهم`, `AED ${num}M`);
+}
+export const fteText = (v) => `${(Number(v) || 0).toLocaleString(getLang() === 'ar' ? 'ar-AE' : 'en-US', { maximumFractionDigits: 2 })} FTE`;
+
+export const ALLOC_STATUS = {
+  pending_manager: { label: ['بانتظار اعتماد المدير', 'Awaiting manager'], tone: 'warn', icon: 'hourglass' },
+  active: { label: ['معتمد', 'Confirmed'], tone: 'good', icon: 'circleCheck' },
+  declined: { label: ['لم يُعتمد', 'Declined'], tone: 'crit', icon: 'circleX' },
+  ended: { label: ['منتهٍ', 'Ended'], tone: '', icon: 'circleDashed' },
+};
+export function allocChip(a, { tiny = true } = {}) {
+  const s = ALLOC_STATUS[a.status] || ALLOC_STATUS.ended;
+  return h(`span.chip${tiny ? '.tiny' : ''}${s.tone ? '.' + s.tone : ''}`, icon(s.icon), L(...s.label));
+}
+export const periodText = (from, to) => (from && to ? L(`${fmtDate(from)} – ${fmtDate(to)}`, `${fmtDate(from)} – ${fmtDate(to)}`) : to ? L(`حتى ${fmtDate(to)}`, `Until ${fmtDate(to)}`) : '—');
+
+// Load meter: active load (solid) + pending (hatched), with a 100% capacity mark.
+// Over 100% turns critical; the scale stretches so the overflow stays visible.
+export function loadMeter(active, { pending = 0, label, lg = false } = {}) {
+  const a = Math.max(0, Number(active) || 0); const pd = Math.max(0, Number(pending) || 0);
+  const total = a + pd;
+  const scale = Math.max(100, total) * (total > 100 ? 1.04 : 1);
+  const tone = a > 100 ? 'crit' : total > 100 ? 'warn' : a >= 90 ? 'full' : '';
+  const pct = (v) => `${Math.min(100, (v / scale) * 100)}%`;
+  const text = `${label || L('الحمل', 'Load')}: ${a}%${pd ? L(` + ${pd}% بانتظار الاعتماد`, ` + ${pd}% pending`) : ''}${total > 100 ? L(' — يتجاوز السعة', ' — over capacity') : ''}`;
+  return h(`div.wk-load${lg ? '.lg' : ''}${tone ? '.' + tone : ''}`, { role: 'img', 'aria-label': text, title: text },
+    h('i.wk-load-fill', { style: { width: pct(a) } }),
+    pd ? h('i.wk-load-pend', { style: { insetInlineStart: pct(a), width: pct(pd) } }) : null,
+    total > 100 ? h('i.wk-load-cap', { style: { insetInlineStart: pct(100) } }) : null);
+}
+
+// People pickers: everyone internal grouped by department (optgroups), or a subset.
+export const staffDirectory = () => cached('directory', '/api/users/directory', 5 * 60e3);
+export const portfolioMeta = () => cached('portfolio-meta', '/api/portfolio/meta', 60e3);
+export function personSelect(people, { value = '', placeholder, first = [], firstLabel } = {}) {
+  const sel = h('select.field');
+  const opt = (u) => h('option', { value: u.id }, L(u.name_ar, u.name_en) + (u.title_ar ? ` — ${L(u.title_ar, u.title_en)}` : ''));
+  if (placeholder) sel.append(h('option', { value: '' }, placeholder));
+  if (first.length) sel.append(h('optgroup', { label: firstLabel || L('مقترحون', 'Suggested') }, first.map(opt)));
+  const groups = new Map();
+  for (const u of people) { if (first.some((f) => f.id === u.id)) continue; const k = L(u.dept_ar, u.dept_en) || '—'; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(u); }
+  for (const [k, list] of groups) sel.append(h('optgroup', { label: k }, list.map(opt)));
+  sel.value = value;
+  return sel;
+}
+
+// Percent control: slider + number (5–100, step 5 on the slider). .value is a number.
+export function percentControl(value = 50, { min = 5, max = 100, label } = {}) {
+  const num = h('input.field.wk-pc-num', { type: 'number', min, max, step: 1, inputmode: 'numeric', value, 'aria-label': label || L('النسبة المئوية', 'Percentage') });
+  const range = h('input.wk-range', { type: 'range', min, max, step: 5, value, 'aria-label': `${label || L('النسبة', 'Percentage')} — ${L('منزلق', 'slider')}` });
+  const wrap = h('div.wk-pc', range, h('div.wk-prog-num', num, h('span.wk-prog-pct', { 'aria-hidden': 'true' }, '%')));
+  const fill = () => range.style.setProperty('--wk-fill', `${((Math.max(min, Math.min(max, Number(num.value) || 0)) - min) / (max - min)) * 100}%`);
+  range.addEventListener('input', () => { num.value = range.value; fill(); wrap.dispatchEvent(new Event('change', { bubbles: true })); });
+  num.addEventListener('input', () => { if (num.value !== '') range.value = num.value; fill(); });
+  num.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+  fill();
+  Object.defineProperty(wrap, 'value', { get: () => Number(num.value), set: (v) => { num.value = v; range.value = v; fill(); } });
+  wrap.valid = () => Number.isInteger(Number(num.value)) && Number(num.value) >= min && Number(num.value) <= max;
+  return wrap;
 }

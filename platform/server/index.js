@@ -146,6 +146,15 @@ app.post('/api/alerts/:id/read', wrap((req, res) => { W.markAlertRead(req.user, 
 app.get('/api/search', wrap((req, res) => res.json(W.search(req.user, req.query.q))));
 app.get('/api/kpis', wrap((req, res) => res.json(W.kpis(req.user))));
 
+// ---------------- strategic portfolio execution (reads; writes go through /api/tools) ----------------
+app.get('/api/portfolio', wrap((req, res) => res.json(W.portfolio(req.user, { department_id: req.query.department_id || undefined, status: req.query.status || undefined }))));
+app.get('/api/portfolio/meta', wrap((req, res) => res.json(W.portfolioMeta(req.user))));
+app.get('/api/assignments', wrap((req, res) => res.json(W.myAssignments(req.user))));
+app.get('/api/allocations', wrap((req, res) => res.json(W.listAllocations(req.user, { project_id: req.query.project_id, user_id: req.query.user_id, scope: req.query.scope, status: req.query.status }))));
+app.get('/api/allocations/:id', wrap((req, res) => res.json(W.getAllocation(req.user, req.params.id))));
+app.get('/api/capacity', wrap((req, res) => res.json(W.personCapacity(req.user, { user_id: req.query.user_id, from: req.query.from, to: req.query.to, percent: req.query.percent, project_id: req.query.project_id, exclude_id: req.query.exclude_id }))));
+app.get('/api/capacity/team', wrap((req, res) => res.json(W.teamCapacity(req.user, { department_id: req.query.department_id || undefined }))));
+
 // Direct UI actions use the same executor as the assistant (validation, policy,
 // confirmation for destructive actions, idempotency, undo log).
 app.post('/api/tools/:name', wrap(async (req, res) => {

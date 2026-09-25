@@ -67,6 +67,7 @@ export async function handleMessage(user, body, emit) {
       if (!res) continue;
       if (r.tool.includes('project') && res.id) newCtx.lastProjectId = res.id;
       if (r.tool === 'create_task' && res.id) { newCtx.lastTaskId = res.id; if (res.project_id) newCtx.lastProjectId = res.project_id; }
+      if (['allocate_resource', 'decide_allocation'].includes(r.tool) && res.project_id) newCtx.lastProjectId = res.project_id;
       if (r.open_document) newCtx.lastDocumentId = r.open_document;
       if (r.tool === 'create_office_agent' || r.tool === 'schedule_office_agent') newCtx.lastOfficeAgentId = res.id;
       if (r.tool === 'run_office_agent') newCtx.lastOfficeAgentId = res.agent_id;
@@ -164,6 +165,7 @@ async function localLoop(user, message, ctx, emit) {
 function entityOf(tool) {
   const sys = toolByName.get(tool)?.system;
   if (sys) return `sys:${sys}`;
+  if (/allocat|milestone|strategic|portfolio|capacity|assignments/.test(tool)) return 'project';
   if (/widget|dashboard/.test(tool)) return 'dashboard';
   if (/project/.test(tool)) return 'project';
   if (/task/.test(tool)) return 'task';
@@ -203,7 +205,8 @@ function renderResult(user, step, r) {
         `• المشاريع ضمن نطاقك: ${c.projects}، المتأخرة منها: ${c.delayed_projects}`,
         `• تنبيهات غير مقروءة: ${c.alerts}`];
       if (s.priorities.length) lines.push(`\n**الأولويات:**\n${s.priorities.map((t) => `– ${t.title} (${P_AR[t.priority]}${t.due_date ? `، ${t.due_date}` : ''})`).join('\n')}`);
-      if (s.needs_action.length) lines.push(`\n**يحتاج إجراءً:**\n${s.needs_action.slice(0, 8).map((a) => `– ${a.title}: ${{ overdue: 'مهمة متأخرة', delayed: 'مشروع متأخر', missing_progress: 'لا توجد نسبة إنجاز مسجلة' }[a.reason]}`).join('\n')}`);
+      const REASON_AR = { overdue: 'مهمة متأخرة', delayed: 'مشروع متأخر', missing_progress: 'لا توجد نسبة إنجاز مسجلة', review: 'بانتظار مراجعتك', allocation_decision: 'طلب تخصيص بانتظار موافقتك', assigned: 'تكليف جديد', allocation_pending: 'تخصيص لوقتك بانتظار اعتماد مديرك', allocation_new: 'تخصيص جديد لوقتك' };
+      if (s.needs_action.length) lines.push(`\n**يحتاج إجراءً:**\n${s.needs_action.slice(0, 8).map((a) => `– ${a.title}: ${REASON_AR[a.reason] || a.reason}${a.by_ar ? ` (من ${a.by_ar})` : ''}`).join('\n')}`);
       lines.push(`\n_المصدر: ${s.source}، ${hhmm(s.generated_at)}_`);
       return lines.join('\n');
     }
@@ -273,7 +276,7 @@ function renderResult(user, step, r) {
 
 function helpText(user) {
   const systems = accessibleSystems(user).filter((s) => (s.tools || []).length).map((s) => s.name_ar);
-  return `أستطيع مساعدتك في:${systems.length ? `\n– الأنظمة المؤسسية المتاحة لك: ${systems.join('، ')} (ضمن صلاحياتك وسياسة البيانات)` : ''}\n– ملخص يومك ومهامك ومواعيدك\n– إنشاء المشاريع والمهام وتحديث التقدم (عندما تحدد القيمة)\n– تخصيص الداشبورد: إضافة بطاقات، تحويل العرض لرسم، الترتيب، الاستعادة\n– إعداد تقارير وخطط ومحاضر وخطابات وتعديلها وتنزيلها Word/PDF\n– البحث والتلخيص وتحليل الملفات المرفوعة\nلا أصل إلى بيانات FS ومرصاد داخل Vault.`;
+  return `أستطيع مساعدتك في:${systems.length ? `\n– الأنظمة المؤسسية المتاحة لك: ${systems.join('، ')} (ضمن صلاحياتك وسياسة البيانات)` : ''}\n– ملخص يومك ومهامك ومواعيدك\n– إنشاء المشاريع والمهام وتحديث التقدم (عندما تحدد القيمة)\n– المحفظة الاستراتيجية: «وضع المحفظة الاستراتيجية»، «ما الذي كُلّفت به؟»، «خصّص سارة 50% لمشروع … حتى …»، «سعة فريقي»\n– تخصيص الداشبورد: إضافة بطاقات، تحويل العرض لرسم، الترتيب، الاستعادة\n– إعداد تقارير وخطط ومحاضر وخطابات وتعديلها وتنزيلها Word/PDF\n– البحث والتلخيص وتحليل الملفات المرفوعة\nلا أصل إلى بيانات FS ومرصاد داخل Vault.`;
 }
 
 function shortTextTemplate(clause, user, notes) {
@@ -298,6 +301,7 @@ async function modelLoop(user, message, conv, ctx, emit) {
 - نفّذ الطلبات عبر الأدوات فقط؛ الخادم يتحقق من الصلاحيات. لا تدّعِ نجاح أي إجراء قبل أن تعيد الأداة status ok.
 - لا تفترض نسب إنجاز أو تواريخ أو قرارات لم يحددها المستخدم؛ اسأل سؤالاً محدداً واحداً عند نقص معلومة ضرورية.
 - ميّز بين تغيير طريقة العرض (update_widget/add_widget) وتعديل بيانات المصدر (update_project/update_task).
+- المحفظة الاستراتيجية: لا تفترض نسب التخصيص أو الموظفين أو التواريخ؛ التخصيص يُقترح (allocate_resource) ويعتمده المدير المباشر للموظف (decide_allocation)، ولا يعتمد أحد تخصيص نفسه.
 - للمستندات الطويلة (تقرير، خطاب، خطة، محضر) استخدم run_skill أو create_document بمحتوى فعلي، وعند التعديل استخدم edit_document على نفس المستند.
 - الحذف والمشاركة وتغيير الصلاحيات تتطلب تأكيد المستخدم (سيعيد الخادم needs_confirmation) — أخبر المستخدم أنها بانتظار تأكيده.
 - لا يمكنك الوصول إلى بيانات FS أو مرصاد داخل Vault؛ وجّه المستخدم لفتحها داخل Vault.

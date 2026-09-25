@@ -138,9 +138,9 @@ export function propose({ value_aed, cash, active_tender, kind }) {
   else if (active_tender) { decision = 'decline_return'; rule = 'tender'; }
   else if (v <= limit) { decision = 'keep'; rule = 'token'; }
   else { decision = kind === 'hospitality' ? 'decline_return' : 'handover'; rule = 'over_limit'; }
-  return { decision, rule, limit, ...explain(rule, decision, v, limit, kind) };
+  return { decision, rule, limit, ...explain(rule, limit, kind) };
 }
-function explain(rule, decision, v, limit, kind) {
+function explain(rule, limit, kind) {
   const hosp = kind === 'hospitality';
   switch (rule) {
     case 'cash': return { reason_ar: 'النقد وبطاقات الهدايا والقسائم لا تُقبل مطلقاً مهما كانت قيمتها.', reason_en: 'Cash, gift cards and vouchers are never accepted, whatever the value.' };

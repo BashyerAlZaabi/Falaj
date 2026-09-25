@@ -260,6 +260,10 @@ function planClause(user, clause, ctx) {
     return [{ tool: 'get_my_achievements', input: {}, label: 'قراءة إنجازاتي', render: 'achievements' }];
   }
 
+  // --- strategic portfolio execution (allocations, portfolio, assignments) ---
+  const portfolioSteps = portfolioIntent(user, clause, n, ctx);
+  if (portfolioSteps) return portfolioSteps;
+
   // --- enterprise systems (each system contributes its own intents) ---
   for (const sys of accessibleSystems(user)) {
     for (const it of sys.intents || []) {
@@ -657,4 +661,98 @@ function officeIntent(user, clause, n, ctx) {
   const nameMatch = extractName(clause, /(?:باسم|اسمه|named|called)\s*[«"“']?(.+?)[»"”']?(?=\s|$)/i);
   const name = nameMatch || O.TEMPLATES[template].name_ar + (config.title ? ` — ${config.title}` : '');
   return [{ tool: 'create_office_agent', input: { name, template, config, schedule }, label: `بناء الوكيل «${name}» (${SCHED_AR(schedule)})`, officeNoSchedule: !sched, officeDefaultTime: sched && !sched.explicitTime }];
+}
+
+
+// ---------------- strategic portfolio intents ----------------
+// «خصّص سارة 50% لمشروع … حتى …» · «وضع المحفظة الاستراتيجية» · «ما الذي كُلّفت به؟»
+// «كلّف أحمد بمهمة … في مشروع … قبل …» (only when a STRATEGIC project is named;
+// otherwise the existing task intents apply) · «وافق على تخصيص أحمد» · «سعة فريقي».
+function staffList() {
+  return all("SELECT u.id,u.name_ar,u.name_en,u.department_id FROM users u JOIN departments d ON d.id=u.department_id WHERE u.active=1 AND u.user_type='staff' AND d.is_external=0");
+}
+// Full name first, then a unique first name ("سارة", "لأحمد", "Sara").
+export function resolvePerson(text, people = staffList()) {
+  const n = norm(text);
+  let hits = people.filter((u) => n.includes(norm(u.name_ar)) || (u.name_en && n.includes(norm(u.name_en))));
+  if (hits.length === 1) return { person: hits[0] };
+  const tokens = new Set();
+  for (const w of n.split(/[\s،,.:؛]+/).filter(Boolean)) { tokens.add(w); tokens.add(w.replace(/^(و|ل|ب|ف)(?=\S{3,})/, '')); }
+  const first = (name) => norm(String(name || '').split(/\s+/)[0]);
+  hits = people.filter((u) => tokens.has(first(u.name_ar)) || tokens.has(first(u.name_en)));
+  if (hits.length === 1) return { person: hits[0] };
+  if (hits.length > 1) return { ambiguous: hits };
+  return {};
+}
+const afterWord = (clause, re) => { const m = String(clause).match(re); return m ? String(clause).slice(m.index + m[0].length) : ''; };
+
+function portfolioIntent(user, clause, n, ctx) {
+  if (user.user_type === 'external') return null;
+  // --- what was I assigned by others? ---
+  if (/(كلفت به|كلفت بها|كلفوني|كلفني|تكليفاتي|تكليفات(ي)? من|المسند(ه)? الي|اسند(ها|وها)? الي|اسندت الي|my assignments|assigned to me|what (have i been|was i|am i) assigned)/.test(n)
+    || (/^(ما|ماذا|ما الذي|ايش|وش|شو)\b/.test(n) && /(كلفت|التكليف)/.test(n))) {
+    return [{ tool: 'my_assignments', input: {}, label: 'قراءة ما كُلّفت به من الآخرين' }];
+  }
+  // --- portfolio status ---
+  if ((/(المحفظه|محفظه|portfolio)/.test(n) && /(استراتيج|strategic|وضع|حاله|ملخص|status|overview|اعرض|كيف|تقرير)/.test(n)) || /(وضع|حاله|ملخص) المشاريع الاستراتيجيه|strategic projects? (status|overview)/.test(n)) {
+    const status = /(متاخر|delayed)/.test(n) ? 'delayed' : /(معرض|خطر|at risk|risk)/.test(n) ? 'at_risk' : undefined;
+    return [{ tool: 'portfolio_overview', input: status ? { status } : {}, label: 'قراءة وضع المحفظة الاستراتيجية' }];
+  }
+  // --- team capacity ---
+  if (/(^|\s)(سعه|حمل|طاقه|اعباء|capacity|workload)(\s|$)/.test(n) && /(فريق|فريقي|الفريق|موظفي|الموظفين|الاداره|team|staff|my people)/.test(n)) {
+    return [{ tool: 'team_capacity', input: {}, label: 'قراءة سعة الفريق' }];
+  }
+  // --- decide on a pending allocation (managers) ---
+  if (/(تخصيص|allocation)/.test(n) && /(وافق|اعتمد|اقبل|approve|confirm|اعتذر|ارفض|decline|reject)/.test(n)) {
+    const decline = /(اعتذر|ارفض|decline|reject)/.test(n);
+    const pending = W.listAllocations(user, { scope: 'decide' });
+    if (!pending.length) return [{ say: 'لا توجد طلبات تخصيص بانتظار قرارك.' }];
+    const who = resolvePerson(clause, pending.map((a) => ({ id: a.user_id, name_ar: a.person_ar, name_en: a.person_en })));
+    const mine = who.person ? pending.filter((a) => a.user_id === who.person.id) : pending.length === 1 ? pending : [];
+    if (mine.length !== 1) return [{ ask: 'أي طلب تخصيص تقصد؟', options: pending.slice(0, 6).map((a) => ({ label: `${a.person_ar} — ${a.percent}% — ${a.project_name}`, value: `${decline ? 'اعتذر عن' : 'اعتمد'} تخصيص ${a.person_ar} لمشروع ${a.project_name}` })) }];
+    const a = mine[0];
+    if (!decline) return [{ tool: 'decide_allocation', input: { id: a.id, decision: 'confirm' }, label: `اعتماد تخصيص ${a.percent}% من وقت ${a.person_ar}` }];
+    const reason = afterWord(clause, /(بسبب|لان|لأن|نظرا ل|because|reason:?|:)\s*/i).trim();
+    if (reason.length < 3) return [{ ask: `ما سبب الاعتذار عن تخصيص ${a.person_ar} لمشروع «${a.project_name}»؟ سيصل السبب إلى ${a.allocated_by_ar}.`, pending: { tool: 'decide_allocation', input: { id: a.id, decision: 'decline' }, missing: 'title', field: 'reason', label: `الاعتذار عن تخصيص ${a.person_ar}` } }];
+    return [{ tool: 'decide_allocation', input: { id: a.id, decision: 'decline', reason }, label: `الاعتذار عن تخصيص ${a.person_ar}` }];
+  }
+  // --- allocate a person's time: «خصّص سارة 50% لمشروع … حتى …» ---
+  if (/(^|\s)(خصص|خصصي|اخصص|نخصص|allocate)\s/.test(n) && !/(بطاقه|widget)/.test(n)) {
+    const pct = parsePercent(clause);
+    const projText = afterWord(clause, /(?:لمشروع|للمشروع|في مشروع|بمشروع|مشروع|to project|project|on)\s*/i);
+    const who = resolvePerson(clause.split(/(?:لمشروع|للمشروع|في مشروع|مشروع|to project|project)/i)[0]);
+    if (who.ambiguous) return [{ ask: 'من تقصد بالتحديد؟', options: who.ambiguous.slice(0, 6).map((u) => ({ label: u.name_ar, value: clause.replace(new RegExp(u.name_ar.split(' ')[0]), u.name_ar) })) }];
+    if (!who.person) return [{ ask: 'من الموظف الذي تريد تخصيص وقته؟ اذكر الاسم، مثال: «خصّص سارة النعيمي 50% لمشروع …».' }];
+    const r = projText ? resolveProject(user, projText.replace(/\s+(?:حتى|الى|إلى|until|till|from|اعتبارا من|ابتداء من)\s.*$/i, ''), ctx) : resolveProject(user, clause, ctx);
+    if (!r.id) return [{ ask: r.ask || 'لأي مشروع استراتيجي؟', options: W.listProjects(user, { strategic: true }).slice(0, 6).map((p) => ({ label: p.name, value: `خصّص ${who.person.name_ar} ${pct ?? 'X'}% لمشروع ${p.name}` })) }];
+    if (pct == null) return [{ ask: `كم نسبة وقت ${who.person.name_ar} المطلوب تخصيصها (من 5 إلى 100%)؟` }];
+    if (pct < 5 || pct > 100) return [{ say: 'نسبة التخصيص يجب أن تكون بين 5% و100%.' }];
+    const input = { project_id: r.id, user_id: who.person.id, percent: pct };
+    const until = afterWord(clause, /(?:حتى|لغايه|لغاية|الى غايه|until|till)\s*/i);
+    const end = until ? parseDate(until) : null; if (end) input.end_date = end;
+    const from = afterWord(clause, /(?:اعتبارا من|اعتباراً من|ابتداء من|ابتداءً من|starting|from)\s*/i);
+    const start = from ? parseDate(from.split(/\s+(?:حتى|until|till)\s/)[0]) : null; if (start) input.start_date = start;
+    const pname = one('SELECT name FROM projects WHERE id=?', r.id)?.name;
+    return [{ tool: 'allocate_resource', input, label: `تخصيص ${pct}% من وقت ${who.person.name_ar} لمشروع «${pname}»` }];
+  }
+  // --- assign a task inside a STRATEGIC project: «كلّف أحمد بمهمة … في مشروع … قبل …» ---
+  if (/(^|\s)(كلف|كلفي|نكلف|اكلف|assign)\s/.test(` ${n}`) && /(مهمه|task)/.test(n) && /(مشروع|project)/.test(n)) {
+    const projText = afterWord(clause, /(?:في مشروع|ضمن مشروع|لمشروع|بمشروع|مشروع|in project|project)\s*/i).replace(/\s+(?:قبل|بحلول|بتاريخ|موعدها|by|before|due)\s.*$/i, '');
+    const r = resolveProject(user, projText, ctx);
+    if (!r.id) return null; // not a project we can resolve: leave it to the task intents
+    const proj = one('SELECT id,name,is_strategic FROM projects WHERE id=?', r.id);
+    if (!proj?.is_strategic) return null; // non-strategic: existing create_task behaviour
+    const head = clause.split(/(?:بمهم(?:ة|ه)|مهم(?:ة|ه)|task)/i)[0];
+    const who = resolvePerson(head);
+    if (who.ambiguous) return [{ ask: 'لمن تريد إسناد المهمة؟', options: who.ambiguous.slice(0, 6).map((u) => ({ label: u.name_ar, value: clause.replace(new RegExp(u.name_ar.split(' ')[0]), u.name_ar) })) }];
+    if (!who.person) return [{ ask: 'لمن تريد إسناد المهمة؟ اذكر اسم الموظف.' }];
+    let title = extractName(clause, /(?:بمهم(?:ة|ه)|مهم(?:ة|ه)|task)\s*(?:بعنوان|اسمها|:)?\s*[«"“']?(.+?)[»"”']?(?=\s+(?:في|ضمن|لمشروع|بمشروع|in|for)\s+(?:مشروع|المشروع|project)|\s+(?:قبل|بحلول|بتاريخ|by|before|due)(?:\s|$)|$)/i);
+    if (!title) return [{ ask: 'ما عنوان المهمة؟', pending: { tool: 'create_task', input: { assignee_id: who.person.id, project_id: proj.id }, missing: 'title', label: 'تكليف بمهمة' } }];
+    const input = { title, assignee_id: who.person.id, project_id: proj.id };
+    const dueText = afterWord(clause, /(?:قبل|بحلول|بتاريخ|موعدها|by|before|due)\s*/i);
+    const due = dueText ? parseDate(dueText) : null; if (due) input.due_date = due;
+    if (/(عاجل|urgent)/.test(n)) input.priority = 'urgent'; else if (/(اولويه عاليه|عالي|high)/.test(n)) input.priority = 'high';
+    return [{ tool: 'create_task', input, label: `تكليف ${who.person.name_ar} بمهمة «${title}» في «${proj.name}»` }];
+  }
+  return null;
 }

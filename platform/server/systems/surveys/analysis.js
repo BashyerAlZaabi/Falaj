@@ -107,7 +107,9 @@ export function computeResults({ questions, sections, responses, answers, depart
 // Strengths / improvement areas from rating questions (overall aggregates only).
 function highlights(qs) {
   const rated = qs.filter((q) => q.type === 'rating' && !q.suppressed).sort((a, b) => b.avg - a.avg);
-  return { strengths: rated.slice(0, 2).map(pick), improve: rated.length > 2 ? rated.slice(-2).reverse().map(pick) : rated.length === 2 ? [pick(rated[1])] : [] };
+  // Never list a question as both a strength and an improvement area.
+  const k = Math.min(2, Math.ceil(rated.length / 2));
+  return { strengths: rated.slice(0, k).map(pick), improve: rated.slice(k).reverse().slice(0, 2).map(pick) };
   function pick(q) { return { id: q.id, text: q.text, avg: q.avg, favourable: q.favourable }; }
 }
 
@@ -164,7 +166,7 @@ const THEMES = [
 ];
 const POSITIVE = ['ممتاز', 'رايع', 'جيد', 'جيده', 'متعاون', 'شكرا', 'افضل', 'تحسن', 'مرضي', 'سهل', 'مفيد', 'متميز', 'excellent', 'great', 'good', 'helpful', 'thank'];
 const NEGATIVE = ['بطء', 'بطيء', 'ضعف', 'ضعيف', 'تاخير', 'يتاخر', 'تاخر', 'صعب', 'صعوبه', 'مشكله', 'مشاكل', 'نقص', 'لا يوجد', 'قليل', 'غير واضح', 'تعقيد', 'معقد', 'سيء', 'ازدحام', 'slow', 'poor', 'delay', 'hard', 'problem', 'lack', 'bad'];
-const STOP = new Set(['في', 'من', 'علي', 'الي', 'عن', 'مع', 'هذا', 'هذه', 'ذلك', 'التي', 'الذي', 'ان', 'او', 'كان', 'لا', 'ما', 'هو', 'هي', 'كل', 'بعض', 'جدا', 'ايضا', 'قد', 'لقد', 'تم', 'عند', 'حتي', 'لكن', 'اكثر', 'اقل', 'نحتاج', 'احيانا', 'يكون', 'لكل', 'غير', 'عبر', 'بين', 'خلال', 'the', 'and', 'for', 'with', 'that', 'this', 'are', 'but', 'more', 'our', 'have', 'need']);
+const STOP = new Set(['في', 'من', 'علي', 'الي', 'عن', 'مع', 'هذا', 'هذه', 'ذلك', 'التي', 'الذي', 'ان', 'او', 'كان', 'لا', 'ما', 'هو', 'هي', 'كل', 'بعض', 'جدا', 'ايضا', 'قد', 'لقد', 'تم', 'عند', 'حتي', 'لكن', 'اكثر', 'اقل', 'نحتاج', 'احيانا', 'يكون', 'لكل', 'غير', 'عبر', 'بين', 'خلال', 'اكبر', 'احسن', 'مثل', 'فقط', 'يجب', 'نقترح', 'اتمني', 'the', 'and', 'for', 'with', 'that', 'this', 'are', 'but', 'more', 'our', 'have', 'need']);
 const stem = (w) => w.replace(/^(وال|بال|فال|كال|لل|ال|و)(?=\S{3,})/, '');
 
 export function themesOf(texts) {
@@ -196,15 +198,19 @@ export function themesOf(texts) {
   return { n, themes: shown, other, keywords, sentiment: { positive: pos, negative: neg, neutral: n - pos - neg } };
 }
 
+// Arabic counted nouns: 1 تعليق · 2 تعليقان · 3–10 تعليقات · 11+ تعليقاً
+export const countAr = (n, [one, two, few, many]) => (n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${n} ${few}` : `${n} ${many}`);
+
 // Deterministic narrative built from the aggregated themes only.
 export function localNarrative(a) {
   if (!a || !a.n) return { ar: '', en: '' };
   const top = a.themes.slice(0, 3);
   const toneAr = { positive: 'غالبها إيجابي', negative: 'غالبها ملاحظات للتحسين', mixed: 'آراء متباينة' };
   const toneEn = { positive: 'mostly positive', negative: 'mostly improvement points', mixed: 'mixed views' };
+  const comments = countAr(a.n, ['تعليق واحد', 'تعليقين', 'تعليقات', 'تعليقاً']);
   const ar = top.length
-    ? `من ${a.n} تعليقاً، تكررت المحاور التالية: ${top.map((t) => `${t.ar} (${t.mentions} إشارات، ${toneAr[t.tone]})`).join('، ')}.`
-    : `من ${a.n} تعليقاً، لم يتكرر محور واحد في أكثر من تعليق؛ الآراء متنوعة.`;
+    ? `من ${comments}، تكررت المحاور التالية: ${top.map((t) => `${t.ar} (${countAr(t.mentions, ['إشارة واحدة', 'إشارتان', 'إشارات', 'إشارة'])}، ${toneAr[t.tone]})`).join('، ')}.`
+    : `من ${comments}، لم يتكرر محور واحد في أكثر من تعليق؛ الآراء متنوعة.`;
   const en = top.length
     ? `Across ${a.n} comments, recurring themes: ${top.map((t) => `${t.en} (${t.mentions} mentions, ${toneEn[t.tone]})`).join('; ')}.`
     : `Across ${a.n} comments no theme recurred in more than one answer; views are diverse.`;

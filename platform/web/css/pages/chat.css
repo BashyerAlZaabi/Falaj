@@ -3,7 +3,12 @@
    confirmations, composer and voice. Owner: chat. Tokens only.
    Glass: the panel itself is Level 3 (shell). Everything inside is Level 2 or
    plain — no backdrop-filter here except the floating "jump to latest" pill.
+   The immersive (full-screen) presentation, the orb, the history rail and the
+   voice mode are styled in pages/assistant.css on top of these rules.
    ========================================================================== */
+
+/* the conversation column (header · thread · composer · starters) next to the rail */
+.chat-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
 
 /* ---------- header: assistant mode chip (button → explainer popover) ---------- */
 .ai-mode { border: 0; cursor: pointer; transition: box-shadow var(--transition-fast), transform var(--dur-fast) var(--ease-spring); }
@@ -34,12 +39,14 @@
 
 /* assistant: no bubble — a luminous glyph and well-set content (Apple Intelligence pattern) */
 .msg.assistant { align-self: stretch; display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: var(--space-3); color: var(--text-primary); }
+/* small brand orbs (navy → gazelle-blood red → sand), the mini version of the assistant orb */
 .ai-glyph, .stage-orb, .w-orb, .xp-orb {
   display: block; flex: none; border-radius: 50%;
   background:
-    radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--white) 72%, transparent), transparent 42%),
-    conic-gradient(from 200deg, var(--series-1), var(--series-3), var(--series-4), var(--series-1));
-  box-shadow: 0 0 14px color-mix(in srgb, var(--series-3) 38%, transparent);
+    radial-gradient(circle at 32% 26%, color-mix(in srgb, var(--white) 70%, transparent), transparent 40%),
+    radial-gradient(circle at 50% 116%, color-mix(in srgb, var(--sand) 95%, transparent), transparent 62%),
+    conic-gradient(from 210deg, var(--brand-navy-2), var(--accent), var(--emph), var(--brand-navy-2));
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--white) 30%, transparent), 0 0 14px color-mix(in srgb, var(--emph) 30%, transparent);
 }
 .ai-glyph { width: 26px; height: 26px; margin-top: 1px; }
 .msg-body { min-width: 0; max-width: 68ch; }
@@ -47,6 +54,10 @@
 
 /* answer typography (renderRich) */
 .md { font: var(--type-callout); line-height: 1.7; color: var(--text-primary); }
+/* progressive reveal of a fresh answer (opacity only; text is in the DOM from the start) */
+.md.revealing .rv { animation: rv-in 420ms var(--ease-out) both; animation-delay: var(--rv, 0ms); }
+.md.revealing .rv-block { animation: rv-in 520ms var(--ease-out) both; animation-delay: var(--rv, 0ms); }
+@keyframes rv-in { from { opacity: 0; } to { opacity: 1; } }
 .md > :first-child { margin-top: 0; }
 .md > :last-child { margin-bottom: 0; }
 .md p { margin: 0 0 var(--space-3); }
@@ -217,7 +228,7 @@
 /* ---------- welcome (the first .msg.assistant) ---------- */
 .msg.assistant.welcome { display: flex; flex-direction: column; gap: var(--space-5); padding-top: var(--space-2); }
 .w-hero { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
-.w-orb { width: 44px; height: 44px; margin-bottom: var(--space-2); box-shadow: 0 0 28px color-mix(in srgb, var(--series-3) 42%, transparent), 0 0 8px color-mix(in srgb, var(--series-1) 30%, transparent); animation: stage-breathe calc(var(--dur-slower) * 10) var(--ease-in-out) infinite; }
+.w-hero .aio-w { --aio-size: 48px; margin-bottom: var(--space-3); }
 .w-title { font: var(--type-title2); color: var(--text-primary); }
 :lang(en) .w-title { letter-spacing: var(--track-title2); }
 .w-sub { margin: 0; font: var(--type-subheadline); color: var(--text-secondary); max-width: 52ch; }
@@ -310,7 +321,8 @@
 .ctx-x:hover { background: var(--fill-1); color: var(--text-primary); }
 .ctx-x .icon { width: 11px; height: 11px; stroke-width: 2.4; }
 
-/* send: dim until there is something to send; spinner while a request runs */
+/* send: dim until there is something to send; spinner while a request runs;
+   a stop square while the answer is being revealed or spoken */
 .send-btn {
   position: relative; width: 34px; height: 34px; border-radius: 50%; border: 0; display: grid; place-items: center; flex: none; cursor: pointer;
   background: var(--accent-fill); color: var(--text-on-accent);
@@ -324,6 +336,22 @@
 .send-btn .icon { width: 18px; height: 18px; stroke-width: 2.4; }
 .send-btn.is-busy .icon { opacity: 0; }
 .send-btn.is-busy::after { content: ""; position: absolute; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--fill-1); border-top-color: var(--accent); animation: spin calc(var(--dur-slower) * 2) linear infinite; }
+.send-btn .stop-glyph { display: none; }
+.send-btn.is-stop .icon:not(.stop-glyph) { display: none; }
+.send-btn.is-stop .stop-glyph { display: block; width: 13px; height: 13px; fill: currentColor; stroke-width: 0; }
+/* empty composer: the voice-conversation button takes the send button's place */
+.voice-mode-btn {
+  position: relative; width: 34px; height: 34px; border-radius: 50%; border: 0; display: none; place-items: center; flex: none; cursor: pointer;
+  background: var(--accent-fill); color: var(--text-on-accent);
+  box-shadow: var(--glass-highlight-soft), 0 2px 10px color-mix(in srgb, var(--accent) 34%, transparent);
+  transition: transform var(--dur-fast) var(--ease-spring), background var(--transition-fast);
+}
+.voice-mode-btn:hover { background: var(--accent-fill-hover); }
+.voice-mode-btn:active { transform: scale(0.9); }
+.voice-mode-btn:focus-visible { box-shadow: var(--focus-ring); }
+.voice-mode-btn .icon { width: 18px; height: 18px; }
+.composer-row.offer-voice .voice-mode-btn { display: grid; }
+.composer-row.offer-voice .send-btn { display: none; }
 
 .composer .icon-btn.mic.rec, .composer .icon-btn.mic.rec:hover { background: var(--red); color: var(--text-on-accent); }
 .composer .icon-btn.mic.rec::after { content: ""; position: absolute; inset: -3px; border-radius: var(--radius-md); border: 2px solid var(--red); animation: pulse-ring calc(var(--dur-slower) * 3) var(--ease-out) infinite; }
@@ -405,7 +433,7 @@
   .context-bar:not(:has(.ctx-chip:not(.here))) { display: none; }
 }
 @media (pointer: coarse) {
-  .send-btn { width: 44px; height: 44px; }
+  .send-btn, .voice-mode-btn { width: 44px; height: 44px; }
   .msg-actions .icon-btn { width: 36px; height: 36px; }
   .suggest { min-height: 60px; }
   .ctx-x { width: 24px; height: 24px; }
