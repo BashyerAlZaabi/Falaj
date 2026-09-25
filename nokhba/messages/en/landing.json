@@ -1,0 +1,475 @@
+{
+  "meta": {
+    "home": "Nokhba — Learn differently. Powered by intelligence.",
+    "homeDescription": "Personalized learning paths, expert content, real-world projects, and an AI tutor that learns how you learn.",
+    "enterprise": "Enterprise training",
+    "enterpriseDescription": "Enrol employees, assign programs, build organisation paths and close skills gaps with evidence.",
+    "about": "About Nokhba",
+    "aboutDescription": "Our mission, how the AI tutor works responsibly, and the team behind the platform.",
+    "privacy": "Privacy policy",
+    "terms": "Terms of service",
+    "verify": "Verify a certificate",
+    "verifyDescription": "Check the authenticity of a Nokhba certificate by its verification code."
+  },
+  "hero": {
+    "eyebrow": "AI-powered learning platform",
+    "titleA": "Learn differently.",
+    "titleB": "Powered by intelligence.",
+    "subtitle": "Personalized learning paths, expert content, real-world projects, and an AI tutor that learns how you learn.",
+    "start": "Start Learning",
+    "explore": "Explore Programs",
+    "trust": {
+      "courses": "{n} expert courses",
+      "paths": "{n} learning paths",
+      "lessons": "{n} lessons",
+      "bilingual": "Arabic and English"
+    },
+    "chat": {
+      "label": "AI Tutor",
+      "context": "Machine Learning Fundamentals · Overfitting, bias and variance",
+      "level": "Simple",
+      "user": "Why does my model score well in training but badly on new data?",
+      "tutor": "That gap is the signature of overfitting: the model memorised the training set instead of learning the underlying pattern.",
+      "bullets": "Compare training and validation error side by side\nAdd regularisation, or gather more varied data\nStop training when validation error stops improving",
+      "followUp": "Want a two-question check before you move on?",
+      "composer": "Ask anything about this lesson…",
+      "disclaimer": "Example conversation. The real tutor answers from your own lessons.",
+      "online": "Grounded in course content"
+    }
+  },
+  "pillars": {
+    "eyebrow": "Why Nokhba",
+    "title": "AI-powered learning, built around you",
+    "description": "Three ideas run through everything on the platform: your path is personal, your tutor adapts, and your work is real.",
+    "items": {
+      "personal": {
+        "title": "Paths shaped to your goal",
+        "body": "Tell us where you are and where you want to be. Nokhba sequences courses, projects and assessments into a plan that fits your weekly hours and adjusts as you progress."
+      },
+      "tutor": {
+        "title": "A tutor that learns how you learn",
+        "body": "Ask anything inside a lesson. The AI tutor answers from approved course content, at the explanation level you choose, and remembers what you found hard."
+      },
+      "real": {
+        "title": "Projects and credentials that hold up",
+        "body": "Every path ends in work reviewed against a professional rubric and a certificate anyone can verify. No multiple-choice-only badges."
+      }
+    }
+  },
+  "paths": {
+    "eyebrow": "Learning paths",
+    "title": "Structured paths to a real role",
+    "description": "Each path moves from foundations to a capstone project, with assessments and a verifiable certificate at the end.",
+    "viewAll": "Explore all programs",
+    "weeks": "{n} weeks",
+    "courses": "{n} courses",
+    "empty": "New learning paths are being prepared. Browse the course catalogue in the meantime."
+  },
+  "how": {
+    "eyebrow": "How learning works",
+    "title": "Four steps, one continuous loop",
+    "description": "The platform keeps closing the loop between what you know, what you practise and what you can prove.",
+    "steps": {
+      "personalize": {
+        "title": "Personalise",
+        "body": "Set your level, goal and weekly hours. Your plan and recommendations are built from them and update as you learn."
+      },
+      "learn": {
+        "title": "Learn with the AI tutor",
+        "body": "Work through lessons with a tutor that explains, quizzes and summarises from the course itself, in Arabic or English."
+      },
+      "build": {
+        "title": "Build projects",
+        "body": "Apply each module in real briefs reviewed against a rubric, with AI feedback first and instructors where it matters."
+      },
+      "earn": {
+        "title": "Earn credentials",
+        "body": "Pass the final assessment and receive a certificate with a public verification code and the skills it evidences."
+      }
+    }
+  },
+  "tutor": {
+    "eyebrow": "AI Tutor",
+    "title": "A tutor that meets you at your level",
+    "description": "Every lesson has a tutor beside it. It knows the lesson, your progress and your preferences, and it never leaves the course material to guess.",
+    "chipsTitle": "Quick actions",
+    "chipsHint": "Tap a quick action to see what it does in a lesson.",
+    "chipDescriptions": {
+      "explain": "Explains the current section using the lesson's own examples and terms.",
+      "simpler": "Restates the idea in plain language with an everyday analogy.",
+      "summarize": "Produces a short revision summary of the lesson with likely exam questions.",
+      "quiz": "Asks you questions one at a time and grades each answer before moving on.",
+      "example": "Gives a worked, real-world example, then asks you to write one from your own field.",
+      "practice": "Sets a short practice task with hints, not answers.",
+      "flashcards": "Turns the lesson into spaced-repetition flashcards saved to your deck.",
+      "remember": "Lists the handful of facts and rules you must not forget from this lesson.",
+      "weak": "Looks at your quiz history and points to the concepts you keep missing."
+    },
+    "levelsTitle": "Explanation levels",
+    "levelsHint": "Choose how deep you want the same idea explained. Here is overfitting at each level.",
+    "concept": "Overfitting",
+    "samples": {
+      "simple": "Imagine memorising last year's exam answers word for word. You would ace that exact paper and fail a new one. A model that memorises its training data has the same problem.",
+      "standard": "Overfitting happens when a model fits noise in the training data rather than the underlying pattern. It shows up as a large gap between training and validation error, and is reduced with regularisation, more data or simpler models.",
+      "technical": "A model with high variance captures sample-specific structure; expected test error decomposes into bias², variance and irreducible noise. Regularisation (L1/L2, dropout, early stopping) trades a small increase in bias for a larger reduction in variance.",
+      "expert": "In the interpolation regime, classical bias–variance intuition breaks down: over-parameterised models can interpolate training data and still generalise (double descent). Practical control still relies on held-out validation, implicit regularisation from the optimiser and calibrated capacity."
+    },
+    "guidedTitle": "Guided Learning Mode",
+    "guidedBody": "Switch it on and the tutor stops handing over answers. It asks questions, gives hints and confirms your reasoning step by step, so what you learn stays learned.",
+    "guidedExample": "Good question. Before I answer, let's think it through together: what do you think this lesson is fundamentally trying to explain?",
+    "groundedTitle": "Grounded in your course",
+    "groundedBody": "Answers are drawn from approved lesson content and your own notes, with the source shown. When something is outside the course, the tutor says so."
+  },
+  "courses": {
+    "eyebrow": "Courses",
+    "title": "Featured courses",
+    "description": "Expert-built, bilingual and practical. Each course ends with an assessment and most offer a certificate.",
+    "viewAll": "Browse all courses",
+    "empty": "Featured courses will appear here as soon as they are published."
+  },
+  "projects": {
+    "eyebrow": "Project-based learning",
+    "title": "Build work that survives a real review",
+    "description": "Projects are briefs, not exercises. Each one is scored against a rubric with clear criteria, so your portfolio shows judgement, not just completion.",
+    "hours": "{n} hours",
+    "rubric": "Rubric-reviewed",
+    "from": "From {course}",
+    "empty": "Projects will appear here as courses are published."
+  },
+  "skills": {
+    "eyebrow": "Skills graph",
+    "title": "See how skills connect",
+    "description": "Every lesson, quiz and project feeds a live skills profile. The graph shows how domains branch into skills and specialisations, and where your evidence is thin.",
+    "legend": {
+      "root": "Domain",
+      "skill": "Skill",
+      "advanced": "Specialisation"
+    },
+    "hint": "Hover or tap a skill to highlight its connections.",
+    "clusters": "Skill clusters",
+    "count": "{n} related skills",
+    "graphLabel": "Skills graph showing how domains branch into related skills"
+  },
+  "enterprise": {
+    "eyebrow": "For organisations",
+    "title": "Upskill teams with evidence, not guesswork",
+    "description": "Enrol employees in minutes, assign programmes by role, build private organisation paths and watch skills gaps close on a live dashboard.",
+    "features": {
+      "enrol": { "title": "Enrol employees", "body": "Invite by email or department and see activity from day one." },
+      "assign": { "title": "Assign programmes", "body": "Courses and paths with due dates, tracked per person and per team." },
+      "paths": { "title": "Organisation paths", "body": "Private learning paths built for your roles, reusing the full catalogue." },
+      "analytics": { "title": "Skills-gap analytics", "body": "Compare each role's requirements with real skill evidence, not self-assessment." }
+    },
+    "cta": "Explore enterprise training",
+    "gapTitle": "Skills gap · Data & Analytics team (illustration)",
+    "gapTarget": "Target",
+    "gapRows": {
+      "python": "Python",
+      "analysis": "Data Analysis",
+      "visualization": "Data Visualization",
+      "statistics": "Statistics"
+    }
+  },
+  "certificates": {
+    "eyebrow": "Credentials",
+    "title": "Certificates anyone can verify",
+    "description": "Each certificate carries a unique code and a QR link. Employers can check the learner, the credential and the skills it evidences in seconds, without an account.",
+    "preview": {
+      "title": "Certificate of completion",
+      "awardedTo": "Awarded to",
+      "name": "Learner name",
+      "for": "for completing",
+      "course": "Course title",
+      "issued": "Issued",
+      "code": "Verification code",
+      "skills": "Skills evidenced"
+    },
+    "verifyTitle": "Verify a certificate",
+    "verifyHint": "Enter the code printed on the certificate, for example NKB-2026-DEMO01."
+  },
+  "testimonials": {
+    "eyebrow": "Example learner stories",
+    "title": "What learning here can feel like",
+    "disclaimer": "These are illustrative quotes with fictional names, written to show how learners use the platform. They are not real reviews.",
+    "items": {
+      "one": {
+        "quote": "I set my level to simple for the first two weeks, then moved to technical. Same lesson, same tutor, and it never once talked down to me.",
+        "name": "Reem K.",
+        "role": "Fictional learner · policy analyst"
+      },
+      "two": {
+        "quote": "The project rubric told me exactly why my first draft would not pass. The second draft did, and I still use that structure at work.",
+        "name": "Omar T.",
+        "role": "Fictional learner · data analyst"
+      },
+      "three": {
+        "quote": "Our managers finally see skills gaps by role instead of course completions. It changed what we assign and to whom.",
+        "name": "Hessa A.",
+        "role": "Fictional learning lead · public sector"
+      }
+    }
+  },
+  "cta": {
+    "title": "Start learning differently today.",
+    "body": "Create a free account, set your goal, and let the plan and the tutor take it from there.",
+    "start": "Start Learning",
+    "explore": "Explore Programs"
+  },
+  "enterprisePage": {
+    "hero": {
+      "eyebrow": "Enterprise training",
+      "title": "Learning your organisation can measure",
+      "description": "Nokhba gives learning and talent teams one place to enrol people, assign programmes, build private paths and see skills evidence by role — in Arabic and English.",
+      "cta": "Talk to us",
+      "secondary": "See learning paths"
+    },
+    "values": {
+      "enrol": { "title": "Enrol employees", "body": "Add people by email or department. Members sign in with their organisation account and see only the programmes assigned to them, alongside the open catalogue if you allow it." },
+      "assign": { "title": "Assign programmes", "body": "Assign a course or a full learning path with a due date. Progress, time on task and assessment results roll up to the person, the department and the organisation." },
+      "paths": { "title": "Organisation paths", "body": "Compose private learning paths for your roles from the catalogue, with your own ordering, required stages and capstone projects." },
+      "analytics": { "title": "Skills-gap analytics", "body": "Define role skill profiles with target levels. The dashboard compares them with each person's real evidence from lessons, quizzes and projects, and recommends what to assign next." }
+    },
+    "how": {
+      "title": "How it works",
+      "steps": {
+        "one": { "title": "Set up your organisation", "body": "Create departments, invite managers and add role skill profiles." },
+        "two": { "title": "Assign learning", "body": "Pick programmes or build paths; set due dates and required stages." },
+        "three": { "title": "Track and adjust", "body": "Follow completion, hours and skill growth; reassign where gaps remain." }
+      }
+    },
+    "stats": {
+      "title": "The catalogue behind it",
+      "courses": "Published courses",
+      "paths": "Learning paths",
+      "skills": "Skills tracked",
+      "lessons": "Lessons"
+    },
+    "form": {
+      "title": "Request a conversation",
+      "description": "Tell us about your team and we will come back with a walkthrough and pricing.",
+      "company": "Organisation",
+      "companyPlaceholder": "Organisation name",
+      "name": "Your name",
+      "namePlaceholder": "Optional",
+      "email": "Work email",
+      "emailPlaceholder": "you@organisation.com",
+      "size": "Team size",
+      "sizePlaceholder": "Select a range",
+      "sizes": { "s1": "1 – 50 people", "s2": "51 – 200 people", "s3": "201 – 1,000 people", "s4": "More than 1,000 people" },
+      "message": "What are you trying to achieve?",
+      "messagePlaceholder": "Roles, skills, timelines, anything that helps us prepare.",
+      "submit": "Send request",
+      "sending": "Sending…",
+      "privacy": "We only use these details to respond to your request. See our privacy policy.",
+      "success": {
+        "title": "Thank you, we have your request.",
+        "body": "A member of the team will reply to {email} within two working days.",
+        "again": "Send another request"
+      },
+      "errors": {
+        "required": "This field is required",
+        "email": "Enter a valid email address",
+        "tooShort": "Please add a little more detail",
+        "tooLong": "That is a bit too long",
+        "size": "Choose a team size",
+        "rateLimited": "Too many requests from this network. Please try again later.",
+        "generic": "We could not send your request. Please try again.",
+        "toast": "Please check the highlighted fields."
+      }
+    }
+  },
+  "about": {
+    "hero": {
+      "eyebrow": "About Nokhba",
+      "title": "Learning that respects how people actually learn",
+      "description": "Nokhba (نخبة) is an AI-powered learning platform for the region: bilingual, practical, and built so that every learner gets a tutor, a plan and credentials that mean something."
+    },
+    "mission": {
+      "title": "Our mission",
+      "body": "Expert learning has always been rationed by access to good teachers. We are building a platform where a patient, knowledgeable tutor sits beside every lesson, where the path adapts to the person rather than the other way round, and where what you can prove at the end is real work, not a certificate of attendance.\nWe work in Arabic and English as equals. Every course, assessment, project and AI conversation is available in both."
+    },
+    "principles": {
+      "title": "How the AI tutor works, responsibly",
+      "description": "The tutor is powerful because it is constrained. These are the rules it runs under.",
+      "items": {
+        "grounded": { "title": "Grounded in approved content", "body": "Answers are built from the lesson you are in, retrieved passages from approved course material and your own notes. The tutor does not improvise a curriculum." },
+        "levels": { "title": "You choose the depth", "body": "Simple, standard, technical or expert: the same idea explained at the level you ask for, and the level is remembered." },
+        "guided": { "title": "Guided mode teaches, it does not tell", "body": "When guided mode is on, the tutor asks and hints instead of answering, so assessments still measure what you know." },
+        "human": { "title": "People stay in the loop", "body": "AI gives first feedback on projects; instructors review what matters and can override any score. Certificates are issued on assessed evidence." },
+        "privacy": { "title": "Your data stays yours", "body": "Conversations are stored so you can continue them, not to train models. You can delete them at any time." },
+        "transparency": { "title": "Honest about limits", "body": "Every AI response carries a reminder that it can be wrong. Sources are shown, and out-of-scope questions are declined rather than guessed." }
+      },
+      "link": "Take the Responsible AI & Governance course",
+      "linkFallback": "Browse courses on responsible AI"
+    },
+    "team": {
+      "title": "The team, by role",
+      "description": "Nokhba is built by a small team working across learning design, engineering and trust. We describe the roles rather than individuals.",
+      "roles": {
+        "design": { "title": "Learning design", "body": "Turn expertise into modules, knowledge checks, projects and rubrics that hold up." },
+        "ai": { "title": "AI engineering", "body": "Own the tutor, retrieval, memory and the guardrails that keep it grounded." },
+        "instructors": { "title": "Instructors", "body": "Practitioners who author courses, answer questions and review capstone work." },
+        "trust": { "title": "Data and trust", "body": "Privacy, security, audit logs and the policies that govern AI use." },
+        "success": { "title": "Learner success", "body": "Support learners and organisations from onboarding to certification." }
+      }
+    },
+    "region": {
+      "title": "Built for the region",
+      "body": "Arabic is a first-class language on Nokhba, not a translation layer. Interfaces, content, assessments and the tutor all work right to left, with numerals and dates formatted the way readers expect."
+    }
+  },
+  "privacy": {
+    "title": "Privacy policy",
+    "updated": "Last updated: September 2026",
+    "intro": "This policy explains what Nokhba collects, why, how long it is kept and the choices you have. It applies to the website, the learning platform and the AI features inside it.",
+    "toc": "On this page",
+    "sections": {
+      "collect": {
+        "title": "What we collect",
+        "body": "Account details: name, email address, a hashed password, language and time zone.\nProfile and preferences: current level, learning goal, weekly hours, preferred learning style and explanation level.\nLearning activity: lessons viewed, progress, time on task, quiz and assessment attempts, project submissions, notes, bookmarks and flashcards.\nAI conversations: the messages you send to the tutor and companion, and the responses.\nOrganisation data: when an employer enrols you, your department, job title, assigned programmes and progress on them.\nTechnical data: device and browser type, approximate location derived from your IP address, and the cookies described below."
+      },
+      "use": {
+        "title": "How we use it",
+        "body": "To deliver the platform: sign-in, lessons, assessments, certificates and notifications.\nTo personalise learning: recommendations, daily plans and tutor behaviour are built from your profile and activity.\nTo report to organisations: if your employer enrolled you, managers see your assigned programmes, progress and skill evidence.\nTo keep the service safe: rate limiting, abuse detection and audit logs of privileged actions.\nTo improve the product: aggregated analytics that do not identify you.\nTo communicate: transactional emails such as password resets and certificate notifications. Marketing messages are sent only with your consent."
+      },
+      "ai": {
+        "title": "AI processing",
+        "body": "When you use the AI tutor, companion, code help or generation tools, your message is combined with the current lesson, relevant passages from approved course content, your profile and recent progress, and sent to a language model through our AI gateway.\nDepending on configuration, the model may be operated by Nokhba or by a third-party provider under a data-processing agreement. Providers are not permitted to use your content to train their models.\nConversations are stored so you can continue them and so the tutor can remember what you found difficult. You can delete any conversation from the platform.\nAI output is generated automatically and can be wrong. Graded work that affects certificates is assessed against defined rubrics, and instructors can review and override AI feedback."
+      },
+      "sharing": {
+        "title": "Who we share data with",
+        "body": "Instructors: aggregated class activity plus the questions and submissions you send them.\nOrganisation managers: for members enrolled by an organisation, assigned programmes, progress, hours and skill evidence.\nService providers: hosting, email delivery and AI model providers, each bound by contract to process data only on our instructions.\nAuthorities: when required by law, or to protect the rights and safety of learners and the platform.\nWe do not sell personal data."
+      },
+      "retention": {
+        "title": "Retention",
+        "body": "Account and profile data: for the life of your account and up to 30 days after deletion.\nLearning records tied to certificates: retained so the certificate remains verifiable, in a form that identifies only the learner name printed on it.\nAI conversations: 12 months from the last message, or earlier if you delete them.\nAnalytics events: pseudonymised after 24 months.\nBackups: rotated within 30 days."
+      },
+      "security": {
+        "title": "Security",
+        "body": "Data is encrypted in transit. Passwords are stored only as salted hashes. Access is governed by role-based permissions, privileged actions are written to an audit log, and requests are rate-limited. No system is perfectly secure; if we learn of a breach affecting you, we will tell you without undue delay."
+      },
+      "cookies": {
+        "title": "Cookies",
+        "body": "We use only essential cookies: your session, your language, your theme and a flag that speeds up organisation-manager routing. We do not use third-party advertising trackers."
+      },
+      "rights": {
+        "title": "Your rights and choices",
+        "body": "You can access and update your profile at any time, export your notes and progress, delete AI conversations, and delete your account from settings. Depending on where you live you may also have rights to object to or restrict processing. Contact us using the address below to exercise them; we respond within 30 days."
+      },
+      "children": {
+        "title": "Children",
+        "body": "Nokhba is designed for learners aged 16 and above, or younger learners enrolled by a school or organisation that has obtained appropriate consent."
+      },
+      "changes": {
+        "title": "Changes to this policy",
+        "body": "We will post updates here and, for material changes, notify you in the platform or by email before they take effect."
+      },
+      "contact": {
+        "title": "Contact",
+        "body": "Questions about privacy can be sent to support@nokhba.example."
+      }
+    }
+  },
+  "terms": {
+    "title": "Terms of service",
+    "updated": "Last updated: September 2026",
+    "intro": "These terms govern your use of Nokhba's website, learning platform and AI features. By creating an account or using the service you agree to them.",
+    "toc": "On this page",
+    "sections": {
+      "accounts": {
+        "title": "Accounts",
+        "body": "You must provide accurate information and keep your credentials secure. You are responsible for activity under your account. Accounts created by an organisation for its members are administered by that organisation."
+      },
+      "licence": {
+        "title": "Using the content",
+        "body": "Courses, lessons, assessments, projects and rubrics are licensed to you for personal learning, or for your organisation's internal training. You may not copy, redistribute, sell or scrape content, or use it to train machine-learning models."
+      },
+      "yourContent": {
+        "title": "Your content",
+        "body": "You own the notes, submissions and messages you create. You grant Nokhba a licence to store, process and display them to deliver the service, including to instructors and, where applicable, to your organisation's managers."
+      },
+      "ai": {
+        "title": "AI features",
+        "body": "The tutor, companion and generation tools produce content automatically. It can be inaccurate or incomplete and is not professional, legal, medical or financial advice. You must not attempt to make the AI ignore its instructions, reveal system prompts or produce harmful content. AI feedback on graded work may be reviewed and overridden by instructors."
+      },
+      "conduct": {
+        "title": "Acceptable use",
+        "body": "Do not cheat on assessments, submit work that is not your own, share answer keys, harass others, or interfere with the platform's security or availability. We may suspend accounts that breach these rules."
+      },
+      "certificates": {
+        "title": "Certificates",
+        "body": "Certificates are issued when you meet the completion and assessment requirements of a course or path. Each carries a public verification code. We may revoke a certificate if it was obtained through misconduct, and the verification page will show it as revoked."
+      },
+      "organisations": {
+        "title": "Organisations",
+        "body": "An organisation that enrols members is responsible for having the right to do so and for how it uses progress and skills data. Organisation managers can see members' assigned programmes, progress, hours and skill evidence, but not the content of private AI conversations or personal notes."
+      },
+      "ip": {
+        "title": "Intellectual property",
+        "body": "Nokhba, its name, mark, software and content are protected by intellectual-property laws. Nothing in these terms transfers ownership to you."
+      },
+      "availability": {
+        "title": "Availability and changes",
+        "body": "We may change, suspend or retire features and content. We aim for high availability but do not guarantee uninterrupted service."
+      },
+      "liability": {
+        "title": "Disclaimers and liability",
+        "body": "The service is provided as is. To the extent permitted by law, Nokhba is not liable for indirect or consequential losses, and our total liability for any claim is limited to the fees you paid in the twelve months before the claim."
+      },
+      "termination": {
+        "title": "Termination",
+        "body": "You can close your account at any time from settings. We may suspend or terminate accounts for breach of these terms. Sections that by their nature should survive, such as licences to your content already used in certificates and limitations of liability, continue to apply."
+      },
+      "law": {
+        "title": "Governing law",
+        "body": "These terms are governed by the laws of the United Arab Emirates. Disputes are subject to the courts of Abu Dhabi unless mandatory local law provides otherwise."
+      },
+      "contact": {
+        "title": "Contact",
+        "body": "Questions about these terms can be sent to support@nokhba.example."
+      }
+    }
+  },
+  "verify": {
+    "eyebrow": "Certificate verification",
+    "title": "Verify a certificate",
+    "description": "Enter the verification code printed on a Nokhba certificate to confirm who earned it, for what, and when.",
+    "label": "Certificate code",
+    "placeholder": "NKB-2026-XXXXXX",
+    "button": "Verify",
+    "invalid": "Enter a code like NKB-2026-XXXXXX",
+    "where": {
+      "title": "Where is the code?",
+      "body": "The code is printed at the bottom of every Nokhba certificate and encoded in its QR code. Scanning the QR opens this page with the code filled in."
+    },
+    "result": {
+      "eyebrow": "Verification result",
+      "valid": "Valid certificate",
+      "revoked": "Revoked",
+      "expired": "Expired",
+      "validNote": "This certificate was issued by Nokhba and is currently valid.",
+      "revokedNote": "This certificate has been revoked and should not be relied upon.",
+      "expiredNote": "This certificate has expired.",
+      "issuedTo": "Issued to",
+      "credential": "Credential",
+      "issuedOn": "Issued on",
+      "expiresOn": "Expires on",
+      "code": "Verification code",
+      "skills": "Skills evidenced",
+      "noSkills": "No skills were recorded for this credential.",
+      "hours": "{n} learning hours",
+      "score": "Final score {n}%",
+      "course": "View the course",
+      "path": "View the learning path",
+      "qr": "QR code linking to this verification page",
+      "qrHint": "Scan to open this verification page",
+      "checked": "Checked against Nokhba records on {date}",
+      "another": "Verify another certificate"
+    },
+    "notFound": {
+      "title": "No certificate found",
+      "body": "We could not find a certificate with the code {code}. Check for typos and try again.",
+      "hint": "Codes look like NKB-2026-XXXXXX. Letters are not case-sensitive."
+    }
+  }
+}
