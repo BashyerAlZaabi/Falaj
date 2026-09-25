@@ -1,0 +1,6 @@
+/* My Apps, Smart Uploader, Platform admin. Owner: admin pages. */
+.apps-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--space-4); }
+.app-tile { display: flex; flex-direction: column; gap: var(--space-2); text-decoration: none; color: inherit; }
+.app-tile .ic { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; background: var(--accent-tint); color: var(--accent); }
+.app-tile.vault .ic { background: var(--amber-vault-tint); color: var(--amber-vault); }
+.app-tile.off { opacity: 0.7; }

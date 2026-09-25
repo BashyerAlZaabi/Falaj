@@ -21,7 +21,7 @@ export async function renderDocuments(root) {
     : h('div.empty', L('لا مستندات بعد. اطلب من المساعد إعداد تقرير أو خطة أو محضر.', 'No documents yet. Ask the assistant for a report, plan or minutes.'))));
 }
 
-async function newDoc() {
+export async function newDoc() {
   const title = h('input.field'); const kind = h('select.field', Object.entries(KINDS).map(([k, v]) => h('option', { value: k }, L(...v))));
   const ok = await modal(L('مستند جديد', 'New document'), h('div', h('label.lbl', L('العنوان', 'Title')), title, h('label.lbl', L('النوع', 'Type')), kind), [{ label: t('cancel'), value: false }, { label: L('إنشاء', 'Create'), value: true, primary: true }]);
   if (!ok) return;

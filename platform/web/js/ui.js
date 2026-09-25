@@ -1,4 +1,8 @@
-import { t } from './i18n.js';
+// UI primitives shared by every screen (GlassModal, GlassPopover, GlassTable,
+// skeletons, empty states, segmented control, toasts). Styling lives in
+// css/components.css; these functions only build accessible DOM.
+import { t, L } from './i18n.js';
+import { ICONS } from './icons-data.js';
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 export const $ = (s, r = document) => r.querySelector(s);
@@ -6,7 +10,7 @@ export const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
 // Minimal element builder: h('div.card#x', {onclick}, children…)
 export function h(tag, attrs = {}, ...children) {
-  const m = tag.match(/^([a-z0-9]+)?((?:[.#][\w-]+)*)$/i);
+  const m = String(tag).replace(/\.{2,}/g, '.').replace(/\.(?=#)|[.#]$/g, '').match(/^([a-z0-9]+)?((?:[.#][\w-]+)*)$/i) || [null, 'div', ''];
   const el = document.createElement(m[1] || 'div');
   for (const p of (m[2] || '').match(/[.#][\w-]+/g) || []) p[0] === '.' ? el.classList.add(p.slice(1)) : (el.id = p.slice(1));
   if (attrs && (typeof attrs !== 'object' || attrs instanceof Node || Array.isArray(attrs))) { children.unshift(attrs); attrs = {}; }
@@ -22,84 +26,190 @@ export function h(tag, attrs = {}, ...children) {
   return el;
 }
 
-const P = {
-  home: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
-  gauge: 'M12 14l4-4M3.5 17a9 9 0 1 1 17 0',
-  folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z',
-  check: 'M4 12l5 5L20 6',
-  doc: 'M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6',
-  grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
-  upload: 'M12 16V4M7 9l5-5 5 5M4 20h16',
-  vault: 'M5 4h14v16H5zM12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM12 14v2M16 8h1M16 16h1',
-  settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z',
-  people: 'M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM22 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8',
-  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3',
-  send: 'M5 12h14M13 6l6 6-6 6',
-  mic: 'M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3zM5 11a7 7 0 0 0 14 0M12 18v3',
-  mute: 'M11 5L6 9H3v6h3l5 4zM22 9l-6 6M16 9l6 6',
-  speaker: 'M11 5L6 9H3v6h3l5 4zM15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13',
-  clip: 'M21 11l-8.5 8.5a5 5 0 0 1-7-7L14 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7',
-  plus: 'M12 5v14M5 12h14',
-  x: 'M6 6l12 12M18 6L6 18',
-  expand: 'M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7',
-  shrink: 'M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7',
-  chevron: 'M9 18l6-6-6-6',
-  chevronL: 'M15 18l-6-6 6-6',
-  history: 'M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 3',
-  logout: 'M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9',
-  sun: 'M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10zM12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4',
-  moon: 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
-  menu: 'M3 6h18M3 12h18M3 18h18',
-  chat: 'M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z',
-  bar: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
-  pie: 'M21 12A9 9 0 1 1 12 3v9z',
-  table: 'M3 5h18v14H3zM3 10h18M3 15h18M9 5v14',
-  list: 'M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01',
-  trash: 'M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14',
-  drag: 'M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01',
-  bold: 'M6 4h8a4 4 0 0 1 0 8H6zM6 12h9a4 4 0 0 1 0 8H6z',
-  italic: 'M19 4h-9M14 20H5M15 4L9 20',
-  h: 'M6 4v16M18 4v16M6 12h12',
-  ul: 'M9 6h11M9 12h11M9 18h11M5 6h.01M5 12h.01M5 18h.01',
-  eye: 'M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
-  download: 'M12 4v12M7 11l5 5 5-5M4 20h16',
-  copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
-  alert: 'M12 9v4M12 17h.01M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z',
-  calendar: 'M3 5h18v16H3zM16 3v4M8 3v4M3 10h18',
-  spark: 'M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2z',
-  undo: 'M9 14L4 9l5-5M4 9h11a5 5 0 0 1 0 10h-1',
-  lock: 'M5 11h14v10H5zM8 11V7a4 4 0 0 1 8 0v4',
-  ext: 'M14 3h7v7M10 14L21 3M19 14v7H3V5h7',
-  refresh: 'M21 12a9 9 0 1 1-2.6-6.4L21 8M21 3v5h-5',
-  info: 'M12 16v-4M12 8h.01M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z',
-};
+// ---------- Icons (Lucide) ----------
+const SVG = 'http://www.w3.org/2000/svg';
 export function icon(name, cls = '') {
-  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const s = document.createElementNS(SVG, 'svg');
   s.setAttribute('viewBox', '0 0 24 24'); s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor');
-  s.setAttribute('stroke-width', '1.8'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
-  s.setAttribute('class', `icon ${cls}`); s.setAttribute('aria-hidden', 'true');
-  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path'); p.setAttribute('d', P[name] || P.info); s.append(p);
+  s.setAttribute('stroke-width', '1.75'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
+  s.setAttribute('class', `icon ${cls}`.trim()); s.setAttribute('aria-hidden', 'true'); s.setAttribute('focusable', 'false');
+  for (const [tag, attrs] of ICONS[name] || ICONS.info) {
+    const n = document.createElementNS(SVG, tag);
+    for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+    s.append(n);
+  }
   return s;
 }
 
+// ---------- Toasts ----------
 export function toast(msg, { action, onAction, timeout = 5000, kind } = {}) {
-  const el = h('div.toast', { role: 'status' }, kind ? icon(kind === 'error' ? 'alert' : 'check') : null, h('span', msg));
-  if (action) el.append(h('button.btn.sm', { onclick: () => { onAction(); el.remove(); } }, action));
-  $('#toast').append(el);
-  setTimeout(() => el.remove(), timeout);
+  const k = kind === 'error' ? 'error' : kind === 'info' ? 'info' : 'success';
+  const el = h(`div.toast.${k}`, { role: k === 'error' ? 'alert' : 'status' }, icon(k === 'error' ? 'circleAlert' : k === 'info' ? 'info' : 'circleCheck'), h('span.grow', msg));
+  const close = () => { el.classList.add('leaving'); setTimeout(() => el.remove(), 220); };
+  if (action) el.append(h('button.btn.sm.tertiary', { onclick: () => { onAction(); close(); } }, action));
+  $('#toast')?.append(el);
+  setTimeout(close, timeout);
+  return close;
 }
 
-export function modal(title, body, actions = []) {
+// ---------- Focus management ----------
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+function trapFocus(container, e) {
+  if (e.key !== 'Tab') return;
+  const f = $$(FOCUSABLE, container).filter((x) => x.offsetParent !== null);
+  if (!f.length) return;
+  const first = f[0]; const last = f[f.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
+// ---------- Modal / bottom sheet (GlassModal) ----------
+let modalSeq = 0;
+export function modal(title, body, actions = [], { wide = false, dismissible = true } = {}) {
   return new Promise((resolve) => {
-    const close = (v) => { wrap.remove(); resolve(v); };
-    const wrap = h('div.modal-wrap', { onclick: (e) => e.target === wrap && close(null), role: 'dialog', 'aria-modal': 'true' },
-      h('div.modal.glass', h('h3', title), body, h('div.actions', actions.map((a) => h(`button.btn${a.primary ? '.primary' : ''}${a.danger ? '.danger' : ''}`, { onclick: () => close(a.value) }, a.label)))));
+    const prevFocus = document.activeElement;
+    const id = `mdl-${++modalSeq}`;
+    let done = false;
+    const close = (v) => {
+      if (done) return; done = true;
+      wrap.classList.add('leaving');
+      document.removeEventListener('keydown', onKey, true);
+      setTimeout(() => { wrap.remove(); prevFocus?.focus?.(); }, 200);
+      resolve(v);
+    };
+    const onKey = (e) => { if (e.key === 'Escape' && dismissible) { e.stopPropagation(); close(null); } else trapFocus(dlg, e); };
+    const dlg = h(`div.modal.glass-4${wide ? '.wide' : ''}`, { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': id },
+      h('div.sheet-grabber', { 'aria-hidden': 'true' }),
+      h('h3', { id }, title),
+      dismissible ? h('button.icon-btn.modal-close', { type: 'button', 'aria-label': t('close'), onclick: () => close(null) }, icon('x')) : null,
+      body,
+      actions.length ? h('div.actions', actions.map((a) => h(`button.btn${a.primary ? '.primary' : ''}${a.danger ? '.danger' : ''}${!a.primary && !a.danger ? '.secondary' : ''}`, { type: 'button', onclick: () => close(a.value) }, a.icon ? icon(a.icon) : null, a.label))) : null);
+    const wrap = h('div.modal-wrap', { onclick: (e) => { if (e.target === wrap && dismissible) close(null); } }, dlg);
     document.body.append(wrap);
-    wrap.addEventListener('keydown', (e) => e.key === 'Escape' && close(null));
-    setTimeout(() => (wrap.querySelector('input,textarea,select') || wrap.querySelector('.btn.primary,.btn.danger'))?.focus(), 30);
+    document.addEventListener('keydown', onKey, true);
+    // Enter submits the primary action from single-line inputs
+    dlg.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('input:not([type=checkbox]):not([type=radio])')) { const p = actions.find((a) => a.primary); if (p) { e.preventDefault(); close(p.value); } } });
+    setTimeout(() => (dlg.querySelector('input,textarea,select') || dlg.querySelector('.actions .btn.primary, .actions .btn.danger') || dlg).focus?.(), 40);
   });
 }
-export const confirmDialog = (title, text, { danger } = {}) => modal(title, h('p', text), [{ label: t('cancel'), value: false }, { label: t('confirm'), value: true, primary: !danger, danger }]);
+export const confirmDialog = (title, text, { danger, confirmLabel } = {}) => modal(title, h('p.muted', { style: { margin: 0 } }, text), [{ label: t('cancel'), value: false }, { label: confirmLabel || t('confirm'), value: true, primary: !danger, danger }]);
+
+// ---------- Popover menu (GlassPopover) ----------
+let openMenu = null;
+export function closeMenu() { openMenu?.(); }
+export function menu(anchor, items, { align = 'end', width } = {}) {
+  closeMenu();
+  const pop = h('div.popover.glass-4', { role: 'menu', style: width ? { minWidth: `${width}px` } : {} });
+  for (const it of items) {
+    if (!it) continue;
+    if (it.sep) { pop.append(h('div.menu-sep', { role: 'separator' })); continue; }
+    if (it.title) { pop.append(h('div.menu-title', it.title)); continue; }
+    if (it.node) { pop.append(it.node); continue; }
+    const el = h(`${it.href ? 'a' : 'button'}.menu-item${it.danger ? '.danger' : ''}`, {
+      role: it.checked != null ? 'menuitemradio' : 'menuitem', type: it.href ? null : 'button', href: it.href || null, id: it.id || null,
+      'aria-checked': it.checked != null ? String(!!it.checked) : null, target: it.target || null, rel: it.target ? 'noopener noreferrer' : null,
+      onclick: (e) => { if (!it.keepOpen) close(); it.onClick?.(e); },
+    }, it.icon ? icon(it.icon) : null, h('span.grow', it.label), it.hint ? h('span.hint', it.hint) : null);
+    pop.append(el);
+  }
+  document.body.append(pop);
+  // position relative to anchor, flipping to stay on screen
+  const r = anchor.getBoundingClientRect(); const pr = pop.getBoundingClientRect();
+  const rtl = document.documentElement.dir === 'rtl';
+  let left = (align === 'end') !== rtl ? r.right - pr.width : r.left;
+  left = Math.max(8, Math.min(left, innerWidth - pr.width - 8));
+  let top = r.bottom + 6;
+  if (top + pr.height > innerHeight - 8) top = Math.max(8, r.top - pr.height - 6);
+  pop.style.left = `${left}px`; pop.style.top = `${top}px`;
+  pop.style.setProperty('--origin', `${top < r.top ? 'bottom' : 'top'} ${left + pr.width / 2 < r.left + r.width / 2 ? 'right' : 'left'}`);
+  anchor.setAttribute('aria-expanded', 'true');
+  const itemsEls = () => $$('.menu-item', pop);
+  const onKey = (e) => {
+    const list = itemsEls(); const i = list.indexOf(document.activeElement);
+    if (e.key === 'Escape') { e.preventDefault(); close(); anchor.focus(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); list[(i + 1) % list.length]?.focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); list[(i - 1 + list.length) % list.length]?.focus(); }
+    else if (e.key === 'Tab') close();
+  };
+  const onDown = (e) => { if (!pop.contains(e.target) && !anchor.contains(e.target)) close(); };
+  function close() {
+    if (!pop.isConnected) return;
+    anchor.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('keydown', onKey, true); document.removeEventListener('pointerdown', onDown, true); window.removeEventListener('resize', close);
+    pop.remove(); openMenu = null;
+  }
+  document.addEventListener('keydown', onKey, true); document.addEventListener('pointerdown', onDown, true); window.addEventListener('resize', close);
+  setTimeout(() => itemsEls()[0]?.focus(), 20);
+  openMenu = close;
+  return close;
+}
+
+// ---------- Segmented control ----------
+// options: [[value, label, count?]]
+export function segmented(options, value, onChange, { label } = {}) {
+  const el = h('div.tabs', { role: 'tablist', 'aria-label': label || null });
+  for (const [v, l, count] of options) {
+    el.append(h(`button${v === value ? '.on' : ''}`, { type: 'button', role: 'tab', 'aria-selected': String(v === value), onclick: () => {
+      $$('button', el).forEach((b) => { b.classList.remove('on'); b.setAttribute('aria-selected', 'false'); });
+      const b = $$('button', el).find((x) => x.dataset.v === String(v)); b?.classList.add('on'); b?.setAttribute('aria-selected', 'true');
+      onChange(v);
+    }, 'data-v': String(v) }, l, count != null ? h('span.count', count) : null));
+  }
+  return el;
+}
+
+// ---------- Skeletons ----------
+export function skeleton(kind = 'card', n = 3) {
+  const w = h('div', { 'aria-busy': 'true', 'aria-label': L('جارٍ التحميل', 'Loading') });
+  if (kind === 'stat') w.append(h('div.sk.sk-line.w-40'), h('div.sk.sk-num'), h('div.sk.sk-line.w-60'));
+  else if (kind === 'list' || kind === 'table') for (let i = 0; i < n; i++) w.append(h('div.sk.sk-row'));
+  else if (kind === 'chart') w.append(h('div.sk.sk-block', { style: { height: '180px' } }));
+  else w.append(h('div.sk.sk-title'), h('div.sk.sk-line.w-80'), h('div.sk.sk-line.w-60'), h('div.sk.sk-line.w-40'));
+  return w;
+}
+
+// ---------- Empty / error states ----------
+export function emptyState({ icon: ic = 'inbox', title, body, actions = [], compact = false, error = false } = {}) {
+  return h(`div.empty-state${compact ? '.compact' : ''}${error ? '.error' : ''}`, { role: error ? 'alert' : null },
+    h('div.es-icon', icon(ic)),
+    title ? h('h4', title) : null,
+    body ? h('p', body) : null,
+    actions.length ? h('div.btn-group', actions.map((a) => h(`button.btn${a.primary ? '.primary' : a.tertiary ? '.tertiary' : ''}${compact ? '.sm' : ''}`, { type: 'button', onclick: a.onClick }, a.icon ? icon(a.icon) : null, a.label))) : null);
+}
+export const errorState = (err, retry) => emptyState({ icon: 'circleAlert', error: true, title: L('تعذّر التحميل', 'Could not load'), body: err?.message || String(err || ''), actions: retry ? [{ label: L('إعادة المحاولة', 'Try again'), icon: 'refresh', onClick: retry }] : [] });
+
+// ---------- Data table (GlassTable): sortable, mobile-stacking ----------
+// columns: [{ key, label, render?(row) -> Node|string, sort?(row) -> comparable, num?, width? }]
+export function dataTable({ columns, rows, onRow, empty, sortKey, sortDir = 'asc', stackMobile = true, caption, rowAttrs }) {
+  let key = sortKey; let dir = sortDir;
+  const wrap = h('div.table-wrap');
+  const draw = () => {
+    const col = columns.find((c) => c.key === key);
+    const sorted = col?.sort ? [...rows].sort((a, b) => { const x = col.sort(a); const y = col.sort(b); const r = x == null ? 1 : y == null ? -1 : x < y ? -1 : x > y ? 1 : 0; return dir === 'asc' ? r : -r; }) : rows;
+    const thead = h('thead', h('tr', columns.map((c) => {
+      const th = h(`th${c.sort ? '.sortable' : ''}${c.num ? '.num' : ''}`, { scope: 'col', 'aria-sort': c.key === key ? (dir === 'asc' ? 'ascending' : 'descending') : c.sort ? 'none' : null, tabindex: c.sort ? 0 : null, style: c.width ? { width: c.width } : null },
+        c.label, c.sort ? h('span.sort-ind', icon(c.key === key ? (dir === 'asc' ? 'sortUp' : 'sortDown') : 'sort', 'sm')) : null);
+      if (c.sort) {
+        const act = () => { if (key === c.key) dir = dir === 'asc' ? 'desc' : 'asc'; else { key = c.key; dir = 'asc'; } draw(); };
+        th.addEventListener('click', act); th.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+      }
+      return th;
+    })));
+    const tbody = h('tbody', sorted.map((r) => h(`tr${onRow ? '.clickable' : ''}`, { ...(rowAttrs ? rowAttrs(r) : {}), tabindex: onRow ? 0 : null, onclick: onRow ? (e) => { if (!e.target.closest('a,button,input,select')) onRow(r, e); } : null, onkeydown: onRow ? (e) => { if (e.key === 'Enter' && e.target === e.currentTarget) onRow(r, e); } : null },
+      columns.map((c) => { const v = c.render ? c.render(r) : r[c.key]; return h(`td${c.num ? '.num' : ''}`, { 'data-label': c.label || null }, v ?? '—'); }))));
+    wrap.replaceChildren(rows.length ? h(`table.tbl${stackMobile ? '.stack-mobile' : ''}`, caption ? h('caption.sr-only', caption) : null, thead, tbody) : (empty || emptyState({ compact: true, title: L('لا توجد بيانات', 'No data') })));
+  };
+  draw();
+  return wrap;
+}
+
+// ---------- Form field helper ----------
+export function field(label, control, { helper, error, id } = {}) {
+  const cid = id || control.id || `f-${Math.random().toString(36).slice(2, 8)}`;
+  control.id = cid;
+  if (error) control.setAttribute('aria-invalid', 'true');
+  return h('div.form-field', h('label.lbl', { for: cid }, label), control, helper ? h('div.helper', helper) : null, error ? h('div.error-text', icon('circleAlert', 'sm'), error) : null);
+}
 
 // Safe markdown-lite: escape first, then **bold**, _italic_, line breaks.
 export function md(text) {
@@ -107,4 +217,13 @@ export function md(text) {
 }
 
 export function debounce(fn, ms) { let tm; return (...a) => { clearTimeout(tm); tm = setTimeout(() => fn(...a), ms); }; }
-export const initials = (name) => String(name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('');
+// Initials: skip Arabic articles (ال / آل) so "مريم الكعبي" → "م ك", not "ما".
+export const initials = (name) => {
+  const parts = String(name || '?').trim().split(/\s+/).filter(Boolean).map((w) => w.replace(/^(ال|آل)(?=\S{2,})/, ''));
+  const pick = parts.length > 1 ? [parts[0], parts[parts.length - 1]] : parts;
+  return pick.map((w) => w[0]).join(/[\u0600-\u06FF]/.test(name) ? ' ' : '').toUpperCase();
+};
+// Stable avatar tint per person (0–6)
+export const avatarTint = (name) => String([...String(name || '')].reduce((a, c) => (a * 31 + c.codePointAt(0)) >>> 0, 7) % 7);
+export function avatar(name, cls = '') { return h(`span.avatar${cls ? '.' + cls : ''}`, { 'data-tint': avatarTint(name), 'aria-hidden': 'true' }, initials(name)); }
+export const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);

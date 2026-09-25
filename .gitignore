@@ -4,3 +4,4 @@ node_modules/
 platform/data/
 platform/.env
 platform/tests/e2e/output/
+platform/tests/e2e/screens/

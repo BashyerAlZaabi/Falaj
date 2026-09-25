@@ -1,0 +1,14 @@
+/* Documents list + editor panel. Owner: documents page. */
+.doc-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 2px; padding: 6px 10px; border-bottom: 1px solid var(--separator); }
+.doc-toolbar .sep { width: 1px; align-self: stretch; background: var(--separator); margin: 6px 4px; }
+.doc-title { width: 100%; border: 0; background: transparent; color: var(--text-primary); font: var(--type-title2); padding: var(--space-4) var(--space-6) 0; outline: none; }
+.doc-status { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: 6px var(--space-6) var(--space-3); font: var(--type-footnote); color: var(--text-tertiary); }
+.doc-body { flex: 1; overflow: auto; padding: var(--space-4) var(--space-6) var(--space-12); outline: none; font: var(--type-body); line-height: 1.9; }
+.doc-body h1, .doc-body h2, .doc-body h3 { line-height: 1.4; margin: var(--space-6) 0 var(--space-2); }
+.doc-body h2 { font: var(--type-title3); }
+.doc-body p { margin: 0 0 var(--space-3); }
+.doc-body table { border-collapse: collapse; width: 100%; margin: var(--space-3) 0; font: var(--type-callout); }
+.doc-body th, .doc-body td { border: 1px solid var(--separator-strong); padding: 8px 10px; text-align: start; vertical-align: top; }
+.doc-body th { background: var(--fill-3); font-weight: 600; }
+.doc-body.preview { background: var(--fill-3); }
+.versions { border-top: 1px solid var(--separator); max-height: 42%; overflow: auto; padding: var(--space-3); }

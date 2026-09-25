@@ -11,7 +11,14 @@ import { undo } from './widgets.js';
 let busy = false;
 
 export function init() {
-  $('#chat-collapse').replaceChildren(icon('chevron'));
+  $('#chat-collapse').replaceChildren(icon('sidebarR'));
+  $('#chat-collapse').setAttribute('aria-label', L('إخفاء المساعد', 'Hide assistant'));
+  $('#chat-new').setAttribute('aria-label', L('محادثة جديدة', 'New conversation'));
+  $('#chat-history').setAttribute('aria-label', L('المحادثات السابقة', 'Conversation history'));
+  $('#chat-expand').setAttribute('aria-label', L('توسيع', 'Expand'));
+  $('#btn-attach').setAttribute('aria-label', L('إرفاق ملف', 'Attach file'));
+  $('#btn-mic').setAttribute('aria-label', L('تحدّث', 'Speak'));
+  $('#btn-send').setAttribute('aria-label', L('إرسال', 'Send'));
   $('#chat-new').replaceChildren(icon('plus'));
   $('#chat-history').replaceChildren(icon('history'));
   $('#chat-expand').replaceChildren(icon('expand'));
@@ -27,7 +34,7 @@ export function init() {
   input.onkeydown = (e) => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); submit(); } };
   input.oninput = () => { input.style.height = 'auto'; input.style.height = Math.min(160, input.scrollHeight) + 'px'; };
   $('#btn-send').onclick = submit;
-  $('#chat-collapse').onclick = () => { $('#chat').classList.toggle('collapsed'); $('#chat').classList.remove('expanded'); };
+  $('#chat-collapse').onclick = () => { $('#chat').classList.remove('expanded'); window.dispatchEvent(new CustomEvent('swp:chat-visible', { detail: false })); };
   $('#chat-expand').onclick = () => { const ex = $('#chat').classList.toggle('expanded'); $('#chat-expand').replaceChildren(icon(ex ? 'shrink' : 'expand')); };
   $('#chat-new').onclick = () => { setConversation(null); $('#chat-body').replaceChildren(); welcome(); };
   $('#chat-history').onclick = showHistory;
@@ -88,7 +95,7 @@ export function refreshContext() {
 
 export function focus(prefix = '') {
   if (window.innerWidth <= 900) import('./app.js').then((m) => m.setTab('chat'));
-  $('#chat').classList.remove('collapsed');
+  if ($('#chat').classList.contains('collapsed')) window.dispatchEvent(new CustomEvent('swp:chat-visible', { detail: true }));
   const i = $('#chat-input'); if (prefix && !i.value.startsWith(prefix)) i.value = prefix + i.value; i.focus();
 }
 

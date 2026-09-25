@@ -158,7 +158,7 @@ await step('10. Agents Office: بناء وكيل بالمحادثة، تحضير
 });
 
 await step('11. البيانات باقية بعد إعادة الدخول', async () => {
-  await page.click('#btn-logout'); await page.waitForSelector('#login-form', { state: 'visible' });
+  await page.click('#user-card'); await page.click('#btn-logout'); await page.waitForSelector('#login-form', { state: 'visible' });
   await login(page, 'mariam');
   await page.goto(S.portal + '/#/documents'); await page.waitForSelector('table.tbl');
   assert.match(await page.locator('table.tbl').innerText(), /تقرير المشاريع المتأخرة/);

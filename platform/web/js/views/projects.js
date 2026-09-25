@@ -19,7 +19,7 @@ export async function renderProjects(root) {
   draw();
 }
 
-async function newProject() {
+export async function newProject() {
   const name = h('input.field', { required: true }); const due = h('input.field', { type: 'date' }); const desc = h('textarea.field', { rows: 2 });
   const ok = await modal(L('مشروع جديد', 'New project'), h('div', h('label.lbl', L('الاسم', 'Name')), name, h('label.lbl', L('تاريخ الاستحقاق', 'Due date')), due, h('label.lbl', L('الوصف', 'Description')), desc,
     h('p.tiny.muted', L('لا تُسجَّل نسبة إنجاز افتراضية؛ حدّدها لاحقاً عند توفرها.', 'No default progress is recorded; set it when known.'))), [{ label: t('cancel'), value: false }, { label: L('إنشاء', 'Create'), value: true, primary: true }]);

@@ -360,6 +360,7 @@ app.get('/mcp', (req, res) => res.status(405).set('Allow', 'POST').end());
 
 // ---------------- static web app ----------------
 app.use('/fonts', express.static(path.join(ROOT, 'node_modules/@fontsource/ibm-plex-sans-arabic/files'), { maxAge: '30d' }));
+app.use('/fonts', express.static(path.join(ROOT, 'node_modules/@fontsource-variable/inter/files'), { maxAge: '30d' }));
 app.use(express.static(path.join(ROOT, 'web'), { index: 'index.html', maxAge: 0 }));
 app.use('/api', (req, res) => res.status(404).json({ error: 'not_found' }));
 

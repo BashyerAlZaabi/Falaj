@@ -1,0 +1,15 @@
+/* Unified Portal home / dashboard. Owner: dashboard page. */
+.greet { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-6); }
+.greet h1 { font: var(--type-large-title); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4); }
+.card.size-l { grid-column: 1 / -1; }
+@media (min-width: 1100px) { .card.size-m { grid-column: span 2; } }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .card.size-m, .card.size-s { grid-column: 1 / -1; } }
+.arranging .card { cursor: grab; }
+.arranging .card.dragging { opacity: 0.5; transform: scale(0.98); }
+.stat { font: var(--type-numeral); letter-spacing: var(--track-numeral); color: var(--text-primary); }
+.stat .unit { font: 500 18px/1 var(--font-display); color: var(--text-tertiary); margin-inline-start: 2px; }
+.stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: var(--space-3); }
+.mini { padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--fill-3); }
+.mini .v { font: 600 26px/1.15 var(--font-display); font-variant-numeric: tabular-nums; }
+.mini .k { font: var(--type-footnote); color: var(--text-secondary); }

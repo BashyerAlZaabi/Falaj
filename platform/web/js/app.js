@@ -1,99 +1,208 @@
+// App shell: authentication, sidebar, contextual toolbar, command palette,
+// notifications, router, realtime, mobile tab bar.
 import { api, realtime } from './api.js';
 import { t, L, setLang, getLang } from './i18n.js';
-import { h, $, $$, icon, toast, initials, debounce, esc } from './ui.js';
+import { h, $, $$, icon, toast, initials, debounce, menu, isMac, errorState, avatar } from './ui.js';
 import { state, on, emit } from './state.js';
 import * as Chat from './chat.js';
 import * as Editor from './editor.js';
+import { openPalette, configure as configurePalette, bindShortcut, remember } from './palette.js';
 import { renderHome } from './views/home.js';
 import { renderAdaa } from './views/adaa.js';
-import { renderProjects, renderProject } from './views/projects.js';
+import { renderProjects, renderProject, newProject, newTask } from './views/projects.js';
 import { renderTasks } from './views/tasks.js';
-import { renderDocuments } from './views/documents.js';
+import { renderDocuments, newDoc } from './views/documents.js';
 import { renderApps } from './views/apps.js';
 import { renderUploader } from './views/uploader.js';
 import { renderAdmin } from './views/admin.js';
-import { renderOffice } from './views/office.js';
+import { renderOffice, builder as officeBuilder } from './views/office.js';
 
-// ---------------- theme ----------------
+const store = { get: (k, d) => { try { return localStorage.getItem(k) ?? d; } catch { return d; } }, set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} } };
+
+// ---------------- theme (system / light / dark) ----------------
+const themeMode = () => store.get('swp.theme', 'system');
 function applyTheme(mode) {
-  if (mode) document.documentElement.dataset.theme = mode; else delete document.documentElement.dataset.theme;
-  try { mode ? localStorage.setItem('swp.theme', mode) : localStorage.removeItem('swp.theme'); } catch {}
-  const dark = mode === 'dark' || (!mode && matchMedia('(prefers-color-scheme: dark)').matches);
-  $('#btn-theme').replaceChildren(icon(dark ? 'sun' : 'moon'));
+  if (mode === 'light' || mode === 'dark') document.documentElement.dataset.theme = mode; else delete document.documentElement.dataset.theme;
+  store.set('swp.theme', mode === 'system' ? null : mode);
+  const dark = mode === 'dark' || (mode === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+  document.querySelector('meta[name="theme-color"]:not([media])')?.remove();
+  document.head.append(h('meta', { name: 'theme-color', content: dark ? '#070708' : '#F2F2F5' }));
 }
-try { applyTheme(localStorage.getItem('swp.theme')); } catch { applyTheme(null); }
-
+applyTheme(themeMode());
 setLang(getLang());
+$$('.brand-mark').forEach((b) => b.replaceChildren(icon('layers')));
+$('#lg-reveal')?.replaceChildren(icon('eye'));
+$$('.icon-slot').forEach((s) => s.replaceWith(icon(s.closest('#btn-ask') || s.closest('.panel-head') ? 'spark' : 'search')));
 
 // ---------------- login ----------------
-const DEMO = [['president', 'خالد المنصوري', 'الرئيس'], ['mariam', 'مريم الكعبي', 'مديرة (مدير المنصة)'], ['omar', 'عمر الظاهري', 'مدير'], ['ahmed', 'أحمد الشامسي', 'موظف'], ['sara', 'سارة النعيمي', 'موظفة'], ['noura', 'نورة المهيري', 'موظفة — المالية']];
+const DEMO = [['president', 'خالد المنصوري', 'Khalid Al Mansoori', 'الرئيس', 'President'], ['mariam', 'مريم الكعبي', 'Mariam Al Kaabi', 'مديرة · مدير المنصة', 'Manager · Admin'], ['omar', 'عمر الظاهري', 'Omar Al Dhaheri', 'مدير', 'Manager'], ['ahmed', 'أحمد الشامسي', 'Ahmed Al Shamsi', 'موظف', 'Employee'], ['sara', 'سارة النعيمي', 'Sara Al Nuaimi', 'موظفة', 'Employee'], ['noura', 'نورة المهيري', 'Noura Al Muhairi', 'موظفة · المالية', 'Employee · Finance']];
+let sessionExpired = false;
 function showLogin() {
+  if (state.me) sessionExpired = true;
+  $('#login-banner')?.classList.toggle('hidden', !sessionExpired);
   $('#app').classList.add('hidden'); $('#tabbar').classList.add('hidden'); $('#login').classList.remove('hidden');
-  const list = $('#demo-list');
-  $$('button', list).forEach((b) => b.remove());
-  for (const [u, n, r] of DEMO) list.append(h('button', { type: 'button', onclick: () => { $('#lg-user').value = u; $('#lg-pass').value = 'Demo@2026'; $('#lg-pass').focus(); } }, h('span', n), h('span.muted.small', `${u} · ${r}`)));
-  $('#lg-user').focus();
+  $('#demo-grid').replaceChildren(...DEMO.map(([u, ar, en, rar, ren]) => h('button', { type: 'button', 'aria-label': `${L('دخول باسم', 'Sign in as')} ${L(ar, en)}`, onclick: () => { $('#lg-user').value = u; $('#lg-pass').value = 'Demo@2026'; $('#login-form').requestSubmit(); } },
+    avatar(ar), h('span', h('span.n', L(ar, en)), h('span.r', `${u} · ${L(rar, ren)}`)))));
+  $('#lg-lang').textContent = getLang() === 'ar' ? 'English' : 'العربية';
+  if (matchMedia('(pointer: fine)').matches) setTimeout(() => $('#lg-user').focus(), 50);
 }
+$('#lg-reveal')?.addEventListener('click', () => { const p = $('#lg-pass'); const show = p.type === 'password'; p.type = show ? 'text' : 'password'; $('#lg-reveal').replaceChildren(icon(show ? 'eyeOff' : 'eye')); $('#lg-reveal').setAttribute('aria-pressed', String(show)); $('#lg-reveal').setAttribute('aria-label', show ? L('إخفاء كلمة المرور', 'Hide password') : L('إظهار كلمة المرور', 'Show password')); });
+$('#lg-pass').addEventListener('keyup', (e) => { $('#lg-caps').classList.toggle('hidden', !e.getModifierState?.('CapsLock')); });
 $('#login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const btn = $('#login-form button[type=submit]');
   $('#lg-err').textContent = '';
+  const u = $('#lg-user'); const p = $('#lg-pass');
+  u.removeAttribute('aria-invalid'); p.removeAttribute('aria-invalid');
+  if (!u.value.trim() || !p.value) { $('#lg-err').textContent = L('أدخل اسم المستخدم وكلمة المرور', 'Enter your username and password'); (u.value.trim() ? p : u).setAttribute('aria-invalid', 'true'); return; }
+  btn.classList.add('is-loading');
   try {
-    await api('/api/auth/login', { method: 'POST', body: { username: $('#lg-user').value, password: $('#lg-pass').value } });
+    await api('/api/auth/login', { method: 'POST', body: { username: u.value, password: p.value } });
     const next = new URLSearchParams(location.search).get('next');
     if (next && next.startsWith('/api/identity/sso/authorize')) { location.href = next; return; }
+    sessionExpired = false;
     await boot();
-  } catch (err) { $('#lg-err').textContent = err.message; }
+  } catch (err) { $('#lg-err').textContent = err.message; p.setAttribute('aria-invalid', 'true'); p.select(); }
+  finally { btn.classList.remove('is-loading'); }
 });
-$('#lg-lang').onclick = () => { setLang(getLang() === 'ar' ? 'en' : 'ar'); $('#lg-lang').textContent = getLang() === 'ar' ? 'English' : 'العربية'; };
+$('#lg-lang').onclick = () => { setLang(getLang() === 'ar' ? 'en' : 'ar'); showLogin(); };
 window.addEventListener('swp:unauth', () => showLogin());
 
-// ---------------- shell ----------------
+// ---------------- routes ----------------
 const ROUTES = {
-  home: { key: 'nav.home', icon: 'home', render: renderHome },
-  adaa: { key: 'nav.adaa', icon: 'gauge', render: renderAdaa },
-  projects: { key: 'nav.projects', icon: 'folder', render: (v, p) => (p[0] ? renderProject(v, p[0]) : renderProjects(v)) },
-  tasks: { key: 'nav.tasks', icon: 'check', render: renderTasks },
-  documents: { key: 'nav.documents', icon: 'doc', render: renderDocuments },
-  office: { key: 'nav.office', icon: 'people', render: renderOffice },
-  apps: { key: 'nav.apps', icon: 'grid', render: renderApps },
-  uploader: { key: 'nav.uploader', icon: 'upload', render: renderUploader },
-  admin: { key: 'nav.admin', icon: 'settings', render: renderAdmin, admin: true },
+  home: { key: 'nav.home', icon: 'home', group: 'work', render: renderHome },
+  adaa: { key: 'nav.adaa', icon: 'gauge', group: 'work', render: renderAdaa },
+  projects: { key: 'nav.projects', icon: 'folder', group: 'work', render: (v, p, o) => (p[0] ? renderProject(v, p[0], o) : renderProjects(v, o)) },
+  tasks: { key: 'nav.tasks', icon: 'check', group: 'work', render: renderTasks },
+  documents: { key: 'nav.documents', icon: 'doc', group: 'work', render: renderDocuments },
+  office: { key: 'nav.office', icon: 'bot', group: 'work', render: renderOffice },
+  apps: { key: 'nav.apps', icon: 'grid', group: 'apps', render: renderApps },
+  uploader: { key: 'nav.uploader', icon: 'upload', group: 'apps', render: renderUploader },
+  admin: { key: 'nav.admin', icon: 'settings', group: 'admin', render: renderAdmin, admin: true },
 };
+const GROUPS = [['work', 'nav.group.work'], ['apps', 'nav.apps'], ['admin', 'nav.group.admin']];
 
+// ---------------- shell ----------------
 function buildNav() {
   const nav = $('#nav-items'); nav.replaceChildren();
-  const add = (r) => nav.append(h('a.item', { href: `#/${r}`, 'data-route': r, title: t(ROUTES[r].key) }, icon(ROUTES[r].icon), h('span', t(ROUTES[r].key))));
-  ['home', 'adaa', 'projects', 'tasks', 'documents', 'office'].forEach(add);
-  nav.append(h('div.sep'), h('div.section-title', t('nav.apps')));
-  add('apps'); add('uploader');
-  if (state.me.user.is_admin) add('admin');
+  for (const [g, key] of GROUPS) {
+    const keys = Object.keys(ROUTES).filter((r) => ROUTES[r].group === g && (!ROUTES[r].admin || state.me.user.is_admin));
+    if (!keys.length) continue;
+    nav.append(h('div.nav-group', { role: 'group', 'aria-label': t(key) }, h('div.nav-group-title', t(key)),
+      keys.map((r) => h('a.item', { href: `#/${r}`, 'data-route': r, title: t(ROUTES[r].key) }, icon(ROUTES[r].icon), h('span.label', t(ROUTES[r].key)), h('span.nav-badge.hidden', { 'data-badge': r })))));
+  }
   const u = state.me.user;
-  $('#user-card').replaceChildren(h('div.avatar', initials(L(u.name_ar, u.name_en))), h('div', { style: { minWidth: 0 } },
-    h('div.small', { style: { fontWeight: 600 } }, L(u.name_ar, u.name_en)),
-    h('div.tiny.muted', `${t('role.' + u.role)} · ${L(u.dept_ar, u.dept_en)}`),
-    u.is_demo ? h('span.chip.demo.tiny', t('demo')) : null));
-  $('#btn-logout').replaceChildren(icon('logout'));
+  $('#user-card').replaceChildren(avatar(u.name_ar), h('span.who', h('div.name', L(u.name_ar, u.name_en)), h('div.role', L(u.title_ar, u.title_en) || `${t('role.' + u.role)} · ${L(u.dept_ar, u.dept_en)}`)), u.is_demo ? h('span.chip.demo.tiny', t('demo')) : null, icon('chevronDown', 'chev'));
+  $('#btn-collapse').replaceChildren(icon('sidebar'));
+  $('#btn-collapse').setAttribute('aria-label', L('طي/توسيع الشريط الجانبي', 'Collapse/expand sidebar'));
   $('#btn-menu').replaceChildren(icon('menu'));
-  $('.search .icon-slot').replaceChildren(icon('search'));
+  $('#btn-alerts').replaceChildren(icon('bell'), h('span.badge-dot.hidden', { id: 'alerts-count' }));
+  $('#btn-alerts').setAttribute('aria-label', L('التنبيهات', 'Notifications')); $('#btn-alerts').setAttribute('data-tip', L('التنبيهات', 'Notifications'));
+  $('#btn-new').replaceChildren(icon('plus'));
+  $('#btn-new').setAttribute('aria-label', L('إنشاء جديد', 'Create new')); $('#btn-new').setAttribute('data-tip', L('إنشاء جديد', 'Create new'));
+  $$('#kbd-hint, .search-trigger kbd').forEach((k) => { k.textContent = isMac ? '⌘K' : 'Ctrl K'; });
   const tb = $('#tabbar'); tb.replaceChildren();
-  const tab = (id, ic, label, fn) => tb.append(h('button', { 'data-tab': id, onclick: fn }, icon(ic), h('span', label)));
-  tab('home', 'home', t('tab.home'), () => { setTab('home'); if (!['home', 'adaa', 'projects', 'tasks', 'documents'].includes(state.route)) location.hash = '#/home'; });
+  const tab = (id, ic, label, fn) => tb.append(h('button', { type: 'button', 'data-tab': id, onclick: fn, 'aria-label': label }, icon(ic), h('span', label)));
+  tab('home', 'home', t('tab.home'), () => { setTab(['apps', 'uploader'].includes(state.route) ? 'home' : 'home'); if (!['home', 'adaa', 'projects', 'tasks', 'documents', 'office'].includes(state.route)) location.hash = '#/home'; });
   tab('chat', 'chat', t('tab.chat'), () => setTab('chat'));
-  tab('doc', 'doc', t('tab.doc'), () => { if (state.openDocumentId) setTab('doc'); else { location.hash = '#/documents'; setTab('home'); toast(L('افتح مستنداً من قائمة المستندات', 'Open a document from the list')); } });
-  tab('apps', 'grid', t('tab.apps'), () => { location.hash = '#/apps'; setTab('home'); });
+  tab('doc', 'doc', t('tab.doc'), () => { if (state.openDocumentId) setTab('doc'); else { location.hash = '#/documents'; setTab('home'); toast(L('افتح مستنداً من قائمة المستندات', 'Open a document from the list'), { kind: 'info' }); } });
+  tab('apps', 'grid', t('tab.apps'), () => { location.hash = '#/apps'; setTab('apps'); });
   tab('menu', 'menu', t('tab.menu'), () => toggleNav(true));
 }
+
+function userMenu() {
+  const u = state.me.user; const mode = themeMode();
+  menu($('#user-card'), [
+    { node: h('div.menu-title', `${L(u.name_ar, u.name_en)} · ${L(u.title_ar, u.title_en) || t('role.' + u.role)}`) },
+    { sep: true },
+    { title: L('المظهر', 'Appearance') },
+    { label: L('حسب النظام', 'System'), icon: 'monitor', checked: mode === 'system', onClick: () => applyTheme('system') },
+    { label: L('فاتح', 'Light'), icon: 'sun', checked: mode === 'light', onClick: () => applyTheme('light') },
+    { label: L('داكن', 'Dark'), icon: 'moon', checked: mode === 'dark', onClick: () => applyTheme('dark') },
+    { sep: true },
+    { label: getLang() === 'ar' ? 'English' : 'العربية', icon: 'languages', onClick: switchLang },
+    { label: L('لوحة الأوامر', 'Command palette'), icon: 'command', hint: isMac ? '⌘K' : 'Ctrl K', onClick: () => openPalette() },
+    { sep: true },
+    { label: L('تسجيل الخروج', 'Sign out'), icon: 'logout', danger: true, id: 'btn-logout', onClick: logout },
+  ], { align: 'start', width: 250 });
+}
+async function logout() { await api('/api/auth/logout', { method: 'POST' }).catch(() => {}); location.hash = ''; location.reload(); }
+function switchLang() { setLang(getLang() === 'ar' ? 'en' : 'ar'); buildNav(); route(); Chat.refreshContext(); refreshBadges(); }
+
+async function alertsMenu() {
+  const list = await api('/api/alerts').catch(() => []);
+  const items = list.slice(0, 8).map((a) => ({ node: h('div.menu-item.alert-item', { role: 'menuitem', tabindex: -1 },
+    h(`span.chip.tiny.${a.level === 'critical' ? 'crit' : a.level === 'warning' ? 'warn' : 'info'}`, icon(a.level === 'info' ? 'info' : 'alert')),
+    h('span.grow', h('div.alert-title', a.title), a.body ? h('div.tiny.faint', a.body) : null),
+    !a.derived && !a.read_at ? h('button.btn.sm.ghost', { type: 'button', onclick: async (e) => { e.stopPropagation(); await api(`/api/alerts/${a.id}/read`, { method: 'POST' }); e.target.closest('.menu-item').style.opacity = 0.5; refreshBadges(); } }, L('قُرئ', 'Read')) : null) }));
+  menu($('#btn-alerts'), [{ title: L('التنبيهات', 'Notifications') }, ...(items.length ? items : [{ node: h('div.empty.tiny', L('لا تنبيهات جديدة', 'You are all caught up')) }]), { sep: true }, { label: L('فتح ملخص اليوم', 'Open daily summary'), icon: 'spark', onClick: () => { location.hash = '#/home'; } }], { width: 340 });
+}
+const newActions = () => [
+  { label: L('مهمة جديدة', 'New task'), icon: 'taskPlus', keywords: 'task مهمة', run: () => newTask(null) },
+  { label: L('مشروع جديد', 'New project'), icon: 'folderPlus', keywords: 'project مشروع', run: () => newProject() },
+  { label: L('مستند جديد', 'New document'), icon: 'filePlus', keywords: 'document مستند', run: () => newDoc() },
+  { label: L('وكيل جديد', 'New agent'), icon: 'bot', keywords: 'agent وكيل office', run: async () => officeBuilder(await api('/api/office/templates')) },
+  { label: L('رفع ملف إلى مرصاد', 'Upload to Marsad'), icon: 'upload', keywords: 'upload رفع marsad', run: () => { location.hash = '#/uploader'; } },
+];
+function newMenu() { menu($('#btn-new'), [{ title: L('إنشاء', 'Create') }, ...newActions().map((a) => ({ label: a.label, icon: a.icon, onClick: a.run }))], { width: 230 }); }
+
 export function setTab(tab) {
   document.body.dataset.tab = tab;
-  $$('#tabbar button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
+  $$('#tabbar button').forEach((b) => { const on = b.dataset.tab === tab; b.classList.toggle('on', on); on ? b.setAttribute('aria-current', 'page') : b.removeAttribute('aria-current'); });
   if (tab === 'chat') setTimeout(() => $('#chat-input').focus(), 50);
 }
-function toggleNav(open) { $('#nav').classList.toggle('open', open); $('#scrim').classList.toggle('hidden', !open); }
+function toggleNav(open) { $('#nav').classList.toggle('open', open); $('#scrim').classList.toggle('hidden', !open); $('#btn-menu').setAttribute('aria-expanded', String(!!open)); if (open && innerWidth <= 900) setTimeout(() => ($('#nav a.item.on') || $('#nav a.item'))?.focus(), 60); }
+function setChatVisible(v) {
+  if (innerWidth <= 900) { setTab(v ? 'chat' : 'home'); return; }
+  $('#chat').classList.toggle('collapsed', !v);
+  $('#btn-ask').setAttribute('aria-pressed', String(v));
+  store.set('swp.chat', v ? null : 'hidden');
+}
 $('#btn-menu').onclick = () => toggleNav(true);
 $('#scrim').onclick = () => toggleNav(false);
-$('#btn-theme').onclick = () => { const cur = document.documentElement.dataset.theme; const dark = cur === 'dark' || (!cur && matchMedia('(prefers-color-scheme: dark)').matches); applyTheme(dark ? 'light' : 'dark'); };
-$('#btn-lang').onclick = () => { setLang(getLang() === 'ar' ? 'en' : 'ar'); $('#btn-lang').replaceChildren(h('span.tiny', getLang() === 'ar' ? 'EN' : 'ع')); buildNav(); route(); Chat.refreshContext(); };
-$('#btn-logout').onclick = async () => { await api('/api/auth/logout', { method: 'POST' }).catch(() => {}); location.hash = ''; location.reload(); };
+$('#btn-collapse').onclick = () => {
+  const app = $('#app');
+  if (innerWidth <= 900) { toggleNav(false); $('#btn-menu').focus(); return; }
+  if (innerWidth <= 1280 && innerWidth > 900) { app.classList.toggle('nav-expanded'); return; }
+  const c = app.classList.toggle('nav-collapsed'); store.set('swp.nav', c ? 'collapsed' : null);
+};
+$('#user-card').onclick = userMenu;
+$('#btn-alerts').onclick = alertsMenu;
+$('#btn-new').onclick = newMenu;
+$('#btn-search').onclick = () => openPalette();
+$('#nav-search').onclick = () => { toggleNav(false); openPalette(); };
+$('#btn-ask').onclick = () => setChatVisible($('#chat').classList.contains('collapsed') || innerWidth <= 900);
+document.addEventListener('keydown', (e) => {
+  const nav = $('#nav');
+  if (!nav.classList.contains('open')) return;
+  if (e.key === 'Escape') { toggleNav(false); $('#btn-menu').focus(); return; }
+  if (e.key === 'Tab') { // keep focus inside the open drawer
+    const f = $$('a[href], button:not([disabled])', nav).filter((x) => x.offsetParent !== null);
+    if (!f.length) return;
+    if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+  }
+});
+// Swipe the drawer back towards its edge to dismiss (touch)
+(() => {
+  const nav = $('#nav'); let x0 = null; let dx = 0;
+  nav.addEventListener('touchstart', (e) => { if (nav.classList.contains('open')) { x0 = e.touches[0].clientX; dx = 0; nav.style.transition = 'none'; } }, { passive: true });
+  nav.addEventListener('touchmove', (e) => {
+    if (x0 == null) return;
+    const rtl = document.documentElement.dir === 'rtl';
+    dx = e.touches[0].clientX - x0;
+    const toward = rtl ? Math.max(0, dx) : Math.min(0, dx);
+    nav.style.transform = `translateX(${toward}px)`;
+  }, { passive: true });
+  nav.addEventListener('touchend', () => {
+    if (x0 == null) return;
+    nav.style.transition = ''; nav.style.transform = '';
+    const rtl = document.documentElement.dir === 'rtl';
+    if ((rtl && dx > 70) || (!rtl && dx < -70)) toggleNav(false);
+    x0 = null;
+  });
+})();
+window.addEventListener('swp:chat-visible', (e) => setChatVisible(e.detail));
 
 // ---------------- router ----------------
 let renderSeq = 0;
@@ -101,50 +210,60 @@ export async function route({ soft = false } = {}) {
   const [, r = 'home', ...params] = (location.hash || '#/home').split('/');
   const def = ROUTES[r] || ROUTES.home;
   if (def.admin && !state.me.user.is_admin) { location.hash = '#/home'; return; }
-  const changed = state.route !== r || JSON.stringify(state.params) !== JSON.stringify(params);
-  state.route = ROUTES[r] ? r : 'home'; state.params = params;
-  if (changed && r === 'projects' && params[0]) state.selectedProjectId = params[0];
-  $$('#nav a.item').forEach((a) => a.classList.toggle('on', a.dataset.route === state.route));
-  $('#view-title').textContent = t(def.key);
+  const key = ROUTES[r] ? r : 'home';
+  if (key === 'projects' && params[0]) state.selectedProjectId = params[0];
+  state.route = key; state.params = params;
+  if (innerWidth <= 900 && !['chat', 'doc'].includes(document.body.dataset.tab)) setTab(['apps', 'uploader'].includes(key) ? 'apps' : 'home');
+  $$('#nav a.item').forEach((a) => { const on = a.dataset.route === key; a.classList.toggle('on', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
   toggleNav(false);
   const seq = ++renderSeq;
   const view = $('#view');
+  const prog = $('#route-progress'); const progTimer = soft ? null : setTimeout(() => prog?.classList.add('on'), 160);
   const container = h('div', { class: soft ? '' : 'view-enter' });
+  if (!soft) setCrumbs(key, params);
   try {
     await def.render(container, params, { soft });
     if (seq !== renderSeq) return;
     const scroll = view.scrollTop;
     view.replaceChildren(container);
-    if (soft) view.scrollTop = scroll;
+    view.scrollTop = soft ? scroll : 0;
   } catch (e) {
     if (seq !== renderSeq) return;
-    view.replaceChildren(h('div.card', h('p', `${L('تعذّر التحميل', 'Failed to load')}: ${e.message}`)));
+    view.replaceChildren(h('div', h('div.card', errorState({ message: `${L('تعذّر التحميل', 'Failed to load')}: ${e.message}` }, () => route()))));
   }
+  clearTimeout(progTimer); prog?.classList.remove('on');
+  setCrumbs(key, params);
+  if (!soft) { view.focus({ preventScroll: true }); document.title = `${t(def.key)} · ${t('brand')}`; remember(location.hash || '#/home', t(def.key) + (key === 'projects' && params[0] && state.projectName ? ` › ${state.projectName}` : '')); }
   Chat.refreshContext();
+}
+function setCrumbs(key, params) {
+  const c = $('#crumbs'); const title = t(ROUTES[key].key);
+  if (key === 'projects' && params[0]) c.replaceChildren(h('a', { href: '#/projects' }, title), h('span.sep', { 'aria-hidden': 'true' }, icon('chevron', 'sm')), h('h2#view-title', state.projectName || '…'));
+  else c.replaceChildren(h('h2#view-title', title));
 }
 window.addEventListener('hashchange', () => route());
 
 // Live refresh: any change to data the user can see re-renders the open view softly.
-const softRefresh = debounce(() => route({ soft: true }), 250);
+const softRefresh = debounce(() => { route({ soft: true }); refreshBadges(); }, 250);
 on('data-changed', softRefresh);
 
-// ---------------- search ----------------
-const doSearch = debounce(async (q) => {
-  const box = $('#search-results');
-  if (!q.trim()) { box.classList.add('hidden'); return; }
-  const res = await api(`/api/search?q=${encodeURIComponent(q)}`).catch(() => []);
-  const TYPES = { project: L('مشروع', 'Project'), task: L('مهمة', 'Task'), document: L('مستند', 'Document'), event: L('موعد', 'Event') };
-  box.replaceChildren(...(res.length ? res.map((r) => h('button', { role: 'option', onclick: () => { box.classList.add('hidden'); $('#search').value = ''; openResult(r); } }, h('span.chip.tiny', TYPES[r.type]), h('span', r.title))) : [h('div.empty.small', L('لا نتائج ضمن صلاحياتك', 'No results within your access'))]));
-  box.classList.remove('hidden');
-}, 200);
-$('#search').addEventListener('input', (e) => doSearch(e.target.value));
-$('#search').addEventListener('blur', () => setTimeout(() => $('#search-results').classList.add('hidden'), 200));
+// ---------------- badges (alerts, pending agent reviews) ----------------
+async function refreshBadges() {
+  const [alerts, runs] = await Promise.all([api('/api/alerts').catch(() => []), api('/api/office/runs?status=awaiting_review').catch(() => [])]);
+  const unread = alerts.filter((a) => a.derived || !a.read_at).length;
+  const ac = $('#alerts-count'); if (ac) { ac.textContent = unread > 9 ? '9+' : String(unread); ac.classList.toggle('hidden', !unread); }
+  const ob = $('[data-badge="office"]'); if (ob) { ob.textContent = String(runs.length); ob.classList.toggle('hidden', !runs.length); ob.classList.add('alert'); }
+}
+
+// ---------------- palette ----------------
 function openResult(r) {
   if (r.type === 'project') location.hash = `#/projects/${r.id}`;
   else if (r.type === 'document') Editor.open(r.id);
   else if (r.type === 'task') location.hash = '#/tasks';
   else location.hash = '#/home';
 }
+configurePalette({ openResult, ask: (q) => { setChatVisible(true); Chat.send(q); } });
+bindShortcut();
 
 // ---------------- boot ----------------
 let stopRt = null;
@@ -153,9 +272,27 @@ async function boot() {
   try { me = await api('/api/me'); } catch { showLogin(); return; }
   state.me = me;
   $('#login').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#tabbar').classList.remove('hidden');
-  if (me.user.lang && !localStorage.getItem('swp.lang')) setLang(me.user.lang);
+  if (me.user.lang && !store.get('swp.lang')) setLang(me.user.lang);
+  if (store.get('swp.nav') === 'collapsed') $('#app').classList.add('nav-collapsed');
+  if (store.get('swp.chat') === 'hidden' && innerWidth > 900) setChatVisible(false);
   buildNav(); setTab('home');
+  configurePalette({
+    routes: Object.entries(ROUTES).filter(([, d]) => !d.admin || me.user.is_admin).map(([k, d]) => ({ key: k, label: t(d.key), icon: d.icon })),
+    actions: [
+      ...newActions(),
+      { label: L('جهّز ملخص اليوم', 'Prepare my daily summary'), icon: 'spark', keywords: 'summary ملخص', run: () => { setChatVisible(true); Chat.send(L('جهّز لي ملخص اليوم', 'Prepare my daily summary')); } },
+      { label: L('تبديل المظهر الفاتح/الداكن', 'Toggle light/dark'), icon: 'moon', keywords: 'theme dark light مظهر داكن', run: () => { const d = document.documentElement.dataset.theme === 'dark' || (!document.documentElement.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches); applyTheme(d ? 'light' : 'dark'); } },
+      { label: getLang() === 'ar' ? 'Switch to English' : 'التبديل إلى العربية', icon: 'languages', keywords: 'language لغة', run: switchLang },
+      { label: L('إظهار/إخفاء Ask AI', 'Show/hide Ask AI'), icon: 'chat', keywords: 'chat محادثة ai', run: () => setChatVisible($('#chat').classList.contains('collapsed')) },
+      { label: L('تسجيل الخروج', 'Sign out'), icon: 'logout', keywords: 'logout خروج', run: logout },
+    ],
+  });
   Chat.init(); Editor.init();
+  // Mobile "Document" tab reflects whether a document is open
+  const syncDocTab = () => { const b = $('#tabbar button[data-tab="doc"]'); if (b) { const off = $('#editor').classList.contains('collapsed'); b.classList.toggle('dim', off); b.setAttribute('aria-disabled', String(off)); if (off && document.body.dataset.tab === 'doc') setTab('home'); } };
+  new MutationObserver(syncDocTab).observe($('#editor'), { attributes: true, attributeFilter: ['class'] });
+  syncDocTab();
+  let rtWas = null;
   stopRt?.();
   stopRt = realtime((ev) => {
     if (ev.type === 'changed') {
@@ -165,12 +302,18 @@ async function boot() {
     }
   }, (st) => {
     const el = $('#rt-status');
-    el.className = `chip ${st === 'live' ? 'good' : 'warn'}`;
-    el.replaceChildren(h('span.dot'), h('span.tiny', t(`rt.${st}`)));
+    el.querySelector('.dot').className = `dot ${st === 'live' ? 'live' : 'off'}`;
+    el.setAttribute('data-tip', st === 'live' ? L('متصل — التحديثات لحظية', 'Live — updates in real time') : L('غير متصل — جارٍ إعادة الاتصال', 'Offline — reconnecting'));
+    el.setAttribute('aria-label', el.getAttribute('data-tip'));
     if (st === 'live') emit('data-changed', { entity: 'all' });
+    // Only speak up on transitions (quiet while healthy)
+    if (rtWas === 'live' && st === 'offline') toast(L('انقطع الاتصال اللحظي — جارٍ إعادة الاتصال…', 'Live updates paused — reconnecting…'), { kind: 'info', timeout: 4000 });
+    if (rtWas === 'offline' && st === 'live') toast(L('عادت التحديثات اللحظية', 'Live updates resumed'), { timeout: 2500 });
+    rtWas = st;
   });
   await route();
+  refreshBadges();
 }
 boot();
 
-export { toggleNav };
+export { toggleNav, applyTheme };

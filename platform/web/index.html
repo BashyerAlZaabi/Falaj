@@ -3,93 +3,122 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#eef1f5">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#F2F2F5" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#070708" media="(prefers-color-scheme: dark)">
 <title>منصة العمل الذكية</title>
 <link rel="icon" href="/img/icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="/css/app.css">
+<link rel="preload" href="/fonts/ibm-plex-sans-arabic-arabic-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/components.css">
+<link rel="stylesheet" href="/css/shell.css">
+<link rel="stylesheet" href="/css/pages/dashboard.css">
+<link rel="stylesheet" href="/css/pages/adaa.css">
+<link rel="stylesheet" href="/css/pages/work.css">
+<link rel="stylesheet" href="/css/pages/documents.css">
+<link rel="stylesheet" href="/css/pages/chat.css">
+<link rel="stylesheet" href="/css/pages/office.css">
+<link rel="stylesheet" href="/css/pages/admin.css">
 </head>
 <body>
+<div class="ambient" aria-hidden="true"></div>
+
 <!-- Login -->
 <section id="login" class="hidden" aria-labelledby="login-title">
-  <form class="login-card glass" id="login-form" autocomplete="on">
-    <div class="brand-mark" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg></div>
+  <form class="login-card glass-4" id="login-form" autocomplete="on" novalidate>
+    <div class="brand-mark" aria-hidden="true"></div>
+    <div class="banner warn hidden" id="login-banner" role="status" data-i18n="login.expired">انتهت الجلسة، سجّل الدخول مجدداً للمتابعة.</div>
     <h1 id="login-title" data-i18n="login.title">تسجيل الدخول الموحّد</h1>
-    <p class="muted small" data-i18n="login.sub">منصة العمل الذكية — Unified Portal و ADAA I و Ask AI</p>
+    <p class="sub" data-i18n="login.sub">منصة العمل الذكية — Unified Portal و ADAA I و Ask AI</p>
     <label class="lbl" for="lg-user" data-i18n="login.user">اسم المستخدم</label>
-    <input class="field" id="lg-user" name="username" autocomplete="username" required>
+    <input class="field" id="lg-user" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
     <label class="lbl" for="lg-pass" data-i18n="login.pass">كلمة المرور</label>
-    <input class="field" id="lg-pass" name="password" type="password" autocomplete="current-password" required>
-    <div class="err" id="lg-err" role="alert"></div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button class="btn primary" type="submit" data-i18n="login.submit">دخول</button>
+    <div class="pass-wrap">
+      <input class="field" id="lg-pass" name="password" type="password" autocomplete="current-password" required aria-describedby="lg-err lg-caps">
+      <button class="icon-btn" id="lg-reveal" type="button" aria-label="إظهار كلمة المرور" aria-pressed="false"></button>
+    </div>
+    <div class="helper hidden" id="lg-caps" data-i18n="login.caps">مفتاح الأحرف الكبيرة (Caps Lock) مفعّل</div>
+    <div class="err" id="lg-err" role="alert" aria-live="assertive"></div>
+    <button class="btn primary" type="submit" data-i18n="login.submit">دخول</button>
+    <div class="login-foot">
+      <span class="tiny faint" data-i18n="login.secure">اتصال آمن · دخول موحّد لكل المكونات</span>
       <button class="btn ghost sm" type="button" id="lg-lang">English</button>
     </div>
     <div class="demo-list" id="demo-list">
-      <div class="small muted"><span class="chip demo" data-i18n="demo">تجريبي</span> <span data-i18n="login.demo">حسابات تجريبية — كلمة المرور: Demo@2026</span></div>
+      <div class="demo-head"><span class="chip demo tiny" data-i18n="demo">تجريبي</span><span data-i18n="login.demo">حسابات تجريبية — كلمة المرور: Demo@2026</span></div>
+      <div class="demo-grid" id="demo-grid"></div>
     </div>
   </form>
 </section>
 
 <!-- App shell -->
-<div id="app" class="hidden">
-  <aside class="nav glass" id="nav" aria-label="التنقل">
-    <div class="logo"><div class="brand-mark" aria-hidden="true"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12l5 5L20 6"/></svg></div><span data-i18n="brand">منصة العمل الذكية</span></div>
-    <div id="nav-items"></div>
-    <div class="foot">
-      <div class="nav-tools">
-        <button class="icon-btn" id="btn-lang" title="Language"><span class="tiny">EN</span></button>
-        <button class="icon-btn" id="btn-theme" title="Theme"></button>
-        <button class="icon-btn" id="btn-logout" title="Logout"></button>
-      </div>
-      <div class="user-card" id="user-card"></div>
+<div id="app" class="shell hidden">
+  <aside class="sidebar nav glass-3" id="nav" aria-label="التنقل الرئيسي">
+    <div class="sidebar-head">
+      <a class="brand" href="#/home" aria-label="الرئيسية">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-name"><span data-i18n="brand">منصة العمل الذكية</span><span class="brand-sub">Smart Work</span></span>
+      </a>
+      <button class="icon-btn" id="btn-collapse" type="button" aria-label="طي الشريط الجانبي" data-tip-pos="end"></button>
+    </div>
+    <button class="sidebar-search" id="nav-search" type="button"><span class="icon-slot"></span><span class="label" data-i18n="search.ph">ابحث أو نفّذ أمراً…</span><kbd class="kbd" id="kbd-hint">⌘K</kbd></button>
+    <nav class="nav-scroll" id="nav-items"></nav>
+    <div class="sidebar-foot">
+      <button class="user-card" id="user-card" type="button" aria-haspopup="menu" aria-expanded="false"></button>
     </div>
   </aside>
   <div class="scrim hidden" id="scrim"></div>
 
-  <main class="main glass" id="main">
-    <header class="topbar">
-      <button class="icon-btn menu-btn" id="btn-menu" aria-label="القائمة"></button>
-      <h2 id="view-title"></h2>
-      <div class="search">
-        <span class="icon-slot"></span>
-        <input class="field" id="search" type="search" data-i18n-ph="search.ph" placeholder="ابحث في مساحة العمل…" autocomplete="off" aria-label="بحث">
-        <div class="search-results glass hidden" id="search-results" role="listbox"></div>
+  <main class="main" id="main">
+    <header class="topbar glass-3">
+      <div class="route-progress" id="route-progress" aria-hidden="true"></div>
+      <button class="icon-btn menu-btn" id="btn-menu" type="button" aria-label="القائمة" aria-controls="nav" aria-expanded="false"></button>
+      <div class="crumbs" id="crumbs"><h2 id="view-title"></h2></div>
+      <div class="toolbar-actions">
+        <button class="search-trigger" id="btn-search" type="button" aria-label="بحث"><span class="icon-slot"></span><span class="label" data-i18n="search.ph">ابحث أو نفّذ أمراً…</span><kbd class="kbd">⌘K</kbd></button>
+        <span class="rt-pill" id="rt-status" data-tip="" data-tip-pos="bottom" role="status"><span class="dot"></span></span>
+        <button class="icon-btn" id="btn-alerts" type="button" aria-haspopup="menu" aria-expanded="false" data-tip-pos="bottom"></button>
+        <button class="icon-btn" id="btn-new" type="button" aria-haspopup="menu" aria-expanded="false" data-tip-pos="bottom"></button>
+        <button class="btn sm ask-btn" id="btn-ask" type="button" aria-pressed="true"><span class="icon-slot"></span><span class="label">Ask AI</span></button>
       </div>
-      <span class="chip" id="rt-status" title="realtime"><span class="dot"></span></span>
     </header>
     <div class="view" id="view" tabindex="-1"></div>
   </main>
 
-  <section class="panel glass" id="chat" aria-label="Ask AI">
+  <section class="panel glass-3" id="chat" aria-label="Ask AI">
     <div class="panel-head">
-      <button class="icon-btn collapse-btn" id="chat-collapse" aria-label="طي المحادثة"></button>
-      <h3>Ask AI <span class="chip tiny" id="ai-mode"></span></h3>
-      <button class="icon-btn hide-collapsed" id="chat-new" title="محادثة جديدة"></button>
-      <button class="icon-btn hide-collapsed" id="chat-history" title="السجل"></button>
-      <button class="icon-btn hide-collapsed" id="chat-expand" title="توسيع"></button>
+      <h3><span class="icon-slot"></span>Ask AI <span class="chip tiny" id="ai-mode"></span></h3>
+      <button class="icon-btn hide-collapsed" id="chat-new" type="button"></button>
+      <button class="icon-btn hide-collapsed" id="chat-history" type="button"></button>
+      <button class="icon-btn hide-collapsed" id="chat-expand" type="button"></button>
+      <button class="icon-btn collapse-btn" id="chat-collapse" type="button"></button>
     </div>
     <div class="panel-body" id="chat-body" aria-live="polite"></div>
     <div class="composer">
       <div class="context-bar" id="context-bar"></div>
       <div class="voice-bar hidden" id="voice-bar" role="status">
-        <span class="dot"></span><span id="voice-state">يستمع…</span><span class="interim" id="voice-interim"></span>
+        <span class="rec-dot" aria-hidden="true"></span><span id="voice-state">يستمع…</span><span class="interim" id="voice-interim"></span>
         <button class="btn sm" id="voice-stop" type="button">إيقاف</button>
       </div>
-      <div class="row">
-        <button class="icon-btn" id="btn-attach" title="إرفاق ملف" type="button"></button>
-        <input type="file" id="file-input" class="hidden" accept=".txt,.md,.csv,.json,.docx">
-        <textarea id="chat-input" rows="1" data-i18n-ph="chat.ph" placeholder="اكتب طلبك… مثال: جهّز لي ملخص اليوم"></textarea>
-        <button class="icon-btn mic" id="btn-mic" title="تحدّث" type="button" aria-pressed="false"></button>
-        <button class="icon-btn" id="btn-mute" title="كتم الرد الصوتي" type="button" aria-pressed="false"></button>
-        <button class="btn primary" id="btn-send" type="button" aria-label="إرسال"></button>
+      <div class="composer-box">
+        <textarea id="chat-input" rows="1" data-i18n-ph="chat.ph" placeholder="اكتب طلبك… مثال: جهّز لي ملخص اليوم" aria-label="رسالة إلى المساعد"></textarea>
+        <div class="composer-row">
+          <button class="icon-btn" id="btn-attach" type="button"></button>
+          <input type="file" id="file-input" class="hidden" accept=".txt,.md,.csv,.json,.docx">
+          <span class="spacer"></span>
+          <button class="icon-btn" id="btn-mute" type="button" aria-pressed="false"></button>
+          <button class="icon-btn mic" id="btn-mic" type="button" aria-pressed="false"></button>
+          <button class="send-btn" id="btn-send" type="button"></button>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="panel glass collapsed" id="editor" aria-label="المستند"></section>
+  <section class="panel glass-3 collapsed" id="editor" aria-label="المستند"></section>
 </div>
 
-<nav class="tabbar glass" id="tabbar" aria-label="تبويبات"></nav>
+<nav class="tabbar glass-3 hidden" id="tabbar" aria-label="تبويبات"></nav>
 <div id="toast" aria-live="polite"></div>
 <script type="module" src="/js/app.js"></script>
 </body>

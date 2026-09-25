@@ -2,8 +2,8 @@ const dict = {
   ar: {
     brand: 'منصة العمل الذكية', demo: 'تجريبي',
     'login.title': 'تسجيل الدخول الموحّد', 'login.sub': 'منصة العمل الذكية — Unified Portal و ADAA I و Ask AI', 'login.user': 'اسم المستخدم', 'login.pass': 'كلمة المرور', 'login.submit': 'دخول', 'login.demo': 'حسابات تجريبية — كلمة المرور: Demo@2026',
-    'search.ph': 'ابحث في مساحة العمل…', 'chat.ph': 'اكتب طلبك… مثال: جهّز لي ملخص اليوم',
-    'nav.home': 'Unified Portal', 'nav.adaa': 'ADAA I', 'nav.projects': 'المشاريع', 'nav.tasks': 'المهام', 'nav.documents': 'المستندات', 'nav.office': 'مكتب الوكلاء', 'nav.apps': 'تطبيقاتي', 'nav.uploader': 'Smart Uploader', 'nav.admin': 'إدارة المنصة', 'nav.more': 'المزيد',
+    'search.ph': 'ابحث أو نفّذ أمراً…', 'chat.ph': 'اكتب طلبك… مثال: جهّز لي ملخص اليوم',
+    'nav.home': 'Unified Portal', 'nav.group.work': 'مساحة العمل', 'nav.group.admin': 'الإدارة', 'login.secure': 'اتصال آمن · دخول موحّد لكل المكونات', 'login.caps': 'مفتاح الأحرف الكبيرة (Caps Lock) مفعّل', 'login.expired': 'انتهت الجلسة، سجّل الدخول مجدداً للمتابعة.', 'nav.adaa': 'ADAA I', 'nav.projects': 'المشاريع', 'nav.tasks': 'المهام', 'nav.documents': 'المستندات', 'nav.office': 'مكتب الوكلاء', 'nav.apps': 'تطبيقاتي', 'nav.uploader': 'Smart Uploader', 'nav.admin': 'إدارة المنصة', 'nav.more': 'المزيد',
     'tab.home': 'الرئيسية', 'tab.chat': 'المحادثة', 'tab.doc': 'المستند', 'tab.apps': 'التطبيقات', 'tab.menu': 'القائمة',
     'role.employee': 'موظف', 'role.manager': 'مدير', 'role.president': 'الرئيس',
     'greet.morning': 'صباح الخير', 'greet.evening': 'مساء الخير',
@@ -16,8 +16,8 @@ const dict = {
   en: {
     brand: 'Smart Work Platform', demo: 'Demo',
     'login.title': 'Single sign-on', 'login.sub': 'Smart Work Platform — Unified Portal, ADAA I and Ask AI', 'login.user': 'Username', 'login.pass': 'Password', 'login.submit': 'Sign in', 'login.demo': 'Demo accounts — password: Demo@2026',
-    'search.ph': 'Search your workspace…', 'chat.ph': 'Type a request… e.g. prepare my daily summary',
-    'nav.home': 'Unified Portal', 'nav.adaa': 'ADAA I', 'nav.projects': 'Projects', 'nav.tasks': 'Tasks', 'nav.documents': 'Documents', 'nav.office': 'Agents Office', 'nav.apps': 'My Apps', 'nav.uploader': 'Smart Uploader', 'nav.admin': 'Platform admin', 'nav.more': 'More',
+    'search.ph': 'Search or run a command…', 'chat.ph': 'Type a request… e.g. prepare my daily summary',
+    'nav.home': 'Unified Portal', 'nav.group.work': 'Workspace', 'nav.group.admin': 'Administration', 'login.secure': 'Secure connection · single sign-on', 'login.caps': 'Caps Lock is on', 'login.expired': 'Your session ended. Sign in again to continue.', 'nav.adaa': 'ADAA I', 'nav.projects': 'Projects', 'nav.tasks': 'Tasks', 'nav.documents': 'Documents', 'nav.office': 'Agents Office', 'nav.apps': 'My Apps', 'nav.uploader': 'Smart Uploader', 'nav.admin': 'Platform admin', 'nav.more': 'More',
     'tab.home': 'Home', 'tab.chat': 'Chat', 'tab.doc': 'Document', 'tab.apps': 'Apps', 'tab.menu': 'Menu',
     'role.employee': 'Employee', 'role.manager': 'Manager', 'role.president': 'President',
     'greet.morning': 'Good morning', 'greet.evening': 'Good evening',

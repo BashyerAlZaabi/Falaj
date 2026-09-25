@@ -115,7 +115,7 @@ function agentCard(a, templates) {
       h('button.btn.sm.ghost', { onclick: async () => { if (!(await confirmDialog(L('حذف الوكيل', 'Delete agent'), L(`سيُحذف «${a.name}» وتُلغى مقترحاته المعلقة.`, `"${a.name}" will be deleted and pending proposals cancelled.`), { danger: true }))) return; await api(`/api/office/agents/${a.id}?confirm=1`, { method: 'DELETE' }); emit('data-changed', { entity: 'office' }); } }, icon('trash'))));
 }
 
-async function builder(templates, existing = null) {
+export async function builder(templates, existing = null) {
   const isEdit = !!existing?.id;
   const [projects, users] = await Promise.all([api('/api/projects').catch(() => []), api('/api/users/assignable').catch(() => [])]);
   const tplSel = h('select.field', { disabled: isEdit || null }, Object.entries(templates).map(([k, v]) => h('option', { value: k, selected: (existing?.template || 'daily_briefing') === k || null }, L(v.name_ar, v.name_en))));
