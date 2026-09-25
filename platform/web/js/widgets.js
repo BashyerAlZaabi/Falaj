@@ -98,7 +98,7 @@ export function renderWidgetView(w, res, ctx = {}) {
 export function widgetSkeleton(w) {
   const busy = { 'aria-busy': 'true', 'aria-label': L('جارٍ التحميل', 'Loading') };
   if (w.type === 'kpi') return h('div.dash-skel', busy, h('div.sk.sk-num'), h('div.sk.sk-line.w-60'));
-  if (w.type === 'summary') return h('div.dash-skel', busy, h('div.skel-cells', Array.from({ length: 6 }, () => h('div.sk.skel-cell'))), h('div.sk.sk-line.w-40'), h('div.sk.sk-row'), h('div.sk.sk-row'));
+  if (w.type === 'summary') return h('div.dash-skel.sum-skel', busy, h('div.skel-cells', Array.from({ length: 6 }, () => h('div.sk.skel-cell'))), h('div', h('div.sk.sk-line.w-40'), h('div.sk.sk-row'), h('div.sk.sk-row')));
   if (w.type === 'week_progress') return h('div.dash-skel', busy, h('div.sk.sk-num'), h('div.sk.sk-block.skel-chart'));
   if (w.view === 'bar' || w.view === 'donut') return h('div.dash-skel', busy, h('div.sk.sk-block.skel-chart'));
   return skeleton('list', 3);
@@ -280,10 +280,11 @@ function renderTasks(w, res, c) {
   if (w.view === 'bar' || w.view === 'donut') {
     const series = taskSeries(res);
     const total = series.reduce((a, x) => a + (x.value || 0), 0);
-    if (!total) return { body: emptyTasks(), empty: true };
     const lbl = res.group_by === 'priority' ? L('المهام حسب الأولوية', 'Tasks by priority') : L('المهام حسب الحالة', 'Tasks by status');
-    const chart = w.view === 'bar' ? barChart(series, { label: lbl, integer: true, height: 180 }) : donutChart(series.filter((x) => x.value), { label: lbl, totalLabel: L('مهمة', 'tasks') });
-    return { body: h('div.dash-chart', chart), count: total, demo };
+    // An all-zero chart is still a true reading of the source, so the chosen view is kept.
+    const chart = w.view === 'bar' ? barChart(series, { label: lbl, integer: true, height: total ? 180 : 140 }) : donutChart(total ? series.filter((x) => x.value) : series, { label: lbl, totalLabel: L('مهمة', 'tasks') });
+    const note = total ? null : h('p.chart-note', icon('checkCheck', 'sm'), w.filters?.open ? L('لا مهام مفتوحة ضمن هذا العرض الآن.', 'No open tasks in this view right now.') : L('لا مهام ضمن هذا العرض الآن.', 'No tasks in this view right now.'));
+    return { body: h('div.dash-chart', note, chart), count: total, demo };
   }
   if (!d.length) return { body: emptyTasks(), empty: true };
   if (w.view === 'table') {

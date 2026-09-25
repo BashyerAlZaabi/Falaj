@@ -144,7 +144,7 @@ function buildNav() {
   // The first tab is the workspace (whatever page is open), not only the Home page.
   tab('home', 'home', t('tab.home'), () => { setTab('home'); if (['apps', 'uploader', 'admin'].includes(state.route)) location.hash = '#/home'; });
   tab('chat', 'chat', t('tab.chat'), () => setTab('chat'));
-  tab('doc', 'doc', t('tab.doc'), () => { if (state.openDocumentId) setTab('doc'); else { location.hash = '#/documents'; setTab('home'); toast(L('افتح مستنداً من قائمة المستندات', 'Open a document from the list'), { kind: 'info' }); } });
+  tab('doc', 'doc', t('tab.doc'), () => { if (state.openDocumentId) setTab('doc'); else { location.hash = '#/documents'; setTab('home'); } });
   tab('apps', 'grid', t('tab.apps'), () => { location.hash = '#/apps'; setTab('apps'); });
   tab('menu', 'menu', t('tab.menu'), () => toggleNav(true));
 }
@@ -255,7 +255,9 @@ window.addEventListener('swp:chat-visible', (e) => setChatVisible(e.detail));
 // ---------------- router ----------------
 let renderSeq = 0;
 export async function route({ soft = false } = {}) {
-  const [, r = 'home', ...params] = (location.hash || '#/home').split('/');
+  const [pathPart, qs = ''] = (location.hash || '#/home').split('?');
+  const [, r = 'home', ...params] = pathPart.split('/');
+  const query = Object.fromEntries(new URLSearchParams(qs));
   if (ROUTES[r]?.alias) { location.replace(ROUTES[r].alias + (params.length ? '/' + params.join('/') : '')); return; }
   // External identities only ever see their portal systems.
   if (isExternal() && r !== 'sys') { const first = sortSystems(state.me.systems || [])[0]; location.replace(first ? `#/sys/${first.key}` : '#/sys/none'); return; }
@@ -274,7 +276,7 @@ export async function route({ soft = false } = {}) {
   const container = h('div', { class: soft ? '' : 'view-enter' });
   if (!soft) setCrumbs(key, params);
   try {
-    await def.render(container, params, { soft });
+    await def.render(container, params, { soft, query });
     if (seq !== renderSeq) return;
     const scroll = view.scrollTop;
     view.replaceChildren(container);

@@ -30,9 +30,11 @@ on('document-open', ({ id } = {}) => {
   });
 });
 
-const norm = (s) => String(s || '').toLowerCase().replace(/[ً-ٰٟـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+const norm = (s) => String(s || '').toLowerCase().replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
 const docPoints = (g) => { const r = g?.rules?.find((x) => x.key === 'document'); return r && g.today_xp < g.daily_cap ? r.points : null; };
 const ptsChip = (n, cls = '') => h(`span.chip.tiny.purple.docs-pts${cls}`, { title: L(`+${n} نقاط تميّز عند الإنشاء`, `+${n} excellence points when created`) }, icon('zap'), h('span.num', `+${fmtNum(n)}`));
+// keep date-like runs ("25-09-2026") on one line inside wrapped titles
+const titleText = (s) => String(s).split(/(\d{1,4}[-/.]\d{1,2}[-/.]\d{1,4})/).map((part, i) => (i % 2 ? h('span.nb', part) : part));
 const openDoc = (id, e) => Editor.open(id, { focus: e?.detail === 0 }); // keyboard activation → move focus into the editor
 
 // ---------------------------------------------------------------- page
@@ -66,7 +68,7 @@ function draw(page, docs, g, { soft = false } = {}) {
 
   page.replaceChildren(
     head(docs),
-    h('div.docs-top', templates(pts), g ? badge(g) : null),
+    templates(pts, g ? badge(g) : null),
     library(docs, { fresh, earned }));
 
   // a document that just appeared and earned points today → a small burst on its chip,
@@ -83,7 +85,7 @@ function head(docs) {
     h('div.docs-head-text',
       h('span.eyebrow', L('مكتبة المستندات', 'Document library')),
       h('h1', L('المستندات', 'Documents'), docs ? h('span.docs-count.num', fmtNum(docs.length)) : null),
-      h('p.sub', L('تقاريرك وخططك ومحاضرك وخطاباتك في مكان واحد — تُحفظ تلقائياً بإصدارات، وتُصدَّر إلى Word وPDF بنقرة.', 'Your reports, plans, minutes and letters in one place — autosaved with versions, exported to Word and PDF in a click.'))),
+      h('p.sub', L('كل تقاريرك وخططك ومحاضرك وخطاباتك — بإصدارات محفوظة وتصدير فوري إلى Word وPDF.', 'All your reports, plans, minutes and letters — versioned, and one click from Word or PDF.'))),
     h('div.actions', h('button.btn.primary.lg', { type: 'button', onclick: () => newDoc() }, icon('filePlus'), L('مستند جديد', 'New document'))));
 }
 
@@ -105,16 +107,18 @@ const TEMPLATES = [
     build: ([to, subject]) => L(`اكتب خطاباً${to ? ` إلى ${to}` : ''}${subject ? ` بخصوص ${subject}` : ''}`, `Write a letter${to ? ` to ${to}` : ''}${subject ? ` regarding ${subject}` : ''}`) },
 ];
 
-function templates(pts) {
+function templates(pts, badgeEl) {
   return h('section.docs-ai', { 'aria-labelledby': 'docs-ai-title' },
     h('div.docs-ai-head',
-      h('h2#docs-ai-title', icon('spark'), L('ابدأ بمساعدة Ask AI', 'Start with Ask AI')),
-      h('p', L('يكتب المسودة من بياناتك الفعلية ثم تُفتح في المحرر لتعدّلها.', 'Drafts from your real data, then opens in the editor for you to refine.'))),
+      h('div.docs-ai-title',
+        h('h2#docs-ai-title', icon('spark'), L('ابدأ بمساعدة Ask AI', 'Start with Ask AI')),
+        h('p', L('يكتب المسودة من بياناتك الفعلية ثم تُفتح في المحرر لتعدّلها.', 'Drafts from your real data, then opens in the editor for you to refine.'))),
+      badgeEl),
     h('div.docs-tpls', TEMPLATES.map((tp) => {
       const btn = h('button.card.interactive.docs-tpl', { type: 'button', 'data-kind': tp.kind, onclick: () => (tp.fields ? guided(tp) : instant(btn, tp)) },
-        h('span.tpl-top', kindGlyph(tp.kind, 'lg'), pts && REWARDED.includes(tp.kind) ? ptsChip(pts) : null),
-        h('span.tpl-title', L(tp.ar, tp.en)),
-        h('span.tpl-sub', L(tp.sub_ar, tp.sub_en)));
+        h('span.tpl-glyph', kindGlyph(tp.kind, 'lg')),
+        h('span.tpl-text', h('span.tpl-title', L(tp.ar, tp.en)), h('span.tpl-sub', L(tp.sub_ar, tp.sub_en))),
+        pts && REWARDED.includes(tp.kind) ? ptsChip(pts) : null);
       return btn;
     })));
 }
@@ -141,22 +145,18 @@ async function guided(tp) {
 function badge(g) {
   const b = g.badges?.find((x) => x.key === 'documented');
   if (!b) return null;
-  const rule = g.rules?.find((r) => r.key === 'document');
   const left = Math.max(0, b.need - b.have);
-  const text = b.earned
-    ? L('حصلت على الشارة — استمر في توثيق عملك.', 'Badge earned — keep documenting your work.')
-    : left === 1 ? L('مستند واحد يفصلك عن الشارة.', 'One more document to earn it.') : L(`${fmtNum(left)} مستندات تفصلك عن الشارة.`, `${fmtNum(left)} more documents to earn it.`);
-  return h(`aside.card.docs-badge${b.earned ? '.earned' : ''}`, { 'aria-labelledby': 'docs-badge-title' },
-    h('div.badge-medal', { 'aria-hidden': 'true' }, icon(b.icon || 'fileCheck')),
-    h('div.docs-badge-body',
-      h('span.eyebrow', b.earned ? L('شارة مكتسبة', 'Badge earned') : L('الشارة التالية', 'Next badge')),
-      h('h2#docs-badge-title', L(`«${b.ar}»`, `“${b.en}”`)),
-      h('p', text),
-      h('div.progress.xp-bar', { role: 'progressbar', 'aria-valuenow': b.progress, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': L(`التقدم نحو شارة «${b.ar}»`, `Progress to “${b.en}”`) }, h('i', { style: { width: `${b.progress}%` } })),
-      h('div.docs-badge-foot',
-        h('span.num.tabular', `${fmtNum(Math.min(b.have, b.need))} / ${fmtNum(b.need)}`),
-        rule ? h('span.grow', L(`+${fmtNum(rule.points)} نقاط لكل تقرير أو خطة أو محضر أو خطاب`, `+${fmtNum(rule.points)} pts per report, plan, minutes or letter`)) : null,
-        h('a', { href: '#/achievements' }, L('إنجازاتي', 'Achievements')))));
+  const text = b.earned ? L('حصلت عليها — استمر في توثيق عملك', 'Earned — keep documenting your work')
+    : left === 1 ? L('مستند واحد يفصلك عنها', 'One more document to earn it')
+      : left === 2 ? L('مستندان يفصلانك عنها', 'Two more documents to earn it')
+        : L(`${fmtNum(left)} مستندات تفصلك عنها`, `${fmtNum(left)} more documents to earn it`);
+  const name = L(`شارة «${b.ar}»`, `“${b.en}” badge`);
+  return h(`a.docs-badge${b.earned ? '.earned' : ''}`, { href: '#/achievements', 'aria-label': `${name}: ${fmtNum(Math.min(b.have, b.need))} / ${fmtNum(b.need)} — ${text}`, title: L(b.desc_ar, b.desc_en) },
+    h('span.badge-medal', { 'aria-hidden': 'true' }, icon(b.earned ? 'badgeCheck' : b.icon || 'fileCheck')),
+    h('span.docs-badge-text', h('span.docs-badge-name', name), h('span.docs-badge-sub', text)),
+    h('span.docs-badge-meter', { 'aria-hidden': 'true' },
+      h('span.num.tabular', `${fmtNum(Math.min(b.have, b.need))}/${fmtNum(b.need)}`),
+      h('span.progress.xp-bar', h('i', { style: { width: `${b.progress}%` } }))));
 }
 
 // ---------------------------------------------------------------- library
@@ -166,7 +166,7 @@ function library(docs, marks) {
   if (!docs.length) {
     card.append(emptyState({ icon: 'fileText', title: L('لا مستندات بعد', 'No documents yet'),
       body: L('ابدأ بمستند فارغ، أو اختر قالباً من «ابدأ بمساعدة Ask AI» ليكتب لك المسودة من بياناتك.', 'Start from a blank document, or pick a template under “Start with Ask AI” to get a draft from your data.'),
-      actions: [{ label: L('مستند جديد', 'New document'), icon: 'filePlus', primary: true, onClick: () => newDoc() }, { label: L('اطلب من Ask AI', 'Ask Ask AI'), icon: 'spark', tertiary: true, onClick: () => Chat.focus() }] }));
+      actions: [{ label: L('مستند جديد', 'New document'), icon: 'filePlus', primary: true, onClick: () => newDoc() }, { label: L('اطلب مسودة من Ask AI', 'Ask AI for a draft'), icon: 'spark', tertiary: true, onClick: () => Chat.focus() }] }));
     return card;
   }
   const counts = {}; for (const d of docs) counts[d.kind] = (counts[d.kind] || 0) + 1;
@@ -238,7 +238,7 @@ function table(rows, { fresh, earned }, redraw) {
           h('td.c-title', h('div.doc-cell', kindGlyph(d.kind),
             h('div.doc-cell-text',
               h('div.doc-line',
-                h('button.doc-name', { type: 'button', 'aria-current': open ? 'true' : null, onclick: (e) => openDoc(d.id, e) }, d.title),
+                h('button.doc-name', { type: 'button', dir: 'auto', 'aria-current': open ? 'true' : null, onclick: (e) => openDoc(d.id, e) }, titleText(d.title)),
                 isNew ? h('span.chip.tiny.info', L('جديد', 'New')) : null,
                 pts ? ptsChip(pts) : null),
               h('div.doc-sub', `${kindLabel(d.kind)} · v${d.current_version} · ${whenText(d.updated_at)}`)))),
@@ -287,7 +287,7 @@ export async function newDoc() {
     h('div.docs-new',
       field(L('العنوان', 'Title'), title, { helper: L('اتركه فارغاً لاستخدام العنوان المقترح.', 'Leave empty to use the suggested title.') }),
       h('div.lbl', { id: 'docs-kind-lbl' }, L('النوع', 'Type')), kinds,
-      pts ? h('p.docs-new-note', icon('zap', 'sm'), L(`التقارير والخطط والمحاضر والخطابات تمنحك +${fmtNum(pts)} نقاط تميّز.`, `Reports, plans, minutes and letters earn +${fmtNum(pts)} excellence points.`)) : null),
+      pts ? h('p.docs-new-note', icon('zap', 'sm'), h('span', L('التقارير والخطط والمحاضر والخطابات تمنحك ', 'Reports, plans, minutes and letters earn '), h('span.num', `+${fmtNum(pts)}`), L(' نقاط تميّز.', ' excellence points.'))) : null),
     [{ label: t('cancel'), value: false }, { label: L('إنشاء وفتح', 'Create & open'), value: true, primary: true }]);
   if (!ok) return;
   const name = title.value.trim() || suggest(kind);

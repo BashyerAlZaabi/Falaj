@@ -53,7 +53,7 @@
 .md h4 { margin: var(--space-4) 0 var(--space-2); font: var(--type-headline); color: var(--text-primary); }
 .md h4.md-lead { font: var(--type-title3); margin-bottom: var(--space-3); }
 .md h4.md-lead strong { font-weight: inherit; }
-.md time { white-space: nowrap; }
+.md time, .md bdi { white-space: nowrap; }
 .md ul, .md ol { margin: 0 0 var(--space-3); padding-inline-start: var(--space-5); display: grid; gap: var(--space-1); }
 .md li { padding-inline-start: 2px; }
 .md li::marker { color: var(--text-tertiary); }
@@ -280,7 +280,7 @@
   position: relative; border-radius: var(--radius-xl); background: var(--input-bg); border: 1px solid transparent; padding: var(--space-1);
   transition: border-color var(--transition-fast), box-shadow var(--transition-normal), background var(--transition-fast);
 }
-.composer-box:focus-within { background: var(--input-bg-focus); border-color: color-mix(in srgb, var(--accent) 50%, transparent); box-shadow: var(--focus-ring), 0 0 28px color-mix(in srgb, var(--series-3) 16%, transparent); }
+.composer-box:focus-within { background: var(--input-bg-focus); border-color: color-mix(in srgb, var(--accent) 50%, transparent); box-shadow: var(--focus-ring), 0 0 28px color-mix(in srgb, var(--accent) 16%, transparent); }
 .composer-box textarea { display: block; width: 100%; resize: none; border: 0; outline: none; background: transparent; color: var(--text-primary); font: var(--type-callout); line-height: 1.55; min-height: 40px; max-height: 160px; padding: 9px 10px 4px; }
 .composer-box textarea:focus-visible { box-shadow: none; }
 .composer-box textarea::placeholder { color: var(--text-tertiary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -366,7 +366,9 @@
 @keyframes vb-wave { 0%, 100% { transform: scaleY(0.35); } 50% { transform: scaleY(1); } }
 
 /* ---------- conversation history (modal) ---------- */
-.history .search-field { margin-bottom: var(--space-2); }
+.history-tools { display: flex; gap: var(--space-2); align-items: center; margin-bottom: var(--space-2); }
+.history-tools .btn { flex: none; min-height: 40px; }
+@media (max-width: 640px) { .history-tools { flex-wrap: wrap; } .history-tools .btn { width: 100%; } }
 .history-list { max-height: min(56vh, 480px); overflow: auto; margin-inline: calc(var(--space-2) * -1); padding-inline: var(--space-2); }
 .history-group + .history-group { margin-top: var(--space-2); }
 .hg-title { position: sticky; top: 0; z-index: 1; padding: var(--space-3) var(--space-2) var(--space-1); font: var(--type-caption); color: var(--text-tertiary); background: var(--glass-4-bg); }
@@ -399,6 +401,8 @@
   .composer-box textarea { font: var(--type-body); }
   .w-title { font: var(--type-title2); }
   .composer-hint, .composer-box:focus-within .composer-hint { display: none; }
+  .ctx-chip.here { display: none; } /* full-screen chat tab: keep the space for the conversation */
+  .context-bar:not(:has(.ctx-chip:not(.here))) { display: none; }
 }
 @media (pointer: coarse) {
   .send-btn { width: 44px; height: 44px; }

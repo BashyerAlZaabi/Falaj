@@ -56,7 +56,18 @@ export function saveDocument(user, id, { title, content_html, reason = 'manual',
   }
   const html = content_html !== undefined ? sanitize(content_html) : doc.content_html;
   const newTitle = title !== undefined ? String(title).trim() || doc.title : doc.title;
-  if (html === doc.content_html && newTitle === doc.title) return { result: getDocument(user, id), unchanged: true };
+  if (html === doc.content_html && newTitle === doc.title) {
+    // "Save version" right after an autosave: promote that autosave to a named manual version.
+    if (!autosave && reason === 'manual') {
+      const lastV = one('SELECT id, reason FROM document_versions WHERE document_id=? ORDER BY version DESC LIMIT 1', id);
+      if (lastV?.reason === 'autosave') {
+        run("UPDATE document_versions SET reason='manual' WHERE id=?", lastV.id);
+        notify(docRecipients(id), { type: 'changed', entity: 'document', id, version: doc.current_version });
+        return { result: getDocument(user, id), promoted: true };
+      }
+    }
+    return { result: getDocument(user, id), unchanged: true };
+  }
   const last = one('SELECT * FROM document_versions WHERE document_id=? ORDER BY version DESC LIMIT 1', id);
   const coalesce = autosave && last && last.reason === 'autosave' && last.author_id === user.id && Date.now() - Date.parse(last.created_at + (last.created_at.endsWith('Z') ? '' : 'Z')) < AUTOSAVE_WINDOW_MS;
   const prevVersion = doc.current_version;

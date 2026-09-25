@@ -64,16 +64,25 @@ export function badgeTile(b) {
     b.earned ? null : h('div.progress', h('i', { style: { width: `${b.progress}%` } })));
 }
 
-// Compact hero for the home dashboard
+// Home hero — «رحلة التميّز»: rings + level/XP + streak + today's points on top,
+// today's quests as three actionable cards below. Everything is derived from real work.
 export function gameHero(g) {
   const doneQ = g.quests.filter((q) => q.done).length;
   return h('section.card.game-hero', { 'aria-label': L('رحلة التميّز', 'Excellence journey') },
-    h('div.gh-rings', ringsSvg(g.rings, 132)),
-    h('div.gh-main',
-      h('div.gh-top', levelOrb(g, { size: 'sm' }), h('div.grow', xpBar(g)),
-        h('div.gh-streak', { 'data-tip': L(`أفضل سلسلة: ${g.streak.best}`, `Best streak: ${g.streak.best}`) }, icon('zap'), h('strong.tabular', String(g.streak.current)), h('span.tiny.faint', L('يوم متتالٍ', 'day streak')))),
-      h('div.gh-quests', h('div.gh-q-head', h('span.eyebrow', L(`مهام اليوم · ${doneQ}/${g.quests.length}`, `Today's quests · ${doneQ}/${g.quests.length}`)), h('a.tiny', { href: '#/achievements' }, L('كل الإنجازات', 'All achievements'))), questList(g.quests.slice(0, 3), { compact: true }))),
-    h('div.gh-legend', ringLegend(g.rings), h('div.gh-today', h('span.t-numeral.tabular.num', `+${fmtNum(g.today_xp)}`), h('span.tiny.faint', L('نقطة اليوم', 'points today')))));
+    h('div.gh-rings', ringsSvg(g.rings, 128), h('ul.gh-ring-keys', g.rings.map((r) => h('li', { style: { '--ring': `var(--${r.color})` } }, h('span.ring-dot'), h('span', L(r.ar, r.en)), h('b.tabular.num', r.value == null ? '—' : `${fmtNum(r.value)}${r.unit_ar === '%' ? '%' : `/${fmtNum(r.goal)}`}`))))),
+    h('div.gh-body',
+      h('div.gh-top',
+        levelOrb(g, { size: 'sm' }),
+        h('div.grow', xpBar(g)),
+        h('div.gh-stat.streak', { 'data-tip': L(`أفضل سلسلة: ${g.streak.best} · عطلة نهاية الأسبوع لا تقطعها`, `Best streak: ${g.streak.best} · weekends never break it`) }, h('span.gs-ic', icon('zap')), h('span', h('strong.tabular', fmtNum(g.streak.current)), h('small', L('يوم متتالٍ', 'day streak')))),
+        h('div.gh-stat.today', h('span.gs-ic', icon('sparkle')), h('span', h('strong.tabular.num', `+${fmtNum(g.today_xp)}`), h('small', L('نقطة اليوم', 'points today'))))),
+      h('div.gh-q-head', h('span.eyebrow', L(`مهام اليوم · ${doneQ}/${g.quests.length}`, `Today's quests · ${doneQ}/${g.quests.length}`)), h('a.tiny', { href: '#/achievements' }, L('كل الإنجازات', 'All achievements'), icon('chevron', 'flip-rtl'))),
+      g.quests.length ? h('ul.quest-cards', g.quests.slice(0, 3).map((q) => h(`li${q.done ? '.done' : ''}`,
+        h(q.done || !q.cta ? 'div.qc' : 'a.qc', q.done || !q.cta ? {} : { href: q.cta.route, 'aria-label': L(`ابدأ: ${q.ar}`, `Start: ${q.en}`) },
+          h('span.q-check', { 'aria-hidden': 'true' }, icon(q.done ? 'check' : q.icon || 'target')),
+          h('span.qc-title', L(q.ar, q.en)),
+          h('span.qc-foot', h('span.q-xp', q.done ? L('مكتملة', 'Done') : L('+15 نقطة', '+15 pts')), !q.done && q.cta ? h('span.qc-go', L('ابدأ', 'Go'), icon('chevron', 'flip-rtl')) : null)))))
+        : h('div.empty.tiny', L('لا مهام يومية الآن — أحسنت!', 'No quests right now — nice work!'))));
 }
 
 // Sidebar chip

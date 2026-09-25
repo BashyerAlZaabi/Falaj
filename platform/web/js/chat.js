@@ -105,7 +105,7 @@ function aiModeInfo(anchor) {
       ? L(`متصل بنموذج لغوي (${a.provider || '—'}). يفهم الطلبات المركّبة وينفّذها ضمن صلاحياتك، ويطلب تأكيدك قبل أي إجراء حساس.`, `Connected to a language model (${a.provider || '—'}). It understands multi-part requests and acts within your permissions, asking before anything sensitive.`)
       : L('يعمل المساعد الآن بوضع الأوامر المحلية: ينفّذ الطلبات الواضحة مباشرة (ملخص اليوم، المهام، تحديث التقدم، التقارير، البطاقات) دون نموذج لغوي.', 'The assistant is running on local commands: it carries out clear requests (daily summary, tasks, progress updates, reports, cards) without a language model.')),
     !model ? h('p.faint', L('اكتب طلباً واحداً واضحاً في كل مرة، مثل: «حدّث تقدم هذا المشروع إلى 60%».', 'Write one clear request at a time, e.g. “Update this project’s progress to 60%”.')) : null,
-    a.degraded && status ? h('p.faint', icon('info', 'sm'), ` ${L('حالة خدمة النموذج', 'Model service')}: `, h('bdi', status)) : null);
+    a.degraded && status && state.me.user?.is_admin ? h('p.faint', icon('info', 'sm'), ` ${L('حالة خدمة النموذج (للمشرفين)', 'Model service (admins)')}: `, h('bdi', status)) : null);
   menu(anchor, [
     { title: model ? L('نموذج لغوي متصل', 'Language model connected') : L('وضع الأوامر المحلية', 'Local command mode') },
     { node: info },
@@ -425,7 +425,7 @@ function assistantBubble(r, historic = false, extra = {}) {
   if (r.actions?.length) {
     const okN = r.actions.filter((a) => a.status === 'ok').length;
     content.append(h('section.receipt', { 'data-status': r.status || null, 'aria-label': L('ما نُفّذ فعلياً', 'What was actually done') },
-      h('header.receipt-head', statusPill(r.status || (okN ? 'done' : 'failed')), h('span.grow'), h('span.receipt-count', receiptCount(okN, r.actions.length))),
+      h('header.receipt-head', statusPill(r.status || (okN ? 'done' : 'failed')), h('span.grow'), h('span.receipt-count', receiptCount(okN, r.actions.length, r.actions.filter((a) => a.status === 'needs_confirmation').length))),
       h('ul.receipt-list', r.actions.map((a) => actionRow(a, historic)))));
   }
   if (extra.steps?.length && extra.steps.length > (r.actions?.length || 0)) {
@@ -474,7 +474,7 @@ function copy(text, done) {
   navigator.clipboard.writeText(text).then(ok, fail);
 }
 
-function receiptCount(ok, n) { return ok === n ? nActions(n) : L(`نُفّذ ${fmtNum(ok)} من ${fmtNum(n)}`, `${ok} of ${n} done`); }
+function receiptCount(ok, n, pending = 0) { return ok === n ? nActions(n) : !ok && pending ? L('لم يُنفَّذ شيء بعد', 'Nothing done yet') : L(`نُفّذ ${fmtNum(ok)} من ${fmtNum(n)}`, `${ok} of ${n} done`); }
 function stepIcon(status) { return status === 'ok' ? ['ok', 'circleCheck'] : status === 'needs_confirmation' ? ['wait', 'circleAlert'] : ['err', 'circleX']; }
 function stepList(steps) {
   return h('ul.steps', steps.map((s) => { const [cls, ic] = stepIcon(s.status); return h(`li.${cls}`, icon(ic), h('span.grow', s.label, s.error ? h('span.step-err', ` — ${s.error}`) : null)); }));
@@ -665,7 +665,11 @@ export async function send(text, { voice = false, requestId = null, retry = fals
     body.append(msg);
     scroll(false, bubble || msg);
     announce(`${statusLabel(final.status || 'done')}. ${plain(final.text || '').slice(0, 160)}`);
-    if (final.open_document) Editor.open(final.open_document);
+    if (final.open_document) {
+      // Already open → let the editor reload it through its "newer version" path (keeps unsaved edits safe).
+      if (state.openDocumentId === final.open_document) emit('document-changed', { id: final.open_document, entity: 'document', source: 'assistant' });
+      else Editor.open(final.open_document);
+    }
     if (final.refresh?.length) emit('data-changed', { entity: final.refresh.join(',') });
     if (final.arrange) { state.arranging = true; location.hash = '#/home'; emit('data-changed', {}); }
     if (final.actions?.some((a) => a.status === 'ok')) watchPoints(msg.querySelector('.msg-body'), before);
@@ -716,15 +720,19 @@ function dayGroup(d) {
 async function showHistory() {
   const listHost = h('div.history-list', skeleton('list', 5));
   const search = h('input.field', { type: 'search', placeholder: L('ابحث في عناوين المحادثات…', 'Search conversation titles…'), 'aria-label': L('بحث في المحادثات', 'Search conversations') });
-  const body = h('div.history', h('div.search-field', icon('search'), search), listHost);
+  const tools = h('div.history-tools', h('div.search-field.grow', icon('search'), search),
+    h('button.btn.tertiary', { type: 'button', onclick: () => { closeModal(); newConversation(); } }, icon('plus'), L('محادثة جديدة', 'New conversation')));
+  const body = h('div.history', tools, listHost);
   let rows = []; let shown = [];
   const closeModal = () => body.closest('.modal')?.querySelector('.modal-close')?.click();
   const pick = (c) => { closeModal(); if (c.id !== state.conversationId) { setConversation(c.id); load(); } };
   const draw = () => {
     const q = search.value.trim().toLowerCase();
     shown = q ? rows.filter((c) => String(c.title || '').toLowerCase().includes(q)) : rows;
+    tools.classList.toggle('hidden', !rows.length);
     if (!rows.length) {
       listHost.replaceChildren(emptyState({ icon: 'messageSquare', compact: true, title: L('لا محادثات سابقة بعد', 'No conversations yet'), body: L('اطلب أي شيء من المساعد وستُحفظ محادثاتك هنا.', 'Ask the assistant anything and your conversations will be kept here.'), actions: [{ label: L('ابدأ محادثة', 'Start a conversation'), icon: 'plus', primary: true, onClick: () => { closeModal(); newConversation(); } }] }));
+      listHost.querySelector('.btn.primary')?.focus();
       return;
     }
     if (!shown.length) { listHost.replaceChildren(emptyState({ icon: 'search', compact: true, title: L(`لا نتائج لـ«${search.value.trim()}»`, `No results for “${search.value.trim()}”`), body: L('جرّب كلمة أخرى من عنوان المحادثة.', 'Try another word from the conversation title.') })); return; }
@@ -744,10 +752,6 @@ async function showHistory() {
   };
   search.addEventListener('input', draw);
   search.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); if (shown[0]) pick(shown[0]); } });
-  const done = modal(L('المحادثات السابقة', 'Previous conversations'), body, [
-    { label: L('محادثة جديدة', 'New conversation'), icon: 'plus', value: 'new' },
-    { label: t('close'), value: null },
-  ]);
+  modal(L('المحادثات السابقة', 'Previous conversations'), body, []);
   fetchList();
-  if ((await done) === 'new') newConversation();
 }

@@ -409,3 +409,9 @@ code { font-family: var(--font-mono); font-size: 0.9em; padding: 1px 6px; border
 .legend { display: flex; flex-wrap: wrap; gap: var(--space-3); font: var(--type-footnote); color: var(--text-secondary); margin-top: var(--space-3); }
 .legend span { display: inline-flex; align-items: center; gap: 6px; }
 .legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+/* Selected segment: stronger in light mode */
+.tabs button.on, .tabs button[aria-selected="true"], .segmented button.on { font-weight: 600; box-shadow: var(--shadow-control), 0 0 0 0.5px var(--separator-strong), var(--glass-highlight-soft); }
+/* Edge-aware tooltip for controls at the end edge of a panel */
+[data-tip-pos="bottom-end"]::after { bottom: auto; top: calc(100% + 8px); left: auto; inset-inline-end: 0; transform: translateY(4px) scale(0.97); }
+[data-tip-pos="bottom-end"]:hover::after, [data-tip-pos="bottom-end"]:focus-visible::after { transform: none; }

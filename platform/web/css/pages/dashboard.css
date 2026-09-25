@@ -143,6 +143,7 @@
 .skel-cells { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); margin-bottom: var(--space-3); }
 @container dash-card (min-width: 640px) and (max-width: 859px) { .skel-cells { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
 .skel-cell { height: 64px; border-radius: var(--radius-md); }
+@container dash-card (min-width: 860px) { .sum-skel { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--space-8); align-items: start; } .sum-skel .skel-cell { height: 76px; } }
 .skel-chart { height: 160px; }
 
 /* ---------- Daily summary: flat stat cells + "needs action" ---------- */
@@ -287,6 +288,8 @@ a.kpi:focus-visible { box-shadow: var(--focus-ring); }
 
 /* ---------- Chart containers inside cards ---------- */
 .dash-chart { display: flex; flex-direction: column; min-width: 0; }
+.chart-note { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3); font: var(--type-footnote); color: var(--text-secondary); }
+.chart-note .icon { color: var(--green-text); }
 .chart-key { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin-top: var(--space-3); font: var(--type-footnote); color: var(--text-secondary); }
 .chart-key span { display: inline-flex; align-items: center; gap: 6px; }
 .key-sw { width: 10px; height: 10px; border-radius: var(--radius-pill); background: var(--series-1); }

@@ -54,7 +54,7 @@ export function toast(msg, { action, onAction, timeout = 5000, kind } = {}) {
 
 // ---------- Focus management ----------
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
-function trapFocus(container, e) {
+export function trapFocus(container, e) {
   if (e.key !== 'Tab') return;
   const f = $$(FOCUSABLE, container).filter((x) => x.offsetParent !== null);
   if (!f.length) return;
@@ -118,7 +118,7 @@ export function menu(anchor, items, { align = 'end', width } = {}) {
     if (it.title) { pop.append(h('div.menu-title', it.title)); continue; }
     if (it.node) { pop.append(it.node); continue; }
     const el = h(`${it.href ? 'a' : 'button'}.menu-item${it.danger ? '.danger' : ''}`, {
-      role: it.checked != null ? 'menuitemradio' : 'menuitem', type: it.href ? null : 'button', href: it.href || null, id: it.id || null,
+      role: it.checked != null ? 'menuitemradio' : 'menuitem', type: it.href ? null : 'button', href: it.href || null, download: it.download != null ? it.download : null, id: it.id || null,
       'aria-checked': it.checked != null ? String(!!it.checked) : null, target: it.target || null, rel: it.target ? 'noopener noreferrer' : null,
       onclick: (e) => { if (!it.keepOpen) close(); it.onClick?.(e); },
     }, it.icon ? icon(it.icon) : null, h('span.grow', it.label), it.hint ? h('span.hint', it.hint) : null);
@@ -188,7 +188,7 @@ export function emptyState({ icon: ic = 'inbox', title, body, actions = [], comp
     body ? h('p', body) : null,
     actions.length ? h('div.btn-group', actions.map((a) => h(`button.btn${a.primary ? '.primary' : a.tertiary ? '.tertiary' : ''}${compact ? '.sm' : ''}`, { type: 'button', onclick: a.onClick }, a.icon ? icon(a.icon) : null, a.label))) : null);
 }
-export const errorState = (err, retry) => emptyState({ icon: 'circleAlert', error: true, title: L('تعذّر التحميل', 'Could not load'), body: err?.message || String(err || ''), actions: retry ? [{ label: L('إعادة المحاولة', 'Try again'), icon: 'refresh', onClick: retry }] : [] });
+export const errorState = (err, retry, { title } = {}) => emptyState({ icon: 'circleAlert', error: true, title: title || L('تعذّر التحميل', 'Could not load'), body: err?.message || String(err || ''), actions: retry ? [{ label: L('إعادة المحاولة', 'Try again'), icon: 'refresh', onClick: retry }] : [] });
 
 // ---------- Data table (GlassTable): sortable, mobile-stacking ----------
 // columns: [{ key, label, render?(row) -> Node|string, sort?(row) -> comparable, num?, width? }]

@@ -30,21 +30,49 @@
 [dir="rtl"] .xp-bar > i { background: linear-gradient(270deg, var(--series-1), var(--series-3)); }
 
 /* ---------- Home hero ---------- */
-.game-hero { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-6); padding: var(--space-5) var(--space-6); margin-bottom: var(--space-4); overflow: hidden; }
-.game-hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background: radial-gradient(60% 120% at 0% 0%, color-mix(in srgb, var(--series-1) 10%, transparent), transparent 60%), radial-gradient(50% 120% at 100% 100%, color-mix(in srgb, var(--series-3) 9%, transparent), transparent 60%); }
+.game-hero { display: grid; grid-template-columns: 1fr; gap: var(--space-5); padding: var(--space-5) var(--space-6); margin-bottom: var(--space-4); overflow: hidden; }
+.game-hero::before { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background: radial-gradient(50% 140% at 0% 0%, color-mix(in srgb, var(--series-1) 9%, transparent), transparent 60%), radial-gradient(45% 120% at 100% 100%, color-mix(in srgb, var(--series-3) 8%, transparent), transparent 60%); }
 .game-hero > * { position: relative; }
-.gh-main { display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; }
-.gh-top { display: flex; align-items: center; gap: var(--space-4); }
-.gh-streak { display: flex; flex-direction: column; align-items: center; gap: 0; padding: 6px 12px; border-radius: var(--radius-lg); background: var(--orange-tint); color: var(--orange-text); }
-.gh-streak .icon { width: 16px; height: 16px; }
-.gh-streak strong { font: 700 20px/1 var(--font-display); color: var(--text-primary); }
-.gh-q-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-.gh-legend { display: flex; flex-direction: column; gap: var(--space-4); min-width: 180px; }
-.gh-today { display: flex; flex-direction: column; }
-.gh-today .t-numeral { font-size: 30px; background: linear-gradient(90deg, var(--series-1), var(--series-3)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.gh-legend { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }
-@container page (min-width: 1000px) { .game-hero { grid-template-columns: auto minmax(0, 1fr) auto; } .gh-legend { grid-column: auto; flex-direction: column; align-items: stretch; } }
-@container page (max-width: 560px) { .game-hero { grid-template-columns: 1fr; justify-items: center; } .gh-main { width: 100%; } }
+.gh-rings { display: flex; align-items: center; gap: var(--space-4); }
+.gh-ring-keys { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font: var(--type-footnote); color: var(--text-secondary); }
+.gh-ring-keys li { display: flex; align-items: center; gap: 8px; }
+.gh-ring-keys b { margin-inline-start: auto; padding-inline-start: var(--space-3); color: var(--text-primary); font: 600 13px/1 var(--font-text); }
+.gh-body { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.gh-top { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
+.gh-top > .grow { min-width: 200px; }
+.gh-stat { display: flex; align-items: center; gap: 10px; padding: 8px 14px 8px 10px; border-radius: var(--radius-lg); background: var(--fill-3); }
+[dir="rtl"] .gh-stat { padding: 8px 10px 8px 14px; }
+.gh-stat .gs-ic { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; flex: none; }
+.gh-stat .gs-ic .icon { width: 16px; height: 16px; }
+.gh-stat strong { display: block; font: 700 18px/1.1 var(--font-display); }
+.gh-stat small { display: block; font: var(--type-caption); color: var(--text-tertiary); }
+.gh-stat.streak .gs-ic { color: #fff; background: linear-gradient(160deg, var(--flame-from), var(--flame-to)); }
+.gh-stat.today .gs-ic { color: var(--emph); background: var(--emph-tint); }
+.gh-stat.today strong { color: var(--emph-text); }
+.gh-q-head { display: flex; justify-content: space-between; align-items: center; }
+.gh-q-head a { display: inline-flex; align-items: center; gap: 2px; }
+.gh-q-head a .icon { width: 13px; height: 13px; }
+.quest-cards { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr; gap: var(--space-2); }
+.quest-cards .qc { height: 100%; display: flex; flex-direction: column; gap: 8px; padding: var(--space-3); border-radius: var(--radius-lg); background: var(--glass-5-bg); border: 1px solid var(--glass-2-border); color: inherit; text-decoration: none; transition: transform var(--dur-normal) var(--ease-spring), box-shadow var(--transition-fast), border-color var(--transition-fast); }
+.quest-cards a.qc:hover { text-decoration: none; transform: translateY(-2px); box-shadow: var(--shadow-card-hover); border-color: color-mix(in srgb, var(--emph) 30%, transparent); }
+.quest-cards a.qc:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.quest-cards .q-check { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; background: var(--emph-tint); color: var(--emph-text); }
+.quest-cards .q-check .icon { width: 14px; height: 14px; stroke-width: 2.2; }
+.quest-cards li.done .q-check { background: var(--green); color: #fff; }
+.quest-cards .qc-title { font: 500 14px/1.45 var(--font-text); }
+.quest-cards li.done .qc-title { color: var(--text-tertiary); text-decoration: line-through; text-decoration-color: var(--separator-strong); }
+.quest-cards .qc-foot { margin-top: auto; display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.quest-cards .q-xp { font: 600 12px/1 var(--font-text); color: var(--sand-text); }
+.quest-cards .qc-go { display: inline-flex; align-items: center; gap: 2px; font: 600 12.5px/1 var(--font-text); color: var(--accent-text); }
+.quest-cards .qc-go .icon { width: 13px; height: 13px; }
+@container page (min-width: 720px) { .quest-cards { grid-template-columns: repeat(3, 1fr); } }
+@container page (max-width: 719px) {
+  .quest-cards .qc { flex-direction: row; align-items: center; gap: var(--space-3); padding: 10px var(--space-3); }
+  .quest-cards .qc-title { flex: 1; min-width: 0; }
+  .quest-cards .qc-foot { margin: 0; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .gh-rings { justify-content: center; }
+}
+@container page (min-width: 900px) { .game-hero { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: var(--space-8); } .gh-rings { flex-direction: column; gap: var(--space-3); } .gh-ring-keys { min-width: 150px; } }
 
 /* ---------- Quests ---------- */
 .quests { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }

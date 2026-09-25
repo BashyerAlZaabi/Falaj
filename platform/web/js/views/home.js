@@ -13,6 +13,8 @@ import { L, t, fmtTime, fmtNum, getLang } from '../i18n.js';
 import { state, on } from '../state.js';
 import { renderWidgetView, fetchWidgetData, widgetSkeleton, widgetError, widgetTitle, widgetIcon, sourceLabel, VIEW_META, TYPE_META, runTool, undo } from '../widgets.js';
 import * as Chat from '../chat.js';
+import { gameHero, loadGame } from '../game.js';
+import { wsCard } from '../systems.js';
 
 const SIZE_NAMES = { s: ['صغير', 'Small'], m: ['متوسط', 'Medium'], l: ['كبير', 'Large'] };
 const SIZE_HINTS = { s: ['ربع العرض', 'Quarter width'], m: ['نصف العرض', 'Half width'], l: ['كامل العرض', 'Full width'] };
@@ -27,6 +29,7 @@ const C = {
   expanded: new Set(),
   pending: new Set(), // entities changed since the last soft refresh
   head: null, wrap: null, grid: null, editbar: null, emptyEl: null, live: null,
+  extras: null, gameSlot: null, wsSlot: null, gameHash: null, wsHash: null, // excellence journey + department workspace strip
   ready: false, lastSync: null, localAt: 0, drag: null, deferred: null, orderBefore: null, orderTimer: 0,
 };
 
@@ -65,6 +68,7 @@ export async function renderHome(root, params, { soft = false } = {}) {
   root.classList.add('dash');
   const entities = soft ? takePending() : (C.pending.clear(), null);
   if (!C.wrap) buildShell();
+  if (!C.extras) buildExtras();
   updateHead();
   const focusBack = rememberFocus();
 
@@ -73,7 +77,7 @@ export async function renderHome(root, params, { soft = false } = {}) {
     try { dash = await api('/api/dashboard'); } catch { /* keep the stale layout */ }
     if (my !== C.seq || state.route !== 'home') return;
     if (dash) applyLayout(dash);
-    root.append(C.head, C.wrap);
+    root.append(C.head, C.extras, C.wrap); refreshExtras();
     focusBack();
     refresh(entities);
     return;
@@ -81,11 +85,11 @@ export async function renderHome(root, params, { soft = false } = {}) {
   if (C.dash) {
     // Returning to the page: paint instantly from cache, then revalidate.
     if (!C.ready) applyLayout(C.dash);
-    root.append(C.head, C.wrap);
+    root.append(C.head, C.extras, C.wrap); refreshExtras();
     api('/api/dashboard').then((dash) => { if (my === C.seq) { applyLayout(dash); refresh(null); } }).catch(() => refresh(null));
     return;
   }
-  root.append(C.head, C.wrap);
+  root.append(C.head, C.extras, C.wrap); refreshExtras();
   loadLayout(my);
 }
 
@@ -95,7 +99,34 @@ function takePending() {
   return s.has('all') ? null : s;
 }
 function resetAll(uid) { C.uid = uid; C.dash = null; C.data.clear(); C.expanded.clear(); C.lastSync = null; resetDom(); }
-function resetDom() { C.lang = getLang(); C.cards.clear(); C.head = C.wrap = C.grid = C.editbar = C.emptyEl = C.live = null; C.ready = false; C.drag = null; }
+function resetDom() { C.lang = getLang(); C.cards.clear(); C.head = C.wrap = C.grid = C.editbar = C.emptyEl = C.live = null; C.extras = C.gameSlot = C.wsSlot = null; C.gameHash = C.wsHash = null; C.ready = false; C.drag = null; }
+
+// ============================== excellence journey + my systems ==============================
+// Two stable sections above the grid: the gamified "رحلة التميّز" hero (points
+// derived from real work) and the department workspace strip — cards from every
+// enterprise system the person can open (their role decides what appears).
+// Contents are swapped only when the data changes, so soft refreshes never flash.
+function buildExtras() {
+  C.gameSlot = h('div.home-game');
+  C.wsSlot = h('section.ws-strip', { 'aria-label': L('مساحتي في الأنظمة', 'My systems'), hidden: true });
+  C.extras = h('div.home-extras', C.gameSlot, C.wsSlot);
+}
+async function refreshExtras() {
+  const [g, ws] = await Promise.all([loadGame().catch(() => null), api('/api/workspace').catch(() => null)]);
+  if (!C.extras) return;
+  if (g) {
+    const hash = JSON.stringify([g.xp, g.level?.n, g.today_xp, g.streak, g.rings, g.quests]);
+    if (hash !== C.gameHash) { C.gameHash = hash; C.gameSlot.replaceChildren(gameHero(g)); }
+  }
+  if (ws) {
+    const cards = ws.flatMap((s) => s.cards.map((c) => ({ ...c, sys: s }))).slice(0, 6);
+    const hash = JSON.stringify(cards);
+    if (hash !== C.wsHash) {
+      C.wsHash = hash; C.wsSlot.hidden = !cards.length;
+      C.wsSlot.replaceChildren(...(cards.length ? [h('div.section', L('مساحتي في الأنظمة', 'My systems'), h('span.count', L('ما يحتاج انتباهك الآن', 'What needs you now'))), h('div.ws-grid', cards.map(wsCard))] : []));
+    }
+  }
+}
 
 // The router swaps the whole view container; keep keyboard focus where it was.
 function rememberFocus() {
@@ -128,7 +159,7 @@ function buildShell() {
   C.headTitle = h('h1');
   C.headRole = h('span');
   C.headScope = h('span');
-  C.syncEl = h('span.dash-sync', { 'aria-live': 'polite' });
+  C.syncEl = h('span.dash-sync');
   C.refreshBtn = h('button.icon-btn.dash-refresh', { type: 'button', onclick: manualRefresh }, icon('refresh'));
   C.editBtn = h('button.btn.dash-edit-btn', { type: 'button', 'aria-pressed': 'false', onclick: () => setEditing(!state.arranging) }, icon('sliders'), h('span.lbl'));
   C.aiBtn = h('button.btn.dash-ai', { type: 'button', onclick: () => Chat.send(L('جهّز لي ملخص اليوم', 'Prepare my daily summary')) }, icon('spark'), h('span.lbl', L('ملخص اليوم', 'Daily summary')));

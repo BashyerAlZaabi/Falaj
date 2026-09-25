@@ -93,9 +93,10 @@ export async function open(id, { force = false, silent = false, focus = false, d
   }
   if (seq !== openSeq) return;
   if (!same) { changedSinceVersion = false; preview = false; }
+  const prevVersion = doc?.current_version;
   doc = d; dirty = false; state.openDocumentId = id; lastSavedAt = d.updated_at;
   reveal(!silent);
-  if (!same || force) render({ focus }); else if (focus) focusEditor();
+  if (!same || force || d.current_version !== prevVersion) render({ focus }); else if (focus) focusEditor();
   emit('document-open', { id });
   import('./chat.js').then((c) => c.refreshContext());
 }
@@ -161,7 +162,7 @@ function render({ focus = false } = {}) {
     h('h3.ed-crumb', kindGlyph(doc.kind, 'sm'), h('span.truncate', L(k.ar, k.en))),
     mode,
     h(`button.icon-btn.ed-hist${versionsOpen ? '.active' : ''}`, { type: 'button', title: L('سجل الإصدارات', 'Version history'), 'aria-expanded': String(versionsOpen), 'aria-controls': 'versions', onclick: toggleVersions }, icon('history')),
-    h('button.icon-btn.ed-focus-btn', { type: 'button', 'aria-pressed': String(focusMode), 'aria-label': L('وضع التركيز', 'Focus mode'), 'data-tip': focusMode ? L('إنهاء وضع التركيز (Esc)', 'Exit focus mode (Esc)') : L('وضع التركيز — مساحة كتابة أوسع', 'Focus mode — a wider writing space'), 'data-tip-pos': 'bottom', onclick: toggleFocus }, icon(focusMode ? 'shrink' : 'expand')));
+    h('button.icon-btn.ed-focus-btn', { type: 'button', 'aria-pressed': String(focusMode), 'aria-label': L('وضع التركيز', 'Focus mode'), onclick: toggleFocus }, icon(focusMode ? 'shrink' : 'expand')));
 
   // status bar: saved state · version · words … Ask AI · save version · export
   const bar = h('div.ed-bar',
@@ -181,7 +182,7 @@ function render({ focus = false } = {}) {
   const body = h('div.doc-body', { contenteditable: String(!isPreview), spellcheck: 'true', dir: 'auto', role: 'textbox', 'aria-multiline': 'true', 'aria-readonly': String(isPreview), 'aria-label': L('متن المستند', 'Document body'), 'data-placeholder': L('ابدأ الكتابة هنا…', 'Start writing…'), html: doc.content_html });
   if (isPreview) body.classList.add('preview');
   body.addEventListener('input', () => { markDirty(); countWords(); });
-  const title = h('input.doc-title', { value: doc.title, 'aria-label': L('عنوان المستند', 'Document title'), placeholder: L('عنوان المستند', 'Document title'), maxlength: 200, disabled: !editable || null, readonly: isPreview || null, autocomplete: 'off',
+  const title = h('input.doc-title', { value: doc.title, dir: 'auto', 'aria-label': L('عنوان المستند', 'Document title'), placeholder: L('عنوان المستند', 'Document title'), maxlength: 200, disabled: !editable || null, readonly: isPreview || null, autocomplete: 'off',
     oninput: markDirty, onkeydown: (e) => { if (e.key === 'Enter') { e.preventDefault(); if (!isPreview) body.focus(); } } });
   const meta = h('div.ed-meta', h('span', { title: fullDate(doc.updated_at) }, `${L('آخر تعديل', 'Updated')} ${whenText(doc.updated_at)}`));
   const sources = doc.sources?.length ? h('div.doc-sources', icon('database'), h('span', `${L('مبني على بيانات', 'Built from')}:`), doc.sources.map((s) => h('span.chip.tiny', { title: s.at ? fullDate(s.at) : null }, h('bdi', sourceLabel(s))))) : null;
@@ -189,12 +190,12 @@ function render({ focus = false } = {}) {
 
   const scroller = h('div.ed-scroll', h('div.ed-banners'), !isPreview ? toolbar(body) : null, paper);
   const root = h(`div.ed-root${isPreview ? '.is-preview' : ''}`, { onkeydown: onRootKey },
-    head, h('div.ed-main', bar, scroller, versionsPane()));
+    head, h('div.ed-main', bar, h('div.ed-stage', scroller, h('div.ed-scrim.hidden', { 'aria-hidden': 'true', onclick: () => hideVersions() }), versionsPane())));
   panel().replaceChildren(root);
   scroller.scrollTop = prevScroll;
   setStatus('saved');
   syncVersionBtn(); countWords(true); syncFocus();
-  if (versionsOpen) { q('#versions').classList.remove('hidden'); loadVersions(); }
+  if (versionsOpen) { q('#versions').classList.remove('hidden'); q('.ed-scrim').classList.remove('hidden'); loadVersions(); }
   if (focus) focusEditor();
 }
 
@@ -210,7 +211,11 @@ function onRootKey(e) {
 
 async function setPreview(v) {
   if (v === preview) return;
-  await flush();
+  if (!(await flush())) { // keep unsaved edits on screen rather than re-rendering over them
+    q('.ed-mode')?.querySelectorAll('button').forEach((b) => { const on = (b.dataset.v === 'preview') === preview; b.classList.toggle('on', on); b.setAttribute('aria-selected', String(on)); });
+    toast(L('تعذّر حفظ تعديلاتك، لذلك بقيت في وضع التحرير. أعد المحاولة ثم بدّل الوضع.', "Your edits couldn't be saved, so you're still editing. Retry, then switch."), { kind: 'error' });
+    return;
+  }
   preview = v; render();
 }
 
@@ -253,7 +258,7 @@ function aiMenu(anchor) {
     { label: L('اجعل الصياغة رسمية', 'Make the tone formal'), icon: 'wand', onClick: ask(L('اجعل الصياغة رسمية', 'Make the tone formal')) },
     { label: L('أضف جدولاً للمسؤوليات والمواعيد', 'Add a responsibilities & deadlines table'), icon: 'table', onClick: ask(L('أضف جدولاً للمسؤوليات والمواعيد', 'Add a responsibilities and deadlines table')) },
     { sep: true },
-    { label: L('طلب آخر…', 'Something else…'), icon: 'chat', hint: '/', onClick: async () => { await flush(); const c = await import('./chat.js'); c.focus(); } },
+    { label: L('طلب آخر…', 'Something else…'), icon: 'chat', onClick: async () => { await flush(); const c = await import('./chat.js'); c.focus(); } },
   ], { width: 290 });
 }
 
@@ -385,7 +390,7 @@ function syncFocus() {
   document.body.classList.toggle('editor-focus', !!doc && focusMode);
   const b = q('.ed-focus-btn'); if (!b) return;
   b.setAttribute('aria-pressed', String(focusMode));
-  b.dataset.tip = focusMode ? L('إنهاء وضع التركيز (Esc)', 'Exit focus mode (Esc)') : L('وضع التركيز — مساحة كتابة أوسع', 'Focus mode — a wider writing space');
+  b.title = focusMode ? L('إنهاء وضع التركيز (Esc)', 'Exit focus mode (Esc)') : L('وضع التركيز — مساحة كتابة أوسع', 'Focus mode — a wider writing space');
   b.replaceChildren(icon(focusMode ? 'shrink' : 'expand'));
 }
 function toggleFocus() { focusMode = !focusMode; syncFocus(); }
@@ -399,7 +404,7 @@ function reasonInfo(r = '') {
   const rs = /^restore v(\d+)$/.exec(r);
   if (rs) return { label: L(`استعادة الإصدار ${rs[1]}`, `Restored version ${rs[1]}`), ic: 'undo', cls: 'key' };
   const ai = /^assistant: (\w+)$/.exec(r);
-  if (ai) { const op = OPS[ai[1]]; return { label: L(`Ask AI: ${op?.[0] || ai[1]}`, `Ask AI: ${op?.[1] || ai[1]}`), ic: 'spark', cls: 'ai' }; }
+  if (ai) { const op = OPS[ai[1]]; return { label: L(`تعديل المساعد: ${op?.[0] || ai[1]}`, `Ask AI: ${op?.[1] || ai[1]}`), ic: 'spark', cls: 'ai' }; }
   return { label: r || '—', ic: 'history', cls: 'key' };
 }
 
@@ -415,14 +420,14 @@ async function toggleVersions() {
   if (versionsOpen) { hideVersions(); return; }
   versionsOpen = true;
   const btn = q('.ed-hist'); btn?.classList.add('active'); btn?.setAttribute('aria-expanded', 'true');
-  q('#versions')?.classList.remove('hidden');
+  q('#versions')?.classList.remove('hidden'); q('.ed-scrim')?.classList.remove('hidden');
   await flush();
   await loadVersions();
   q('#versions .ver-row .icon-btn, #versions .ver-head .icon-btn')?.focus({ preventScroll: true });
 }
 function hideVersions() {
   versionsOpen = false;
-  q('#versions')?.classList.add('hidden');
+  q('#versions')?.classList.add('hidden'); q('.ed-scrim')?.classList.add('hidden');
   const btn = q('.ed-hist'); btn?.classList.remove('active'); btn?.setAttribute('aria-expanded', 'false'); btn?.focus();
 }
 
@@ -436,7 +441,8 @@ async function loadVersions() {
     return;
   }
   if (doc?.id !== id || !box.isConnected) return;
-  q('#versions .ver-count').textContent = fmtNum(vs.length);
+  const n = vs.length;
+  q('#versions .ver-count').textContent = getLang() === 'en' ? `${fmtNum(n)} ${n === 1 ? 'version' : 'versions'}` : n === 1 ? 'إصدار واحد' : n === 2 ? 'إصداران' : n < 11 ? `${fmtNum(n)} إصدارات` : `${fmtNum(n)} إصداراً`;
   const groups = [];
   for (const v of vs) {
     const key = dayLabel(v.created_at);
@@ -462,7 +468,7 @@ async function previewVersion(v) {
   const canRestore = canEdit() && v !== doc.current_version;
   const res = await modal(L(`معاينة الإصدار v${v}`, `Preview of v${v}`),
     h('div.ver-preview-wrap',
-      h('div.ver-preview', h('div.ver-preview-title', r.title), h('div.doc-body.preview', { html: r.content_html })),
+      h('div.ver-preview', h('div.ver-preview-title', { dir: 'auto' }, r.title), h('div.doc-body.preview', { html: r.content_html })),
       canRestore ? h('p.ver-preview-note', icon('info', 'sm'), L(`الاستعادة تُنشئ إصداراً جديداً (v${doc.current_version + 1}) بمحتوى هذا الإصدار، ويبقى السجل كاملاً.`, `Restoring creates a new version (v${doc.current_version + 1}) with this content; history is kept.`)) : null),
     [{ label: t('close'), value: null }, canRestore ? { label: L('استعادة هذا الإصدار', 'Restore this version'), value: 'restore', primary: true, icon: 'undo' } : null].filter(Boolean), { wide: true });
   if (res === 'restore') doRestore(v); // the preview itself is the confirmation step
@@ -479,7 +485,10 @@ async function doRestore(v) {
   const id = doc.id;
   const r = await api('/api/tools/restore_document_version', { method: 'POST', body: { input: { id, version: v }, requestId: rid() } }).catch((e) => e.body);
   if (r?.status !== 'ok') { toast(r?.error || L('تعذّرت الاستعادة', 'Restore failed'), { kind: 'error' }); return; }
+  versionsOpen = false; // done with the history: show the restored page
   await open(id, { force: true });
+  q('.ed-hist')?.focus({ preventScroll: true });
+  const paper = q('.ed-paper'); if (paper) { paper.classList.remove('flash'); void paper.offsetWidth; paper.classList.add('flash'); }
   toast(L(`استُعيد الإصدار v${v} كإصدار جديد (v${doc?.current_version ?? '—'})`, `Restored v${v} as a new version (v${doc?.current_version ?? '—'})`), r.undoable && r.actionId ? { action: t('undo'), onAction: () => undoAction(r.actionId) } : {});
   emit('data-changed', { entity: 'document' });
 }

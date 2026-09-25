@@ -126,12 +126,12 @@
   --glass-2-border: rgba(90, 70, 40, 0.08);
   --glass-3-bg: rgba(251, 248, 243, 0.72);
   --glass-3-border: rgba(255, 255, 255, 0.75);
-  --glass-4-bg: rgba(252, 250, 246, 0.88);
+  --glass-4-bg: rgba(252, 250, 246, 0.93);
   --glass-4-border: rgba(255, 255, 255, 0.8);
   --glass-5-bg: rgba(255, 255, 255, 0.94);
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.85), inset 0 0 0 0.5px rgba(255, 255, 255, 0.4);
   --glass-highlight-soft: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  --scrim: rgba(15, 24, 40, 0.28);
+  --scrim: rgba(15, 24, 40, 0.34);
 
   --control-bg: rgba(255, 255, 255, 0.84);
   --control-bg-hover: rgba(255, 255, 255, 0.94);
@@ -173,11 +173,11 @@
     --danger-fill: #C63A22;
     --amber-vault: #DEC393; --amber-vault-tint: rgba(216, 188, 136, 0.14);
     --series-1: #4A85D4; --series-2: #B5842E; --series-3: #BF3852; --series-4: #2AA68E;
-    --chart-grid: rgba(226, 232, 245, 0.07); --chart-axis: rgba(226, 232, 245, 0.18); --chart-missing: rgba(150, 160, 180, 0.5);
+    --chart-grid: rgba(226, 232, 245, 0.09); --chart-axis: rgba(226, 232, 245, 0.18); --chart-missing: rgba(150, 160, 180, 0.5);
     --glass-1-bg: rgba(10, 20, 36, 0.5); --glass-1-border: rgba(255, 255, 255, 0.05);
     --glass-2-bg: rgba(23, 41, 64, 0.58); --glass-2-bg-hover: rgba(30, 50, 78, 0.68); --glass-2-border: rgba(200, 215, 240, 0.07);
     --glass-3-bg: rgba(14, 27, 48, 0.68); --glass-3-border: rgba(200, 215, 240, 0.1);
-    --glass-4-bg: rgba(17, 31, 54, 0.88); --glass-4-border: rgba(200, 215, 240, 0.12);
+    --glass-4-bg: rgba(17, 31, 54, 0.93); --glass-4-border: rgba(200, 215, 240, 0.12);
     --glass-5-bg: rgba(40, 60, 92, 0.9);
     --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 0 0.5px rgba(255, 255, 255, 0.05);
     --glass-highlight-soft: inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -215,11 +215,11 @@
   --danger-fill: #C63A22;
   --amber-vault: #DEC393; --amber-vault-tint: rgba(216, 188, 136, 0.14);
   --series-1: #4A85D4; --series-2: #B5842E; --series-3: #BF3852; --series-4: #2AA68E;
-  --chart-grid: rgba(226, 232, 245, 0.07); --chart-axis: rgba(226, 232, 245, 0.18); --chart-missing: rgba(150, 160, 180, 0.5);
+  --chart-grid: rgba(226, 232, 245, 0.09); --chart-axis: rgba(226, 232, 245, 0.18); --chart-missing: rgba(150, 160, 180, 0.5);
   --glass-1-bg: rgba(10, 20, 36, 0.5); --glass-1-border: rgba(255, 255, 255, 0.05);
   --glass-2-bg: rgba(23, 41, 64, 0.58); --glass-2-bg-hover: rgba(30, 50, 78, 0.68); --glass-2-border: rgba(200, 215, 240, 0.07);
   --glass-3-bg: rgba(14, 27, 48, 0.68); --glass-3-border: rgba(200, 215, 240, 0.1);
-  --glass-4-bg: rgba(17, 31, 54, 0.88); --glass-4-border: rgba(200, 215, 240, 0.12);
+  --glass-4-bg: rgba(17, 31, 54, 0.93); --glass-4-border: rgba(200, 215, 240, 0.12);
   --glass-5-bg: rgba(40, 60, 92, 0.9);
   --glass-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 0 0 0.5px rgba(255, 255, 255, 0.05);
   --glass-highlight-soft: inset 0 1px 0 rgba(255, 255, 255, 0.06);
