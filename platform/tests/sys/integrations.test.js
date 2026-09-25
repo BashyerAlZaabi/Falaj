@@ -393,13 +393,9 @@ test('what the center says Ask AI can read matches MCP reality: locked never, op
   const toolsList = async () => (await fetch(`${noura.base}/mcp`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${tok}` }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }) }).then((r) => r.json())).result.tools.map((t) => t.name);
   const ai = (await noura.get(`${B}/ai`)).data;
   const listed = await toolsList();
-  for (const sys of ai.systems) {
-    const readable = sys.domains.some((d) => d.ai_active);
-    if (!readable && sys.domains.every((d) => d.tools.read + d.tools.write === 0 || !d.ai_active)) {
-      const allOff = sys.domains.every((d) => !d.ai_active);
-      if (allOff) assert.ok(!listed.some((n) => n.startsWith(`${sys.key}_`)), `${sys.key}: no tools while nothing is readable`);
-    }
-  }
+  const integrity = ai.systems.find((x) => x.key === 'integrity');
+  assert.ok(integrity.domains.every((d) => d.ai_locked && !d.ai_active));
+  assert.ok(!listed.some((x) => x.startsWith('integrity_')), 'a locked domain never exposes tools');
   const goals = ai.systems.find((x) => x.key === 'goals');
   const n = goals.domains.reduce((a, d) => a + d.tools.read + d.tools.write, 0);
   assert.equal(goals.domains.some((d) => d.ai_active), false);
