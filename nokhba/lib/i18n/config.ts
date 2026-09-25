@@ -20,7 +20,8 @@ export function dirOf(locale: Locale) {
 export function pick<T extends Record<string, unknown>>(record: T, field: string, locale: Locale): string {
   const key = `${field}${locale === "ar" ? "Ar" : "En"}` as keyof T;
   const fallback = `${field}${locale === "ar" ? "En" : "Ar"}` as keyof T;
-  const value = record[key] ?? record[fallback];
+  // Empty strings count as missing so a course with no Arabic summary yet shows the English one.
+  const value = (typeof record[key] === "string" && (record[key] as string).trim()) ? record[key] : record[fallback];
   return typeof value === "string" ? value : "";
 }
 

@@ -1,0 +1,81 @@
+name: Nokhba CI
+
+on:
+  push:
+    paths: ["nokhba/**", ".github/workflows/nokhba-ci.yml"]
+  pull_request:
+    paths: ["nokhba/**", ".github/workflows/nokhba-ci.yml"]
+
+defaults:
+  run:
+    working-directory: nokhba
+
+jobs:
+  checks:
+    name: Lint · typecheck · unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: nokhba/package-lock.json
+      - run: npm ci
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/nokhba
+      - run: npx next typegen
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+
+  e2e:
+    name: Build · migrate · seed · e2e
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nokhba
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/nokhba?schema=public
+      AUTH_SECRET: ci-only-secret-not-for-production
+      AUTH_URL: http://localhost:3000
+      AUTH_TRUST_HOST: "true"
+      NEXT_PUBLIC_APP_URL: http://localhost:3000
+      AI_PROVIDER: local
+      E2E_BASE_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: nokhba/package-lock.json
+      - run: npm ci
+      - run: npx prisma migrate deploy
+      - run: npm run db:seed
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - name: Start the production server
+        run: |
+          npm run start &
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:3000/api/health >/dev/null && exit 0
+            sleep 2
+          done
+          echo "server did not become healthy" && exit 1
+      - run: npx playwright test --project=desktop
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: nokhba/test-results
