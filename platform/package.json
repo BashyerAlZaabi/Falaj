@@ -1,0 +1,26 @@
+{
+  "name": "smart-work-platform",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "منصة العمل الذكية — Unified Portal + ADAA I + Ask AI + Vault",
+  "scripts": {
+    "start": "node --no-warnings server/index.js",
+    "start:vault": "node --no-warnings vault/server.js",
+    "dev": "node --no-warnings scripts/run-all.js",
+    "seed": "node --no-warnings server/seed.js --reset",
+    "wajib:sim": "node --no-warnings scripts/wajib-sim.js",
+    "test": "node --no-warnings --test tests/*.test.js",
+    "e2e": "node --no-warnings tests/e2e/journey.mjs"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-sans-arabic": "^5.3.0",
+    "docx": "^9.7.2",
+    "express": "^5.2.1",
+    "mammoth": "^1.12.3",
+    "playwright-core": "^1.63.0"
+  }
+}

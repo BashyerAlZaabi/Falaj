@@ -1,3 +1,5 @@
+> **جديد:** منصة العمل الذكية (Unified Portal + ADAA I + Ask AI + Agents Office + Vault) في المجلد [`platform/`](platform/README.md).
+
 # 🌴 فلج رياضة — Falaj Fitness
 
 تطبيق رياضي تفاعلي فيه **شخصية إماراتية** (رجل بالكندورة والغترة، أو أنثى بالعباية والشيلة) تمثّلك،
