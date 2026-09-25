@@ -255,6 +255,38 @@ await step('17. نقاط التميّز: إنجاز مهمة حقيقية يمن
   await gp.context().close();
 });
 
+await step('18. واجهات الأقسام: الموارد البشرية والتدقيق الداخلي ترى أنظمتها في القائمة', async () => {
+  const hp = await newPage();
+  await login(hp, 'hessa');
+  await hp.waitForSelector('#nav .nav-systems a[data-route="sys:performance"]');
+  await hp.click('#nav .nav-systems a[data-route="sys:performance"]');
+  await hp.waitForSelector('.sys-head h1');
+  assert.match(await hp.locator('.sys-head .class-chip').innerText(), /سري/);
+  await shot(hp, '15-hr-performance');
+  await hp.context().close();
+  const ap = await newPage();
+  await login(ap, 'aisha');
+  await ap.waitForSelector('#nav .nav-systems a[data-route="sys:audit"]');
+  await ap.context().close();
+});
+
+await step('19. جهة خارجية (مقدم خدمة): بوابة معزولة بلا مساحة عمل ولا مساعد', async () => {
+  const vp = await newPage();
+  await vp.goto(S.portal + '/');
+  await vp.waitForSelector('#login-form', { state: 'visible' });
+  await vp.fill('#lg-user', 'horizon'); await vp.fill('#lg-pass', 'Demo@2026');
+  await vp.click('#login-form button[type=submit]');
+  await vp.waitForFunction(() => location.hash.startsWith('#/sys/'), null, { timeout: 8000 });
+  const routes = await vp.locator('#nav a.item').evaluateAll((as) => as.map((a) => a.dataset.route));
+  assert.deepEqual(routes.sort(), ['sys:procurement', 'sys:providers']);
+  assert.equal(await vp.locator('#btn-ask').isVisible(), false);
+  assert.equal(await vp.locator('#ask-dock').isVisible(), false);
+  await vp.goto(S.portal + '/#/projects');
+  await vp.waitForFunction(() => location.hash.startsWith('#/sys/'), null, { timeout: 8000 });
+  await shot(vp, '16-provider-portal');
+  await vp.context().close();
+});
+
 await browser.close();
 await S.stop();
 const failed = results.filter((r) => !r.ok);
