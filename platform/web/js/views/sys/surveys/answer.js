@@ -8,6 +8,22 @@ import { celebrate } from '../../../game.js';
 import { call, MIN_GROUP, TYPES, RATING_LABELS, anonChip, demoChip, leftChip, questionsLabel, minutesLabel, dateLabel, keepFocus } from './common.js';
 
 const drafts = new Map();     // surveyId → { answers: {qid: value}, ack }
+// One document-level key handler routed to the question card of the current
+// hash, so keys typed while the view is being rebuilt (live data refresh) are
+// never lost. It ignores keys aimed at other controls and at open dialogs.
+const keys = { current: null, bound: false };
+function bindKeys() {
+  if (keys.bound) return;
+  keys.bound = true;
+  document.addEventListener('keydown', (e) => {
+    const k = keys.current;
+    if (!k || k.hash !== location.hash || e.defaultPrevented) return;
+    const t = e.target;
+    if (document.querySelector('.modal-wrap, .sys-sheet, .popover')) return;
+    if (t !== document.body && t?.id !== 'view' && !k.el.contains(t) && !(t?.closest?.('.sv-qcard'))) return;
+    k.fn(e);
+  });
+}
 const completed = new Map();  // surveyId → submit result (for the thank-you step)
 const cache = new Map();      // surveyId → { s, at }
 
@@ -108,14 +124,12 @@ export function answerForm(ctx, s, { preview = false, step } = {}) {
     const control = controlFor(q, d, onChange);
     const body = h('div.sv-q-control', control);
     const sec = q.section; const firstInSection = qs.findIndex((x) => x.section.id === sec.id) === i - 1;
-    const el = h('section.card.sv-qcard', {
-      'aria-labelledby': headingId,
-      onkeydown: (e) => {
-        const inText = e.target.matches('textarea, input[type=text]');
-        if (e.key === 'Enter' && !e.shiftKey && (!inText || e.ctrlKey || e.metaKey) && !e.target.matches('button, a')) { e.preventDefault(); next(); return; }
-        if (!inText && /^[0-9]$/.test(e.key) && !e.altKey && !e.ctrlKey && !e.metaKey) digitPick(q, e.key, el, onChange) && e.preventDefault();
-      },
-    },
+    const onKey = (e) => {
+      const inText = e.target.matches?.('textarea, input[type=text]');
+      if (e.key === 'Enter' && !e.shiftKey && (!inText || e.ctrlKey || e.metaKey) && !e.target.matches?.('button, a')) { e.preventDefault(); next(); return; }
+      if (!inText && /^[0-9]$/.test(e.key) && !e.altKey && !e.ctrlKey && !e.metaKey) digitPick(q, e.key, el, onChange) && e.preventDefault();
+    };
+    const el = h('section.card.sv-qcard', { 'aria-labelledby': headingId },
     preview ? h('div.sv-preview-flag', icon('eye'), L('معاينة', 'Preview')) : null,
     h('div.sv-q-progress', h('span.num.tabular', L(`السؤال ${fmtNum(i)} من ${fmtNum(n)}`, `Question ${i} of ${n}`)), progress((100 * (i - 1)) / n, { label: L('التقدّم', 'Progress') }), h('span.sv-q-sec', q.section.title)),
     firstInSection && q.section.description ? h('p.sv-sec-intro', icon('info'), q.section.description) : null,
@@ -128,6 +142,8 @@ export function answerForm(ctx, s, { preview = false, step } = {}) {
       !q.required && !isAnswered(q) ? h('button.btn.ghost', { type: 'button', onclick: () => nav(i < n ? i + 1 : 'review') }, L('تخطٍّ', 'Skip')) : null,
       nextBtn),
     h('p.sv-kbd-hint', icon('keyboard'), hintFor(q)));
+    keys.current = { hash: location.hash, el, fn: onKey };
+    bindKeys();
     // Put focus on the question (screen readers announce it; digits/Enter work at once)
     // unless the person is already interacting with something meaningful.
     requestAnimationFrame(() => { const a = document.activeElement; if (!el.isConnected || el.contains(a)) return; if (!a || a === document.body || a.id === 'view') el.querySelector(`#${headingId}`)?.focus({ preventScroll: true }); });

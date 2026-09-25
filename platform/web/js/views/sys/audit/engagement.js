@@ -1,7 +1,8 @@
 // Internal Audit — engagement record page (#/sys/audit/e/<id>[/<section>]):
 // phase stepper, next step, and sections: overview · information requests ·
 // working papers (IA only, restricted) · findings · report.
-import { sysHeader, sysTabs, stepper, card, grid, confidentialBanner, dataTable, openSheet, accessLogList, confirmDialog, whoChip } from '../../../sys-kit.js';
+import { sysHeader, sysTabs, stepper, card, grid, confidentialBanner, dataTable, openSheet, confirmDialog, whoChip } from '../../../sys-kit.js';
+import { accessList } from './common.js';
 import { h, icon, L, fmtNum, fmtDate, call, HREF, PHASES, phaseChip, phaseLabel, riskChip, findingChip, deptName, qChip, dueLabel, nextCard, btn, back, mount, demoChip, para, formDialog, act, toast, emptyState, personOpt, skeleton, errorState, statusChip } from './common.js';
 import { requestCard } from './requests.js';
 import { newFinding } from './finding.js';
@@ -255,7 +256,7 @@ async function workpaperSheet(e, id) {
       h('dl.sys-kv', h('dt', L('أعدها', 'Prepared by')), h('dd', w.prepared_by_user ? L(w.prepared_by_user.name_ar, w.prepared_by_user.name_en) : '—'), h('dt', L('راجعها', 'Reviewed by')), h('dd', w.reviewed_by_user ? `${L(w.reviewed_by_user.name_ar, w.reviewed_by_user.name_en)} · ${fmtDate(w.reviewed_at)}` : '—')),
       w.can.review_blocked_sod ? h('div.callout', icon('shieldAlert'), L('فصل المهام: لا تراجع ورقة عمل أعددتها بنفسك.', 'Segregation of duties: you cannot review your own working paper.')) : null,
       acts.childElementCount ? acts : null,
-      w.access_log ? h('div', h('div.lbl-sm', L('سجل الاطلاع', 'Access log')), accessLogList(w.access_log)) : null));
+      w.access_log ? h('div', h('div.lbl-sm', L('سجل الاطلاع', 'Access log')), accessList(w.access_log)) : null));
   } catch (err) { sheet.setBody(errorState(err)); }
 }
 async function editWorkpaper(e, w = null) {

@@ -409,6 +409,7 @@ body.ai-immersive .ai-orb-wrap, body.ai-voice-open .ai-orb-wrap { display: none;
 .vo-line[hidden] { display: none; }
 .vo-line.you { font: var(--type-callout); color: var(--text-secondary); }
 .vo-line.ai { font: var(--type-title3); font-weight: 500; line-height: 1.55; }
+.vo-line.ai .vo-text { white-space: pre-line; } /* one line per item of the reply */
 .vo-who { display: inline-block; margin-inline-end: var(--space-2); padding: 1px 8px; border-radius: var(--radius-pill); background: var(--fill-3); font: var(--type-caption); color: var(--text-tertiary); vertical-align: 2px; }
 .vo-line.you.interim .vo-text { color: var(--text-tertiary); }
 .vo-line.ai .vo-who { background: var(--emph-tint); color: var(--emph-text); }

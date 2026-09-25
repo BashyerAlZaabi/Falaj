@@ -186,12 +186,12 @@ async function reviewView(ctx, cycleId, reviewId) {
   const cycKey = cycleId || 'current';
   let r;
   try { r = await C.call(`/reviews/${encodeURIComponent(reviewId)}`); } catch (e) {
-    return h('div.perf-hr', h('a.btn.sm.ghost.perf-back.always', { href: `#/sys/performance/hr/${cycKey}` }, icon('chevron', 'flip-rtl perf-back-ic'), L('لوحة الموارد البشرية', 'HR console')),
+    return h('div.perf-hr', h('a.btn.sm.ghost.perf-back.always', { href: `#/sys/performance/hr/${cycKey}` }, icon('chevronL', 'flip-rtl'), L('لوحة الموارد البشرية', 'HR console')),
       h('section.card', errorState({ message: e.status === 404 ? L('المراجعة غير موجودة.', 'Review not found.') : e.message })));
   }
   const main = [];
   main.push(h('section.card.perf-dhead',
-    h('a.btn.sm.ghost.perf-back.always', { href: `#/sys/performance/hr/${cycKey}` }, icon('chevron', 'flip-rtl perf-back-ic'), L('لوحة الموارد البشرية', 'HR console')),
+    h('a.btn.sm.ghost.perf-back.always', { href: `#/sys/performance/hr/${cycKey}` }, icon('chevronL', 'flip-rtl'), L('لوحة الموارد البشرية', 'HR console')),
     h('div.perf-dhead-row', C.personLine(r.employee), h('div.perf-dhead-chips', C.statusOf(r.status), C.demoChip(r.is_demo))),
     h('div.perf-dmeta', h('span', icon('userCheck'), L('المقيِّم: ', 'Assessor: '), r.manager ? L(r.manager.name_ar, r.manager.name_en) : '—'), h('span', icon('calendarClock'), `${L(r.cycle.name_ar, r.cycle.name_en)} · ${C.phaseName(r.cycle.phase)}`)),
     C.reviewStepper(r)));

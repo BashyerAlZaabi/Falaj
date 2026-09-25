@@ -103,7 +103,10 @@ export function seed() {
     run(`INSERT INTO strategy_kpis (id,objective_id,code,name_ar,name_en,definition_ar,formula_ar,unit_ar,unit_en,direction,measure,frequency,baseline,baseline_year,decimals,min_value,max_value,owner_dept_id,owner_user_id,data_source_ar,data_source_en,weight,active,sort,is_demo,created_at,updated_at)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?,?,?,?,?,1,?,1,?,?)`, id, obj, code, ar, en, def, formula, uar, uen, dir, measure, freq, baseline, y0 - 1, decimals, max, dept, owner, sar, sen, weight, ++sort, created, created);
     targets.forEach((t, i) => run('INSERT INTO strategy_targets (kpi_id,year,target) VALUES (?,?,?)', id, y0 + i, t));
-    const last = lastClosedPeriod(freq, today);
+    // the demo series ends at the latest period whose reporting could already have happened
+    // (a period that closed in the last few days is simply «due» — never pre-filled)
+    let last = lastClosedPeriod(freq, today);
+    if (parsePeriod(freq, last).end >= addDays(today, -4)) last = shiftPeriod(freq, last, -1);
     const n = values.length;
     values.forEach((v, i) => {
       if (v == null) return;

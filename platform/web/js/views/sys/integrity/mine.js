@@ -2,7 +2,7 @@
 // «الإفصاح يحميك» privacy card with «من اطّلع على إفصاحي», active instructions,
 // ad-hoc disclosures and my gifts.
 import { h, icon, L, fmtDate, fmtNum, toast, formDialog, stepper, emptyState, grid, act, statusChip } from '../../../sys-kit.js';
-import { call, DECL, GIFT, DECISION, INTEREST, MITIGATION, lbl, chip, demoChip, money, accessList, openRouted, isOpen, ring, count, daysWord } from './common.js';
+import { call, DECL, GIFT, DECISION, INTEREST, MITIGATION, lbl, chip, money, accessList, openRouted, isOpen, ring, count } from './common.js';
 import { openRecord, interestRow } from './record.js';
 import { declareGift, giftTodo } from './gifts.js';
 

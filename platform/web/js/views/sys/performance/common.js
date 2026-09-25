@@ -35,10 +35,10 @@ export const BANDS = [
 ];
 export const band = (k) => BANDS.find((b) => b.key === k) || null;
 export const bandName = (k) => { const b = band(k); return b ? L(b.ar, b.en) : '—'; };
-export function bandChip(k, { tiny = true, final = false } = {}) {
+export function bandChip(k, { tiny = true, final = false, short = false } = {}) {
   const b = band(k);
   if (!b) return h('span.chip.tiny.outline', L('لم يُحدَّد', 'Not set'));
-  return h(`span.chip.${b.tone}${tiny ? '.tiny' : ''}.perf-band`, icon(final ? 'award' : 'star'), L(b.ar, b.en));
+  return h(`span.chip.${b.tone}${tiny ? '.tiny' : ''}.perf-band`, short ? { 'data-tip': L(b.ar, b.en), 'aria-label': L(b.ar, b.en) } : {}, icon(final ? 'award' : 'star'), short ? L(b.short_ar, b.short_en) : L(b.ar, b.en));
 }
 export const bandOf = (score) => (score == null ? null : BANDS.find((b) => score >= b.min - 1e-9)?.key || 'unsatisfactory');
 export const SCALE = [

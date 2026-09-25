@@ -92,7 +92,7 @@ function quarters(plan) {
     return h(`section.aud-q${cur && q === cq ? '.now' : ''}`, { 'aria-label': L(`الربع ${q}`, `Q${q}`) },
       h('header', h('span.aud-q-name', L(`الربع ${['الأول', 'الثاني', 'الثالث', 'الرابع'][q - 1]}`, `Quarter ${q}`)), cur && q === cq ? h('span.chip.tiny.info', L('الحالي', 'Now')) : null, h('span.grow'), h('span.count.num', fmtNum(list.length))),
       list.length ? list.map((e) => h('a.aud-qitem', { href: `${HREF}/e/${e.id}` },
-        h('div.aud-qitem-title', e.title), h('div.aud-qitem-meta', h('span', deptName(e.department)), phaseChip(e.phase), e.added_after_approval ? h('span.chip.tiny.warn', { 'data-tip': L('أضيفت بعد اعتماد الخطة', 'Added after plan approval') }, icon('plus'), L('بعد الاعتماد', 'Post-approval')) : null)))
+        h('div.aud-qitem-title', { dir: 'auto' }, e.title), h('div.aud-qitem-meta', h('span', deptName(e.department)), phaseChip(e.phase), e.added_after_approval ? h('span.chip.tiny.warn', { 'data-tip': L('أضيفت بعد اعتماد الخطة', 'Added after plan approval') }, icon('plus'), L('بعد الاعتماد', 'Post-approval')) : null)))
         : h('div.board-empty', L('لا مهام', 'None')));
   }));
 }

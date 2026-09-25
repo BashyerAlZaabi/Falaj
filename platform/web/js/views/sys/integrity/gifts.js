@@ -1,7 +1,7 @@
 // «سجل الهدايا» — declare a gift or hospitality with live policy guidance; the
 // published policy; my register. The system proposes, the compliance officer decides.
 import { h, icon, L, fmtDate, fmtNum, toast, modal, emptyState, dataTable, debounce, statusChip } from '../../../sys-kit.js';
-import { call, GIFT, DECISION, lbl, chip, demoChip, money, daysWord } from './common.js';
+import { call, GIFT, DECISION, lbl, chip, money, daysWord } from './common.js';
 import { openRecord } from './record.js';
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -99,7 +99,7 @@ async function giftDialog() {
     h('div.form-row', h('span.lbl', L('النوع', 'Type')), seg('kind', [['gift', L('هدية', 'Gift'), 'gift'], ['hospitality', L('ضيافة', 'Hospitality'), 'party']])),
     field('value_aed', L('القيمة التقديرية', 'Estimated value'), h('div.money-field', input('value_aed', { type: 'number', min: 0, step: 1, inputmode: 'decimal', placeholder: '0' }), h('span.cur', L('د.إ', 'AED'))), { required: true, help: L('تقدير معقول يكفي', 'A reasonable estimate is enough') }),
     field('giver_name', L('الجهة المانحة', 'Giver'), giver, { required: true }),
-    h('div.form-row', h('span.lbl', L('المانح', 'Giver type')), seg('giver_type', [['organisation', L('جهة', 'Organisation'), 'building'], ['person', L('شخص', 'Person'), 'user']])),
+    h('div.form-row', h('span.lbl', L('المانح', 'Giver type')), seg('giver_type', [['organisation', L('جهة', 'Entity'), 'building'], ['person', L('شخص', 'Person'), 'user']])),
     field('provider_id', L('مقدّم خدمة مسجّل؟', 'Registered provider?'), provider),
     field('received_on', L('تاريخ الاستلام أو العرض', 'Received or offered on'), input('received_on', { type: 'date', max: todayIso() }), { required: true }),
     field('occasion', L('المناسبة', 'Occasion'), input('occasion', { maxlength: 200, placeholder: L('اختياري', 'Optional') }), { full: true }),

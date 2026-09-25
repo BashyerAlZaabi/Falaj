@@ -2,7 +2,7 @@
 // The same sheet serves the discloser (own record) and the compliance officer
 // (every officer view is logged server-side and appears in the access log).
 import { h, icon, L, fmtDate, toast, modal, confirmDialog, formDialog, stepper, confidentialBanner, act } from '../../../sys-kit.js';
-import { call, DECL, GIFT, DECISION, INTEREST, MITIGATION, lbl, chip, demoChip, stamp, money, nameOf, deptOf, personLine, accessList, historyList, kv, section, openRouted, isOpen } from './common.js';
+import { call, DECL, GIFT, DECISION, INTEREST, MITIGATION, lbl, chip, demoChip, money, nameOf, deptOf, personLine, accessList, historyList, kv, section, openRouted, isOpen, daysWord } from './common.js';
 
 const PATH = { declaration: 'declarations', disclosure: 'disclosures', gift: 'gifts' };
 const STEPS = [{ ar: 'مسودة', en: 'Draft' }, { ar: 'مُقدَّم', en: 'Submitted' }, { ar: 'قيد المراجعة', en: 'Under review' }, { ar: 'القرار', en: 'Decision' }, { ar: 'مغلق', en: 'Closed' }];
@@ -89,7 +89,7 @@ function giftBody(r) {
       [L('الجهة المانحة', 'Giver'), `${r.giver_name} · ${r.giver_type === 'person' ? L('شخص', 'Person') : L('جهة', 'Organisation')}`],
       [L('المناسبة', 'Occasion'), r.occasion || '—'],
       [r.offered_only ? L('تاريخ العرض', 'Offered on') : L('تاريخ الاستلام', 'Received on'), fmtDate(r.received_on)],
-      [L('مدة الإفصاح', 'Declared within'), h('span', L(`${r.days_to_declare} يوم`, `${r.days_to_declare} days`), ' ', r.prompt ? h('span.chip.tiny.good', icon('check'), L('في الوقت', 'On time')) : h('span.chip.tiny.warn', L('بعد المهلة', 'Late')))],
+      [L('مدة الإفصاح', 'Declared within'), h('span', r.days_to_declare === 0 ? L('في اليوم نفسه', 'Same day') : daysWord(r.days_to_declare), ' ', r.prompt ? h('span.chip.tiny.good', icon('check'), L('في الوقت', 'On time')) : h('span.chip.tiny.warn', L('بعد المهلة', 'Late')))],
     ]),
     h(`div.integ-proposal.${DECISION[d.decision]?.[2] || 'navy'}`, h('span.integ-proposal-ic', icon(DECISION[d.decision]?.[3] || 'scale')),
       h('div', h('span.eyebrow', L('مقترح النظام وفق السياسة', 'Policy proposal')), h('strong', lbl(DECISION, d.decision)), h('p', L(d.reason_ar, d.reason_en)))),
@@ -166,7 +166,7 @@ async function mitigationDialog(r) {
   const provider = r.type === 'declaration' ? r.interests.find((i) => i.provider) : r.provider ? { provider: r.provider, party_name: r.related_party } : null;
   const pName = provider ? (provider.party_name || L(provider.provider.name_ar, provider.provider.name_en)) : '';
   const rows = [provider
-    ? { kind: 'recusal', matter: `تقييم عروض ${pName} وقرارات الشراء الخاصة بها`, provider_id: provider.provider?.id || provider.provider_id || '', instruction: `يمتنع عن تقييم عروض ${pName} أو المشاركة في أي قرار شراء يخصها`, notify_manager: true }
+    ? { kind: 'recusal', matter: `تقييم عروض ${pName} وقرارات الشراء الخاصة بها`, provider_id: provider.provider?.id || provider.provider_id || '', instruction: `الامتناع عن تقييم عروض ${pName} وعن المشاركة في أي قرار شراء يخصها`, notify_manager: true }
     : { kind: 'recusal', matter: r.type === 'disclosure' ? r.matter : '', provider_id: '', instruction: '', notify_manager: true }];
   const providers = (await call('/policy').catch(() => ({ providers: [] }))).providers;
   const list = h('div.integ-mit-edit');

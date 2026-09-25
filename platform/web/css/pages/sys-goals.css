@@ -6,11 +6,10 @@
 .viz-ring-wrap > svg { position: absolute; inset: 0; overflow: visible; }
 .viz-ring .vr-track { stroke: var(--fill-2); }
 .viz-ring .vr-track.is-missing { stroke: var(--chart-missing); stroke-dasharray: 2 5; }
-.viz-ring .vr-arc { stroke: var(--accent); animation: vr-draw var(--dur-slower) var(--ease-out) both; }
+.viz-ring .vr-arc { stroke: var(--accent); }
 .viz-ring.t-good .vr-arc { stroke: var(--green); } .viz-ring.t-warn .vr-arc { stroke: var(--orange); } .viz-ring.t-crit .vr-arc { stroke: var(--red); }
 .viz-ring.t-emph .vr-arc { stroke: var(--emph); } .viz-ring.t-none .vr-arc { stroke: var(--chart-missing); }
 .viz-ring .vr-stop-a { stop-color: var(--accent); } .viz-ring .vr-stop-b { stop-color: var(--emph); }
-@keyframes vr-draw { from { stroke-dashoffset: var(--circ); } }
 .vr-center { position: relative; display: flex; flex-direction: column; align-items: center; line-height: 1.05; text-align: center; }
 .vr-label { font: 600 13px/1 var(--font-display); color: var(--text-primary); }
 .vr-sub { font: var(--type-caption); color: var(--text-tertiary); margin-top: 3px; max-width: 10ch; }
@@ -103,8 +102,8 @@
 .gl-periods { display: flex; flex-direction: column; gap: var(--space-5); }
 .gl-lanes { display: grid; gap: var(--space-3); grid-template-columns: 1fr; align-items: start; }
 @container page (min-width: 720px) { .gl-lanes { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@container page (min-width: 980px) { .gl-lanes { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-@container page (min-width: 1240px) { .gl-lanes { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@container page (min-width: 900px) { .gl-lanes { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container page (min-width: 1080px) { .gl-lanes { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--space-2); } .gl-lane { padding: var(--space-3) var(--space-2); } }
 .gl-lane { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; padding: var(--space-3); border-radius: var(--radius-2xl); background: var(--fill-3); }
 .gl-lane-head { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-1) var(--space-1) var(--space-2); }
 .gl-lane-head h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 2px; font: var(--type-headline); }

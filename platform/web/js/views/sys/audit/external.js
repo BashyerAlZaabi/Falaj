@@ -2,7 +2,8 @@
 //  • External auditor (portal «طلباتي»): his own requests and released replies only.
 //  • Internal Audit («المدقق الخارجي»): assign to a department manager, review, release.
 //  • Assigned manager: prepare the reply (from the requests tab or the record page).
-import { board, statRow, statTile, confirmDialog, confidentialBanner, sysHeader, stepper, accessLogList, card, grid } from '../../../sys-kit.js';
+import { board, statRow, statTile, confirmDialog, confidentialBanner, sysHeader, stepper, card, grid } from '../../../sys-kit.js';
+import { accessList } from './common.js';
 import { h, icon, L, fmtNum, fmtDate, call, HREF, extChip, dueLabel, docList, docField, formDialog, act, toast, emptyState, nextCard, btn, back, mount, demoChip, demoBadge, para, statusChip } from './common.js';
 
 // What the external auditor sees: no internal routing vocabulary.
@@ -82,9 +83,9 @@ const portalIndex = (s) => (s === 'released' ? 3 : s === 'in_progress' ? 1 : 0);
 function portalCard(x) {
   return h(`article.card.aud-portal-card${x.status === 'released' ? '.done' : ''}`,
     h('div.aud-req-head', pubChip(x.status), x.due_date ? h('span.tiny.faint', L(`مطلوب قبل ${fmtDate(x.due_date)}`, `Needed by ${fmtDate(x.due_date)}`)) : null, h('span.grow'), h('span.tiny.faint', L(`أُرسل ${fmtDate(x.created_at)}`, `Sent ${fmtDate(x.created_at)}`))),
-    h('h3.aud-req-title', h('a', { href: `${HREF}/x/${x.id}` }, x.title)),
+    h('h3.aud-req-title', { dir: 'auto' }, h('a', { href: `${HREF}/x/${x.id}` }, x.title)),
     stepper(PORTAL_STEPS, portalIndex(x.status)),
-    x.status === 'released' ? h('div.aud-reply.released', h('div.aud-reply-head', icon('circleCheck'), h('strong', L('الرد المعتمد', 'Released reply')), h('span.tiny.faint', fmtDate(x.released_at))), h('p.aud-para', x.released_text), docList(x.docs)) : null);
+    x.status === 'released' ? h('div.aud-reply.released', h('div.aud-reply-head', icon('circleCheck'), h('strong', L('الرد المعتمد', 'Released reply')), h('span.tiny.faint', fmtDate(x.released_at))), h('p.aud-para', { dir: 'auto' }, x.released_text), docList(x.docs)) : null);
 }
 function iaCard(x) {
   return h('a.board-card.aud-xcard', { href: `${HREF}/x/${x.id}` },
@@ -139,7 +140,7 @@ export async function renderDetail(root, ctx) {
     const side = ext ? [card(L('خصوصية البوابة', 'Portal privacy'), h('p.tiny.muted', L('ترى في هذه البوابة طلباتك والردود التي أفرج عنها مكتب التدقيق الداخلي فقط. تُسجَّل كل عملية اطلاع.', 'You see only your requests and replies released by Internal Audit. Every view is logged.')))]
       : [card(L('التوجيه الداخلي', 'Internal routing'), confidentialBanner('لا يطّلع المدقق الخارجي على هذا القسم', 'Never shown to the external auditor'),
         h('dl.sys-kv', h('dt', L('مسند إلى', 'Assigned to')), h('dd', x.assigned_to ? `${L(x.assigned_to.name_ar, x.assigned_to.name_en)} — ${L(x.assigned_to.dept_ar, x.assigned_to.dept_en)}` : '—'), h('dt', L('التعليمات', 'Instructions')), h('dd', x.internal_note || '—'), x.return_note ? [h('dt', L('آخر إعادة', 'Last return')), h('dd', x.return_note)] : null)),
-      x.access_log ? card(L('سجل الاطلاع', 'Access log'), accessLogList(x.access_log)) : null];
+      x.access_log ? card(L('سجل الاطلاع', 'Access log'), accessList(x.access_log)) : null];
     return [back(ext ? `${HREF}/portal` : x.requester ? `${HREF}/external` : `${HREF}/requests`, ext ? L('طلباتي', 'My requests') : L('الطلبات', 'Requests')), head,
       stepper(steps, idx), next, grid('main-side', h('div.stack', main), h('div.stack', side.filter(Boolean)))];
   });

@@ -89,9 +89,9 @@ function hero(ctx, o) {
       : todays.length ? L('انتهت اجتماعات اليوم', 'Today’s meetings are over') : o.upcoming[0] ? L(`أقرب اجتماع ${C.relDay(C.localDay(o.upcoming[0].starts_at))} الساعة ${C.time(o.upcoming[0].starts_at)}`, `Next meeting ${C.relDay(C.localDay(o.upcoming[0].starts_at))} at ${C.time(o.upcoming[0].starts_at)}`) : L('لا اجتماعات خلال الأسبوعين القادمين', 'Nothing in the next two weeks');
   const liveLink = live?.virtual ? live : null;
   const pills = [
-    o.inbox.rsvp.length ? pill('mailCheck', L(`${plural(o.inbox.rsvp.length, ['دعوة', 'دعوتان', 'دعوات', 'دعوة'])} بانتظار ردّك`, `${o.inbox.rsvp.length} to reply`), '#inbox') : null,
-    o.inbox.review.length ? pill('fileCheck', L(`${plural(o.inbox.review.length, ['محضر', 'محضران', 'محاضر', 'محضراً'])} للاعتماد`, `${o.inbox.review.length} minutes to approve`), `#/sys/meetings/m/${o.inbox.review[0].id}/minutes`) : null,
-    o.inbox.actions.length ? pill('listChecks', L(`${plural(o.inbox.actions.length, ['تكليف مفتوح', 'تكليفان مفتوحان', 'تكليفات مفتوحة', 'تكليفاً مفتوحاً'])}`, `${o.inbox.actions.length} open action items`), '#/sys/meetings/decisions') : null,
+    o.inbox.rsvp.length ? pill('mailCheck', L(`${plural(o.inbox.rsvp.length, ['دعوة', 'دعوتان', 'دعوات', 'دعوة'])} بانتظار ردّك`, `${o.inbox.rsvp.length} ${o.inbox.rsvp.length === 1 ? 'invitation' : 'invitations'} to answer`), '#inbox') : null,
+    o.inbox.review.length ? pill('fileCheck', L(`${plural(o.inbox.review.length, ['محضر', 'محضران', 'محاضر', 'محضراً'])} للاعتماد`, `${o.inbox.review.length} ${o.inbox.review.length === 1 ? 'set' : 'sets'} of minutes to approve`), `#/sys/meetings/m/${o.inbox.review[0].id}/minutes`) : null,
+    o.inbox.actions.length ? pill('listChecks', L(`${plural(o.inbox.actions.length, ['تكليف مفتوح', 'تكليفان مفتوحان', 'تكليفات مفتوحة', 'تكليفاً مفتوحاً'])}`, `${o.inbox.actions.length} open action ${o.inbox.actions.length === 1 ? 'item' : 'items'}`), '#/sys/meetings/decisions') : null,
   ].filter(Boolean);
   return h(`section.card.mt-hero.${step.tone}`, { 'aria-labelledby': 'mt-hero-title' },
     h('div.mt-hero-top',
@@ -148,7 +148,7 @@ export function meetingRow(m, { showDay = false } = {}) {
     h('div.mt-row-time', showDay ? h('span.mt-row-day', `${C.weekday(C.localDay(m.starts_at))} ${C.dayMonth(C.localDay(m.starts_at))}`) : null, h('strong.num', C.time(m.starts_at)), h('span.num', C.time(m.ends_at))),
     h(`span.mt-rail.t-${m.type}`, { 'aria-hidden': 'true' }),
     h('div.mt-row-main',
-      h('div.mt-row-title', m.masked ? h('span.mt-mask-ic', { 'data-tip': C.maskedTip }, icon('lockKeyhole')) : null, h('span', C.titleOf(m))),
+      h('div.mt-row-title', m.masked ? h('span.mt-mask-ic', { 'data-tip': C.maskedTip }, icon('lockKeyhole')) : null, h('span', { dir: 'auto' }, C.titleOf(m))),
       h('div.mt-row-meta',
         C.chip(C.TYPE, m.type),
         m.status === 'cancelled' ? C.chip(C.PHASE, 'cancelled') : m.phase === 'live' ? C.chip(C.PHASE, 'live') : null,
@@ -208,9 +208,9 @@ function miniCalendar(ctx, cal, day, month) {
   }
   return h('section.card.mt-cal', { 'aria-labelledby': 'mt-cal-title' },
     h('div.mt-cal-head',
-      h('a.icon-btn', { href: `#/sys/meetings/upcoming/${ym(prev)}`, 'aria-label': L('الشهر السابق', 'Previous month') }, icon('chevron', 'flip-rtl')),
+      h('a.icon-btn', { href: `#/sys/meetings/upcoming/${ym(prev)}`, 'aria-label': L('الشهر السابق', 'Previous month') }, icon('chevronL', 'flip-rtl')),
       h('h2.mt-cal-title#mt-cal-title', C.monthTitle(month)),
-      h('a.icon-btn', { href: `#/sys/meetings/upcoming/${ym(next)}`, 'aria-label': L('الشهر التالي', 'Next month') }, icon('chevronL', 'flip-rtl'))),
+      h('a.icon-btn', { href: `#/sys/meetings/upcoming/${ym(next)}`, 'aria-label': L('الشهر التالي', 'Next month') }, icon('chevron', 'flip-rtl'))),
     h('div.mt-cal-grid', { role: 'grid', 'aria-label': C.monthTitle(month) }, names.map((n) => h('span.mt-cal-dow', { 'aria-hidden': 'true' }, n)), cells),
     month !== today.slice(0, 7) || day ? h('a.btn.sm.ghost.mt-cal-today', { href: '#/sys/meetings/upcoming' }, icon('calendarCheck'), L('العودة إلى اليوم', 'Back to today')) : null);
 }

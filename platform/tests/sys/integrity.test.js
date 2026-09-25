@@ -269,6 +269,15 @@ test('Ask AI and MCP never read disclosures; intents only explain the policy', a
   assert.match(r3.final.text, /الاعتذار عنها وإعادتها/);
 });
 
+test('integrity intents never capture existing platform commands', async () => {
+  const sara = await as('sara');
+  const t = await sara.chat('أضف مهمة شراء هدية للزميل المتقاعد غداً');
+  assert.ok(!t.final.text.includes('#/sys/integrity'), t.final.text);
+  const en = await sara.chat('Can I accept a gift worth 150 AED?');
+  assert.match(en.final.text, /Keep/);
+  assert.ok(en.final.text.includes('#/sys/integrity/gifts'));
+});
+
 test('cycle administration: officer only, reminders rate-limited, closing requires confirmation', async () => {
   const yousef = await as('yousef');
   const cy = (await yousef.get(`${API}/overview`)).data.cycle;

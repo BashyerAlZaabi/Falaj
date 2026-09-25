@@ -29,7 +29,8 @@ export async function view(ctx, boot, { cycleId, reviewId }) {
   if (detail?.__error) pane = h('section.card', errorState({ message: detail.__error.status === 404 ? L('المراجعة غير موجودة أو ليست ضمن فريقك.', 'Review not found or not in your team.') : detail.__error.message }));
   else if (selected) pane = detailPane(selected, cycKey);
   else pane = overviewPane(data, cycKey);
-  return h('div.perf-teamv', tiles, h(`div.perf-team${selected || detail?.__error ? '.has-detail' : ''}`, roster, h('div.perf-pane', pane)));
+  const has = selected || detail?.__error ? '.has-detail' : '';
+  return h(`div.perf-teamv${has}`, tiles, h(`div.perf-team${has}`, roster, h('div.perf-pane', pane)));
 }
 
 function rosterItem(r, cycKey, on) {
@@ -41,7 +42,7 @@ function rosterItem(r, cycKey, on) {
       h('div.perf-ri-sub', L(r.next.ar, r.next.en)),
       h('div.perf-ri-foot',
         h('div.perf-ri-steps', { role: 'img', 'aria-label': L(`المرحلة ${Math.min(idx + 1, 5)} من 5: ${C.REVIEW_STEPS[Math.min(idx, 4)][0]}`, `Stage ${Math.min(idx + 1, 5)} of 5`) }, C.REVIEW_STEPS.map((_, i) => h(`i${i < idx ? '.done' : i === idx ? '.cur' : ''}`))),
-        r.assessment_visible && r.band ? C.bandChip(r.band) : null))));
+        r.assessment_visible && r.band ? C.bandChip(r.band, { short: true }) : null))));
 }
 
 // ---------------- overview (no selection) ----------------
@@ -69,7 +70,7 @@ function overviewPane(data, cycKey) {
 function detailPane(r, cycKey) {
   const blocks = [];
   blocks.push(h('section.card.perf-dhead',
-    h('a.btn.sm.ghost.perf-back', { href: `#/sys/performance/team/${cycKey}` }, icon('chevron', 'flip-rtl perf-back-ic'), L('الفريق', 'Team')),
+    h('a.btn.sm.ghost.perf-back', { href: `#/sys/performance/team/${cycKey}` }, icon('chevronL', 'flip-rtl'), L('الفريق', 'Team')),
     h('div.perf-dhead-row', C.personLine(r.employee), h('div.perf-dhead-chips', C.statusOf(r.status), C.demoChip(r.is_demo))),
     C.reviewStepper(r),
     r.next.actionable ? h('div.perf-dnext', icon('arrowRight', 'flip-rtl'), h('span', L(r.next.ar, r.next.en)), r.next.due ? h('span.faint', `· ${C.dueText(r.next.due)}`) : null) : null));

@@ -7,7 +7,7 @@ import { call, statusChip, directionChip, domainChip, sectionHead, ago, stamp, n
 const REQ_STATUS = { open: ['قيد المراجعة', 'Under review', 'warn', 'hourglass'], done: ['نُفّذ', 'Done', 'good', 'circleCheck'], declined: ['تعذّر', 'Declined', 'outline', 'circleX'], withdrawn: ['مسحوب', 'Withdrawn', 'outline', 'undo'] };
 
 export async function render(root, ctx, env) {
-  const data = await call('/connectors');
+  const data = await env.get('/connectors');
   const ics = data.connectors.find((c) => c.key === 'ics');
   // Connectors meant for my team (HR → HRMS, Finance/Procurement → ERP) come first.
   const others = data.connectors.filter((c) => c.key !== 'ics').sort((a, b) => Number(b.team) - Number(a.team));

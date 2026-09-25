@@ -25,8 +25,8 @@ function findingCard(f, { cta } = {}) {
   const a = f.action;
   return h(`article.card.aud-fcard${a?.overdue ? '.late' : ''}`,
     h('div.aud-req-head', riskChip(f.risk), findingChip(f.status), h('span.grow'), h('span.tiny.faint', f.ref)),
-    h('h3.aud-req-title', h('a', { href: `${HREF}/f/${f.id}` }, f.title)),
-    h('p.aud-para.muted.aud-clamp', f.recommendation),
+    h('h3.aud-req-title', { dir: 'auto' }, h('a', { href: `${HREF}/f/${f.id}` }, f.title)),
+    h('p.aud-para.muted.aud-clamp', { dir: 'auto' }, f.recommendation),
     a ? h('div.aud-fcard-action', icon('listChecks'), h('span.grow.aud-clamp1', a.description), actionChip(a.status), dueLabel(a.due_date, { done: ['implemented', 'closed'].includes(a.status) })) : null,
     h('div.aud-fcard-foot', h('span.tiny.faint', `${f.engagement.title} · ${deptName(f.department)}`), h('span.grow'), a?.owner && !a.mine ? h('span.tiny.faint', icon('user'), L(a.owner.name_ar, a.owner.name_en)) : null,
       cta || btn(L('فتح', 'Open'), { sm: true, tertiary: true, href: `${HREF}/f/${f.id}` })));

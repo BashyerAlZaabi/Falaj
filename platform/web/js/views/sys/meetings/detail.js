@@ -63,8 +63,8 @@ function paint(page, ctx, m) {
     h('nav.mt-sections', { 'aria-label': L('أقسام الاجتماع', 'Meeting sections') }, SECTIONS.map((s) => h(`a${s.key === sec ? '.on' : ''}`, { href: `#/sys/meetings/m/${m.id}/${s.key}`, 'aria-current': s.key === sec ? 'page' : null },
       icon(s.icon), L(s.ar, s.en), counts[s.key] ? h('span.count', fmtNum(counts[s.key])) : s.key === 'minutes' && m.minutes.status !== 'none' ? h('span.mt-sec-dot', { class: `ms-${m.minutes.status}`, 'aria-hidden': 'true' }) : null))),
     h('div.mt-layout',
-      h('div.mt-main', { id: `mt-sec-${sec}` }, { agenda: agendaSection, minutes: minutesSection, decisions: decisionsSection, actions: actionsSection, attendance: attendanceSection }[sec](ctx, m)),
-      side(ctx, m)));
+      h('div.mt-main', { id: `mt-sec-${sec}` }, nextCard(m, sec, '.mt-next-inline'), { agenda: agendaSection, minutes: minutesSection, decisions: decisionsSection, actions: actionsSection, attendance: attendanceSection }[sec](ctx, m)),
+      side(ctx, m, sec)));
   if (focusKey) { const k = focusKey; setTimeout(() => { const el = document.querySelector(`[data-mkey="${k}"]`); if (el && document.activeElement !== el) { el.focus(); el.setSelectionRange?.(el.value.length, el.value.length); } }, 0); }
 }
 
@@ -90,7 +90,7 @@ function header(ctx, m) {
       h('div.grow.mt-dhead-text',
         h('span.eyebrow', [L(...C.TYPE[m.type].slice(0, 2)), m.committee ? L(m.committee.name_ar, m.committee.name_en) : null].filter(Boolean).join(' · '),
           m.project ? [' · ', h('a', { href: `#/projects/${m.project.id}` }, m.project.name)] : null),
-        h('h1.mt-title#mt-title', m.title),
+        h('h1.mt-title#mt-title', { dir: 'auto' }, m.title),
         h('div.sys-badges', C.chip(C.PHASE, m.phase), m.phase !== 'upcoming' && m.status !== 'cancelled' ? C.chip(C.MINUTES, m.minutes.status) : null, m.confidential ? C.lockChip() : null, C.demoChip(m))),
       orgTools.length ? h('div.mt-dhead-tools', orgTools) : null),
     h('div.mt-facts',
@@ -99,7 +99,7 @@ function header(ctx, m) {
         m.virtual_link ? h('a.mt-join', { href: m.virtual_link, target: '_blank', rel: 'noopener noreferrer' }, icon('ext'), L('رابط الاجتماع', 'Meeting link')) : null]) : null,
       fact('user', L('المنظّم', 'Organizer'), [C.person(m.organizer), m.secretary ? h('span.faint.mt-fact-sub', L(`أمين السر: ${m.secretary.name_ar}`, `Secretary: ${m.secretary.name_en}`)) : null]),
       fact('usersRound', L('المدعوون', 'Invitees'), [h('span', L(`${fmtNum(accepted)} مؤكد من ${fmtNum(m.attendees.length)}`, `${accepted} of ${m.attendees.length} confirmed`)), C.avatarStack(m.attendees, { max: 6 })])),
-    m.description ? h('p.mt-desc', m.description) : null,
+    m.description ? h('p.mt-desc', { dir: 'auto' }, m.description) : null,
     m.can.rsvp ? rsvpBar(m, me) : null);
 }
 function fact(ic, label, value, hint) {
@@ -142,13 +142,18 @@ function nextStep(m) {
   if (m.phase === 'upcoming') return { icon: 'calendarCheck', text: L(`الاجتماع ${C.until(m.starts_at)}. اطّلع على جدول الأعمال.`, `The meeting starts ${C.until(m.starts_at)}. Review the agenda.`), label: null };
   return { icon: 'circleCheck', text: m.minutes.status === 'approved' ? L('المحضر معتمد — تابع تنفيذ القرارات والتكليفات.', 'Minutes approved — follow up on decisions and actions.') : L('لا إجراء مطلوب منك الآن.', 'Nothing needed from you right now.'), label: null, calm: true };
 }
-function side(ctx, m) {
+function nextCard(m, sec, cls = '') {
   const step = nextStep(m);
+  if (!step) return null;
+  if (step.href?.endsWith(`/${sec}`)) step.label = null; // already on that section
+  return h(`section.card.mt-nextcard${step.calm ? '.calm' : ''}${cls}`, h('span.mt-next-ic', icon(step.icon)), h('div.grow', h('span.mt-next-eyebrow', L('الخطوة التالية', 'Next step')), h('p.mt-next-text', step.text),
+    step.label ? (step.href ? h('a.btn.primary.sm', { href: step.href }, step.label) : h('button.btn.primary.sm', { type: 'button', onclick: (e) => step.run(e.currentTarget) }, step.label)) : null));
+}
+function side(ctx, m, sec) {
   const idx = { none: -1, draft: 0, circulated: 1, approved: 3 }[m.minutes.status];
   const rsvpCounts = ['accepted', 'tentative', 'pending', 'declined'].map((k) => [k, m.attendees.filter((a) => a.rsvp === k).length]);
   return h('aside.mt-side', { 'aria-label': L('ملخص الاجتماع', 'Meeting summary') },
-    step ? h(`section.card.mt-nextcard${step.calm ? '.calm' : ''}`, h('span.mt-next-ic', icon(step.icon)), h('div.grow', h('span.mt-next-eyebrow', L('الخطوة التالية', 'Next step')), h('p.mt-next-text', step.text),
-      step.label ? (step.href ? h('a.btn.primary.sm', { href: step.href }, step.label) : h('button.btn.primary.sm', { type: 'button', onclick: (e) => step.run(e.currentTarget) }, step.label)) : null)) : null,
+    nextCard(m, sec),
     m.phase !== 'upcoming' && m.status !== 'cancelled' ? h('section.card.mt-lifecycle', h('div.card-head', h('h2.card-title', L('دورة المحضر', 'Minutes lifecycle'))),
       stepper([{ ar: 'مسودة', en: 'Draft' }, { ar: 'معمّم', en: 'Circulated' }, { ar: 'معتمد', en: 'Approved' }], Math.max(0, idx), { label: L('مراحل المحضر', 'Minutes stages') }),
       m.minutes.circulated_at ? h('p.tiny.faint', L(`عمّمه ${m.minutes.circulated_by?.name_ar || '—'} ${dateTime(m.minutes.circulated_at)}`, `Circulated by ${m.minutes.circulated_by?.name_en || '—'} ${dateTime(m.minutes.circulated_at)}`),
@@ -234,7 +239,7 @@ function agendaSection(ctx, m) {
     h('ol.mt-ag-list', m.agenda.map((g, i) => h('li.mt-ag-item',
       h('span.mt-ag-num', fmtNum(i + 1)),
       h('div.grow',
-        h('div.mt-ag-title', g.title),
+        h('div.mt-ag-title', { dir: 'auto' }, g.title),
         h('div.mt-ag-meta', g.presenter ? whoChip(g.presenter) : h('span.faint.tiny', L('بلا مقدّم', 'No presenter')), h('span.chip.tiny.outline', icon('timer'), C.duration(g.duration_min)),
           g.document ? docChip(g.document) : null,
           g.minutes.trim() ? h('span.chip.tiny.sand', icon('notebook'), L('له محضر', 'Has minutes')) : null)),
@@ -312,7 +317,7 @@ function minutesSection(ctx, m) {
     acts.length ? h('div.mt-min-actions', acts) : null));
   const sum = summaries.get(m.id);
   if (sum) wrap.append(h(`section.card.mt-summary.${sum.source}`, h('div.card-head', h('h2.card-title', icon('spark'), L(' الملخص', ' Summary')), h(`span.chip.tiny.${sum.source === 'ai' ? 'purple' : 'outline'}`, L(sum.label_ar, sum.label_en)),
-    h('button.icon-btn', { type: 'button', 'aria-label': L('إغلاق الملخص', 'Close summary'), onclick: () => { summaries.delete(m.id); reload(); } }, icon('x'))), h('div.mt-summary-text', sum.text)));
+    h('button.icon-btn', { type: 'button', 'aria-label': L('إغلاق الملخص', 'Close summary'), onclick: () => { summaries.delete(m.id); reload(); } }, icon('x'))), h('div.mt-summary-text', { dir: 'auto' }, sum.text)));
   // per agenda item
   if (!m.agenda.length) wrap.append(h('section.card', emptyState({ compact: true, icon: 'listOrdered', title: L('لا بنود في جدول الأعمال', 'No agenda items'), body: m.can.agenda ? L('أضف بنداً لتكتب محضره، أو سجّل القرارات مباشرة.', 'Add an item to write its minutes, or record decisions directly.') : '', actions: m.can.agenda ? [{ label: L('إضافة بند', 'Add item'), onClick: () => agendaDialog(m) }] : [] })));
   wrap.append(...m.agenda.map((g, i) => minutesItem(m, g, i)));
@@ -326,14 +331,14 @@ function minutesItem(m, g, i) {
   const itemComments = m.comments.filter((c) => c.agenda_id === g.id);
   if (!m.can.minutes) {
     return h('section.card.mt-min-item', h('div.mt-min-item-head', h('span.mt-ag-num', fmtNum(i + 1)), h('h3.grow', g.title), g.presenter ? whoChip(g.presenter) : null),
-      g.minutes.trim() ? h('p.mt-min-text', g.minutes) : h('p.faint.tiny', L('لا محضر لهذا البند.', 'No minutes for this item.')),
+      g.minutes.trim() ? h('p.mt-min-text', { dir: 'auto' }, g.minutes) : h('p.faint.tiny', L('لا محضر لهذا البند.', 'No minutes for this item.')),
       decisions.length ? h('ul.mt-min-decisions', decisions.map((d) => h('li', h('span.mt-dec-num', fmtNum(d.number)), d.text))) : null,
       itemComments.length ? h('p.tiny.faint', icon('messageSquare'), L(` ${fmtNum(itemComments.length)} ملاحظة`, ` ${itemComments.length} comments`)) : null);
   }
   const draft = drafts.get(key);
   const dirty = draft != null && draft !== g.minutes;
   const status = h('span.mt-save-state', { 'aria-live': 'polite' }, dirty ? L('تغييرات غير محفوظة', 'Unsaved changes') : g.minutes_updated_at ? L(`حُفظ ${dateTime(g.minutes_updated_at)}`, `Saved ${dateTime(g.minutes_updated_at)}`) : '');
-  const ta = h('textarea.field.mt-min-input', { rows: Math.max(4, Math.min(12, Math.ceil(((draft ?? g.minutes).length || 1) / 90) + 2)), maxlength: 8000, 'data-mkey': key, id: `mt-min-${g.id}`,
+  const ta = h('textarea.field.mt-min-input', { dir: 'auto', rows: Math.max(4, Math.min(12, Math.ceil(((draft ?? g.minutes).length || 1) / 90) + 2)), maxlength: 8000, 'data-mkey': key, id: `mt-min-${g.id}`,
     placeholder: L('ما الذي نوقش؟ ما الذي اتُّفق عليه؟', 'What was discussed? What was agreed?'),
     oninput: (e) => { drafts.set(key, e.target.value); status.textContent = e.target.value !== g.minutes ? L('تغييرات غير محفوظة', 'Unsaved changes') : ''; save.disabled = e.target.value === g.minutes; },
     onfocus: () => { focusKey = key; }, onblur: () => { if (focusKey === key) focusKey = null; },
@@ -346,14 +351,14 @@ function minutesItem(m, g, i) {
   return h(`section.card.mt-min-item${dirty ? '.dirty' : ''}`,
     h('div.mt-min-item-head', h('span.mt-ag-num', fmtNum(i + 1)), h('label.grow', { for: `mt-min-${g.id}` }, h('h3', g.title)), g.presenter ? whoChip(g.presenter) : null),
     ta,
-    h('div.mt-min-item-foot', status, h('span.grow'), h('span.tiny.faint', h('span.kbd', '⌘S'), L(' للحفظ', ' to save')), save),
+    h('div.mt-min-item-foot', status, h('span.grow'), h('span.tiny.faint.mt-kbd-hint', h('span.kbd', /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '⌘S' : 'Ctrl+S'), L(' للحفظ', ' to save')), save),
     decisions.length ? h('ul.mt-min-decisions', decisions.map((d) => h('li', h('span.mt-dec-num', fmtNum(d.number)), d.text))) : null);
 }
 function commentsCard(m) {
-  const box = h('textarea.field', { rows: 3, maxlength: 2000, id: 'mt-comment', placeholder: L('ملاحظتك على المحضر…', 'Your comment on the minutes…'), oninput: (e) => comments.set(m.id, e.target.value) }, comments.get(m.id) || '');
+  const box = h('textarea.field', { dir: 'auto', rows: 3, maxlength: 2000, id: 'mt-comment', placeholder: L('ملاحظتك على المحضر…', 'Your comment on the minutes…'), oninput: (e) => comments.set(m.id, e.target.value) }, comments.get(m.id) || '');
   return h('section.card.mt-comments', { 'aria-labelledby': 'mt-c-title' },
     h('div.card-head', h('h2.card-title#mt-c-title', L('ملاحظات على المحضر', 'Comments on the minutes')), h('span.card-sub', fmtNum(m.comments.length))),
-    m.comments.length ? h('ul.mt-comment-list', m.comments.map((c) => h('li', whoChip(c.user), h('span.tiny.faint', dateTime(c.created_at)), h('p', c.body)))) : h('p.faint.tiny', L('لا ملاحظات بعد.', 'No comments yet.')),
+    m.comments.length ? h('ul.mt-comment-list', m.comments.map((c) => h('li', whoChip(c.user), h('span.tiny.faint', dateTime(c.created_at)), h('p', { dir: 'auto' }, c.body)))) : h('p.faint.tiny', L('لا ملاحظات بعد.', 'No comments yet.')),
     m.can.comment ? h('div.mt-comment-form', h('label.sr', { for: 'mt-comment' }, L('ملاحظة', 'Comment')), box,
       h('button.btn.sm', { type: 'button', onclick: async (e) => {
         const body = box.value.trim(); if (body.length < 2) { box.focus(); return; }
@@ -404,7 +409,7 @@ function decisionsSection(ctx, m) {
     const next = { open: ['in_progress', 'done', 'cancelled'], in_progress: ['done', 'open', 'cancelled'], done: ['in_progress'], cancelled: ['open'] }[d.status];
     return h(`li.mt-dec.s-${d.status}`,
       h('span.mt-dec-badge', h('small', L('قرار', 'No.')), h('b', fmtNum(d.number))),
-      h('div.grow', h('p.mt-dec-text', d.text),
+      h('div.grow', h('p.mt-dec-text', { dir: 'auto' }, d.text),
         h('div.mt-dec-meta', d.owner ? whoChip(d.owner) : h('span.faint.tiny', L('بلا مسؤول', 'No owner')),
           d.due_date ? h(`span.chip.tiny.${d.overdue ? 'crit' : 'outline'}`, icon(d.overdue ? 'clockAlert' : 'calendar'), L(`حتى ${C.dayMonth(d.due_date)}`, `By ${C.dayMonth(d.due_date)}`)) : null,
           linked.length ? h('span.chip.tiny.info', icon('listChecks'), L(`${fmtNum(linked.length)} تكليف`, `${linked.length} actions`)) : null)),
@@ -448,7 +453,7 @@ function actionsSection(ctx, m) {
     const dec = a.decision_id ? m.decisions.find((d) => d.id === a.decision_id) : null;
     return h(`li.mt-act.s-${a.status}${mine ? '.mine' : ''}`,
       h('span.mt-act-check', { 'aria-hidden': 'true' }, icon(a.status === 'done' ? 'circleCheck' : a.status === 'pending_acceptance' ? 'hourglass' : ['declined', 'cancelled', 'task_removed'].includes(a.status) ? 'ban' : 'circle')),
-      h('div.grow', h('div.mt-act-title', a.title),
+      h('div.grow', h('div.mt-act-title', { dir: 'auto' }, a.title),
         h('div.mt-act-meta', whoChip(a.assignee), a.due_date ? h(`span.chip.tiny.${a.overdue ? 'crit' : 'outline'}`, icon(a.overdue ? 'clockAlert' : 'calendar'), C.dayMonth(a.due_date)) : null,
           dec ? h('span.chip.tiny.outline', icon('gavel'), L(`قرار ${fmtNum(dec.number)}`, `Decision ${dec.number}`)) : null,
           a.task ? h('span.mt-task-link', { 'data-tip': L('المهمة المرتبطة في «المهام»', 'Linked task in Tasks') }, icon('link'), L('مهمة: ', 'Task: '), C.chip(C.TASK, a.task.status)) : null,

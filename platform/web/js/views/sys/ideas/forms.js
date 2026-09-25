@@ -73,7 +73,7 @@ export async function ideaForm({ idea = null, campaignId = null, mode = idea ? (
       h('div.full.impact-fields',
         h('div.if-head', h('span.lbl', L('الأثر المتوقع سنوياً', 'Expected annual impact')), h('span.helper', L('تقدير تقريبي يكفي — لا تبالغ؛ تتحقق اللجنة منه', 'A rough estimate is enough — the committee verifies it'))),
         h('div.if-grid',
-          fieldRow(L('وفر مالي (د.إ)', 'Saving (AED)'), h('div.money-field', saving, h('span.cur', L('د.إ', 'AED'))), { id: uid('saving') }),
+          fieldRow(L('وفر مالي', 'Saving'), h('div.money-field', saving, h('span.cur', L('د.إ', 'AED'))), { id: uid('saving') }),
           fieldRow(L('ساعات عمل موفرة', 'Hours saved'), hours, { id: uid('hours') }),
           fieldRow(L('سعادة المتعاملين', 'Customer happiness'), happy, { id: uid('happy') }))),
       fieldRow(L('شركاء في الفكرة (اختياري)', 'Co-authors (optional)'), co, { full: true, id: uid('co') }),
@@ -191,7 +191,7 @@ export async function decisionDialog(idea, { options = ['approved', 'needs_info'
       return h(`button.dopt${choice === o ? '.on' : ''}`, { type: 'button', role: 'radio', 'aria-checked': String(choice === o), disabled: disabled || null, 'data-o': o, onclick: () => { choice = o; draw(); } },
         icon(OPT[o][1]), h('span.do-t', OPT[o][0]), h('small', disabled ? L(`يتطلب ${idea.evaluation?.min_scores || 2} تقييمات على الأقل`, `Needs at least ${idea.evaluation?.min_scores || 2} scores`) : OPT[o][2]));
     }));
-    noteLbl.replaceChildren(choice === 'approved' ? L('ملاحظة القرار (اختيارية)', 'Decision note (optional)') : choice === 'needs_info' ? L('ما المعلومات المطلوبة؟', 'What information is needed?') : L('سبب القرار وملاحظات بنّاءة', 'Reason and constructive feedback'), choice === 'approved' ? null : h('span.req', ' *'));
+    noteLbl.replaceChildren(...[choice === 'approved' ? L('ملاحظة القرار (اختيارية)', 'Decision note (optional)') : choice === 'needs_info' ? L('ما المعلومات المطلوبة؟', 'What information is needed?') : L('سبب القرار وملاحظات بنّاءة', 'Reason and constructive feedback'), choice === 'approved' ? null : h('span.req', ' *')].filter(Boolean));
     note.placeholder = choice === 'rejected' ? L('اشرح السبب بلغة بنّاءة واقترح بديلاً إن وُجد', 'Explain kindly and suggest an alternative if any') : choice === 'needs_info' ? L('مثال: نرجو تقدير الكلفة وعدد المعاملات الشهرية', 'e.g. please estimate the cost and monthly volume') : '';
     sponsorRow.hidden = choice !== 'approved';
   };
@@ -200,7 +200,7 @@ export async function decisionDialog(idea, { options = ['approved', 'needs_info'
   const run = submitting(ref, errBox, () => call(`/ideas/${idea.id}/transition`, { method: 'POST', body: { to: choice, note: note.value.trim() || null, sponsor_id: choice === 'approved' ? sponsor.value || null : null } }));
   const p = modal(L('قرار اللجنة', 'Committee decision'), h('div.decision-form',
     h('p.muted', h('strong', idea.title)),
-    agg ? h('div.decision-agg', icon('scale'), h('span', L(`متوسط اللجنة ${fmtNum(agg.weighted)} من ٥ (${fmtNum(agg.pct)}%) · ${agg.count} تقييمات`, `Committee average ${agg.weighted}/5 (${agg.pct}%) · ${agg.count} scores`))) : null,
+    agg ? h('div.decision-agg', icon('scale'), h('span', L('متوسط اللجنة', 'Committee average'), ' ', h('bdi.num', `${fmtNum(agg.weighted)}/${fmtNum(5)}`), ' · ', h('bdi.num', `${fmtNum(agg.pct)}%`), ' · ', L(`${fmtNum(agg.count)} تقييمات`, `${agg.count} scores`))) : null,
     segs, h('div.form-row', noteLbl, note), sponsorRow, errBox),
   [{ label: L('إلغاء', 'Cancel'), value: false }, { label: L('تأكيد القرار', 'Confirm decision'), value: true, primary: true }], {
     wide: true,

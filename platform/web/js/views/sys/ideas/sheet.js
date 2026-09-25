@@ -39,7 +39,7 @@ const refresh = (ctx, sh) => openIdea(ctx, sh.id);
 function paint(ctx, sh, d) {
   const el = sh.handle.el;
   const restore = keepFocus(el);
-  el.querySelector('.sheet-head h2').textContent = d.title;
+  const h2 = el.querySelector('.sheet-head h2'); h2.textContent = d.title; h2.setAttribute('dir', 'auto');
   const sub = el.querySelector('.sheet-head .sub');
   if (sub) sub.replaceChildren(h('span.num', d.ref || L('مسودة', 'Draft')), ' · ', d.submitted_at ? L(`قُدّمت ${fmtDate(d.submitted_at)}`, `Submitted ${fmtDate(d.submitted_at)}`) : L(`أُنشئت ${fmtDate(d.created_at)}`, `Created ${fmtDate(d.created_at)}`));
   const headGrow = el.querySelector('.sheet-head .grow');
@@ -50,8 +50,8 @@ function paint(ctx, sh, d) {
     nextBlock(ctx, sh, d),
     h('div.is-grid',
       h('div.is-main',
-        section(L('المشكلة أو الفرصة', 'Problem or opportunity'), 'target', h('p.is-text', d.problem || h('span.faint', L('لم تُكتب بعد', 'Not written yet')))),
-        section(L('الحل المقترح', 'Proposed solution'), 'lightbulb', h('p.is-text', d.solution || h('span.faint', L('لم يُكتب بعد', 'Not written yet')))),
+        section(L('المشكلة أو الفرصة', 'Problem or opportunity'), 'target', h('p.is-text', { dir: 'auto' }, d.problem || h('span.faint', L('لم تُكتب بعد', 'Not written yet')))),
+        section(L('الحل المقترح', 'Proposed solution'), 'lightbulb', h('p.is-text', { dir: 'auto' }, d.solution || h('span.faint', L('لم يُكتب بعد', 'Not written yet')))),
         impactBlock(d),
         d.benefits ? benefitsBlock(d) : null,
         evaluationBlock(ctx, sh, d),
@@ -86,7 +86,7 @@ function nextBlock(ctx, sh, d) {
     add(L('إرسال للجنة', 'Send to the committee'), 'send', async () => { const r = await call(`/ideas/${d.id}/submit`, { method: 'POST', body: {} }); toast(L('وصلت فكرتك إلى اللجنة', 'Your idea reached the committee')); const { pointsFeedback } = await import('./ui.js'); pointsFeedback(document.querySelector('#level-chip-host')); return r; }, { primary: true });
     add(L('تعديل', 'Edit'), 'pencil', () => ideaForm({ idea: d }));
     add(L('حذف المسودة', 'Delete draft'), 'trash', async () => { if (!(await confirmDialog(L('حذف المسودة؟', 'Delete draft?'), L('ستُحذف المسودة نهائياً. لا يمكن التراجع.', 'The draft will be permanently deleted.'), { danger: true, confirmLabel: L('حذف', 'Delete') }))) return null; const r = await call(`/ideas/${d.id}`, { method: 'DELETE', body: { confirm: true } }); toast(L('حُذفت المسودة', 'Draft deleted')); sh.handle.close(); return null; }, { danger: true });
-  } else if (c.resubmit) { tone = 'warn'; ic = 'help'; msg = h('div', h('strong', L('طلبت اللجنة معلومات إضافية', 'The committee asked for more information')), d.info_request?.note ? h('p', d.info_request.note) : null);
+  } else if (c.resubmit) { tone = 'warn'; ic = 'help'; msg = h('div', h('strong', L('طلبت اللجنة معلومات إضافية', 'The committee asked for more information')), d.info_request?.note ? h('p', { dir: 'auto' }, d.info_request.note) : null);
     add(L('استكمل وأعد الإرسال', 'Complete & resubmit'), 'send', () => ideaForm({ idea: d }), { primary: true });
   } else if (c.screen) { msg = L('فكرة جديدة بانتظار الفرز: تحقّق من اكتمالها وعدم تكرارها.', 'New idea awaiting screening: check completeness and duplicates.'); ic = 'scanSearch';
     add(L('بدء الفرز', 'Start screening'), 'scanSearch', () => transition(d, 'screening'), { primary: true });
@@ -150,7 +150,7 @@ function benefitsBlock(d) {
   return h('section.is-sec.is-benefits', h('h3.is-h', icon('trophy'), L('الأثر المحقق', 'Realised benefits'), h('span.chip.tiny.good', icon('badgeCheck'), fmtDate(b.at))),
     h('div.imp-tiles', b.saving ? h('div.imp-tile.good', h('span.it-ic', icon('coins')), h('div', h('div.it-l', L('وفر محقق سنوياً', 'Realised saving / yr')), h('div.it-v', money(b.saving)))) : null,
       b.hours ? h('div.imp-tile.good', h('span.it-ic', icon('clock')), h('div', h('div.it-l', L('ساعات موفرة سنوياً', 'Hours saved / yr')), h('div.it-v', num(Math.round(b.hours)), h('small', L('ساعة', 'h'))))) : null),
-    b.note ? h('p.is-text', b.note) : null);
+    b.note ? h('p.is-text', { dir: 'auto' }, b.note) : null);
 }
 function evaluationBlock(ctx, sh, d) {
   const e = d.evaluation;
@@ -166,10 +166,12 @@ function evaluationBlock(ctx, sh, d) {
   // committee view
   const blind = e.blind ? h('div.callout.is-blind', icon('eyeOff'), h('span', L(`قيّمها ${fmtNum(e.count)} من الأعضاء. تظهر تقييماتهم بعد حفظ تقييمك (تقييم مستقل).`, `${e.count} member(s) scored. Their scores appear after you save yours (blind scoring).`))) : null;
   const mine = e.mine ? h('div.my-score', h('span.lbl', L('تقييمي', 'My score')), h('div.ms-pills', Object.keys(WEIGHTS).map((k) => h('span.sc-pill', { 'data-v': e.mine[k] }, h('small', L(CRIT[k][0], CRIT[k][1])), h('b.num', fmtNum(e.mine[k]))))), h('strong.num.tabular', `${fmtNum(e.mine.weighted)}/5`)) : null;
-  const members = e.members?.length ? h('table.tbl.score-tbl', h('thead', h('tr', h('th', L('العضو', 'Member')), Object.keys(WEIGHTS).map((k) => h('th.num', L(CRIT[k][0], CRIT[k][1]))), h('th.num', L('الموزونة', 'Weighted')))),
-    h('tbody', e.members.map((m) => h(`tr${m.me ? '.me' : ''}`, h('td', h('span.who-chip', avatar(m.user.name_ar), L(m.user.name_ar, m.user.name_en)), m.note ? h('div.tiny.faint', m.note) : null), Object.keys(WEIGHTS).map((k) => h('td.num', fmtNum(m[k]))), h('td.num', h('strong', fmtNum(m.weighted))))))) : null;
+  const members = e.members?.length ? h('ul.mem-list', { 'aria-label': L('تقييمات الأعضاء', 'Member scores') }, e.members.map((m) => h(`li${m.me ? '.me' : ''}`,
+    h('span.who-chip', avatar(m.user.name_ar), h('span', L(m.user.name_ar, m.user.name_en)), m.me ? h('span.chip.tiny.info', L('أنت', 'You')) : null),
+    h('div.row', h('div.ms-pills', Object.keys(WEIGHTS).map((k) => h('span.sc-pill', { 'data-v': m[k], title: L(CRIT[k][0], CRIT[k][1]) }, h('small', L(CRIT[k][0], CRIT[k][1]).split(' ')[0]), h('b.num', fmtNum(m[k]))))), h('strong.mem-w.num.tabular', fmtNum(m.weighted))),
+    m.note ? h('p.mem-note', { dir: 'auto' }, m.note) : null))) : null;
   return h('section.is-sec.is-committee', h('h3.is-h', icon('scale'), L('تقييم اللجنة', 'Committee evaluation'), h('span.chip.tiny.outline', icon('lock'), L('للجنة فقط', 'Committee only'))),
-    e.aggregate ? critBars(e.aggregate) : null, mine, blind, members ? h('div.table-wrap', members) : null,
+    e.aggregate ? critBars(e.aggregate) : null, mine, blind, members,
     h('p.tiny.faint', L(`الأوزان: الأثر 35% · قابلية التطبيق 25% · الكلفة 20% · المواءمة 20%. الحد الأدنى للاعتماد ${e.min_scores} تقييمات.`, `Weights: impact 35% · feasibility 25% · cost 20% · alignment 20%. Approval needs ${e.min_scores} scores.`)));
 }
 function critBars(a) {
@@ -182,7 +184,7 @@ function decisionBlock(d) {
   const tone = d.status === 'rejected' ? 'outline' : 'good';
   return h(`section.is-sec.is-decision.${tone}`, h('h3.is-h', icon(d.status === 'rejected' ? 'messageSquare' : 'badgeCheck'), d.status === 'rejected' ? L('ملاحظات اللجنة', 'Committee feedback') : L('قرار اللجنة', 'Committee decision'),
     h('span.tiny.faint', fmtDate(dec.at))),
-  dec.note ? h('p.is-text', dec.note) : h('p.faint.tiny', L('دون ملاحظات إضافية.', 'No additional notes.')),
+  dec.note ? h('p.is-text', { dir: 'auto' }, dec.note) : h('p.faint.tiny', L('دون ملاحظات إضافية.', 'No additional notes.')),
   h('p.tiny.faint', L('تظهر هذه الملاحظات لمقدّمي الفكرة واللجنة وراعي التنفيذ فقط.', 'Visible to the authors, the committee and the sponsor only.')));
 }
 function projectBlock(d) {
@@ -246,6 +248,6 @@ function commentItem(ctx, sh, d, c) {
     c.user ? avatar(c.user.name_ar) : h('span.anon-ic', { 'aria-hidden': 'true' }, icon('eyeOff')),
     h('div.grow',
       h('div.cm-head', h('strong', who), c.by_idea_author ? h('span.chip.tiny.purple', L('مقدّم الفكرة', 'Author')) : null, h('span.tiny.faint', dateTime(c.created_at)), tools.length ? h('span.cm-tools', tools) : null),
-      c.hidden ? h('p.cm-hidden', icon('eyeOff'), h('span', L('أخفت اللجنة هذا التعليق', 'Hidden by the committee'), c.hidden_reason ? ` — ${c.hidden_reason}` : ''), c.body ? h('span.cm-orig', `«${c.body}»`) : null) : h('p.cm-body', c.body)));
+      c.hidden ? h('p.cm-hidden', icon('eyeOff'), h('span', L('أخفت اللجنة هذا التعليق', 'Hidden by the committee'), c.hidden_reason ? ` — ${c.hidden_reason}` : ''), c.body ? h('span.cm-orig', `«${c.body}»`) : null) : h('p.cm-body', { dir: 'auto' }, c.body)));
 }
 void stLabel; void compactMoney;

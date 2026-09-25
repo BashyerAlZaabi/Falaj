@@ -382,3 +382,36 @@ test('calendar-feed export: organizer/invitee meetings with restricted ones flag
   assert.ok(!out.o.some((m) => m.id === 'mt_demo_stores'), 'cancelled excluded');
   assert.deepEqual(out.x, [], 'external identities get nothing');
 });
+
+test('restricted committees make their meetings restricted; rescheduling alerts invitees without restricted details', async () => {
+  const majed = await as('majed'); // chair of the (restricted) Procurement Committee
+  const m = (await majed.post(M('/meetings'), { title: 'لجنة المشتريات — مفاوضة العرض الأفضل', committee_id: 'cm_proc', starts_at: iso(96), duration_min: 90 })).data;
+  assert.equal(m.confidential, true, 'inherits the committee classification');
+  assert.equal((await majed.put(M(`/meetings/${m.id}`), { confidential: false, confirm: true })).status, 409, 'restricted committee meetings stay restricted');
+  const mariam = await as('mariam');
+  const row = (await mariam.get(M('/overview'))).data.upcoming.find((x) => x.id === m.id);
+  assert.ok(row && row.title === null && row.masked);
+  assert.equal((await (await as('reem')).put(M(`/meetings/${m.id}`), { location: 'قاعة أخرى' })).status, 403, 'the secretary does not reschedule');
+  assert.equal((await majed.put(M(`/meetings/${m.id}`), { starts_at: iso(120) })).status, 200);
+  const alerts = (await mariam.get('/api/alerts')).data.filter((a) => a.entity === 'sys:meetings');
+  assert.ok(alerts.some((a) => a.title.includes('تغيّر موعد')));
+  assert.ok(alerts.every((a) => !`${a.title} ${a.body}`.includes('مفاوضة')), 'no restricted title in alerts');
+  assert.equal((await (await as('fatima')).get(M(`/meetings/${m.id}`))).status, 404);
+});
+
+test('action items: decline needs a reason; cancelling (confirmed) removes the unfinished organizer-created task', async () => {
+  const m = await heldMeeting();
+  const sara = await as('sara'); const omar = await as('omar'); const ahmed = await as('ahmed');
+  await sara.post(M(`/meetings/${m.id}/attendance`), { entries: ['u_mariam', 'u_sara', 'u_ahmed', 'u_omar'].map((user_id) => ({ user_id, status: 'present' })) });
+  const pend = (await sara.post(M(`/meetings/${m.id}/actions`), { title: 'مراجعة إجراءات الاستلام', assignee_id: 'u_omar' })).data;
+  assert.equal((await omar.post(M(`/actions/${pend.id}/decline`), { reason: '' })).status, 400);
+  assert.equal((await omar.post(M(`/actions/${pend.id}/decline`), { reason: 'خارج اختصاص إدارة العمليات' })).data.status, 'declined');
+  assert.equal((await omar.post(M(`/actions/${pend.id}/accept`), {})).status, 409, 'declined cannot be accepted');
+  const open = (await sara.post(M(`/meetings/${m.id}/actions`), { title: 'تحديث مخطط قاعدة البيانات', assignee_id: 'u_ahmed', due_date: day(3) })).data;
+  assert.ok((await ahmed.get('/api/tasks?mine=1')).data.some((t) => t.id === open.task.id));
+  assert.equal((await ahmed.post(M(`/actions/${open.id}/cancel`), { confirm: true })).status, 403, 'the assignee cannot cancel');
+  assert.equal((await sara.post(M(`/actions/${open.id}/cancel`), {})).status, 428);
+  assert.equal((await sara.post(M(`/actions/${open.id}/cancel`), { confirm: true })).data.status, 'cancelled');
+  assert.ok(!(await ahmed.get('/api/tasks?mine=1')).data.some((t) => t.id === open.task.id), 'linked task removed');
+  assert.ok((await ahmed.get('/api/alerts')).data.some((a) => a.entity === 'sys:meetings' && a.title.includes('أُلغي تكليف')));
+});

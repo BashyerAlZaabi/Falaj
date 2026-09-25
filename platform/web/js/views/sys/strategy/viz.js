@@ -39,8 +39,11 @@ export function ring({ value, size = 64, stroke, tone = 'accent', label, sub, ti
   if (v != null) {
     const arc = s('circle', { cx: mid, cy: mid, r, fill: 'none', 'stroke-width': sw, class: 'vr-arc', 'stroke-linecap': 'round', 'stroke-dasharray': `${c} ${c}`, 'stroke-dashoffset': String(c * (1 - v / 100)), transform: `rotate(-90 ${mid} ${mid})` });
     if (svg.dataset.grad) arc.style.stroke = `url(#${svg.dataset.grad})`; // inline: beats the tone rule
-    arc.style.setProperty('--circ', String(c));
     svg.append(arc);
+    // draw-in motion via the Web Animations API (static under reduced motion, so the final state is always rendered)
+    if (v > 0 && typeof arc.animate === 'function' && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      arc.animate([{ strokeDashoffset: String(c) }, { strokeDashoffset: String(c * (1 - v / 100)) }], { duration: 900, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+    }
   }
   return h(`div.viz-ring-wrap.sz-${size >= 120 ? 'xl' : size >= 72 ? 'lg' : size >= 52 ? 'md' : 'sm'}`, { style: { width: `${size}px`, height: `${size}px` }, role: 'img', 'aria-label': title || (v == null ? L('لا توجد بيانات', 'No data') : `${Math.round(v)}%`) },
     svg, label != null || sub ? h('div.vr-center', label != null ? h('span.vr-label.num.tabular', label) : null, sub ? h('span.vr-sub', sub) : null) : null);

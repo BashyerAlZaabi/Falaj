@@ -236,7 +236,7 @@ function updateHead() {
   const hr = new Date().getHours();
   const greet = hr < 12 ? t('greet.morning') : hr < 17 ? L('نهارك سعيد', 'Good afternoon') : t('greet.evening');
   C.headDate.textContent = `${new Date().toLocaleDateString(L('ar-AE', 'en-GB'), { weekday: 'long', day: 'numeric', month: 'long' })} · ${greet}`;
-  C.headTitle.textContent = L(`كيف أساعدك اليوم يا ${u.name_ar.split(' ')[0]}؟`, `How can I help you today, ${(u.name_en || u.name_ar).split(' ')[0]}?`);
+  C.headTitle.textContent = t('ai.greet').replace('{name}', L(u.name_ar, u.name_en || u.name_ar).split(' ')[0]);
   paintAsk();
   C.headRole.textContent = [t(`role.${u.role}`), L(u.dept_ar, u.dept_en)].filter(Boolean).join(' · ');
   C.headScope.textContent = `${L('نطاق العرض', 'Scope')}: ${u.role === 'president' ? L('المؤسسة (خارج Vault)', 'Organisation (outside Vault)') : u.role === 'manager' ? L('إدارتك', 'Your department') : L('أعمالك', 'Your work')}`;

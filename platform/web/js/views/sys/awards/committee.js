@@ -32,11 +32,13 @@ export async function view(ctx, me, rest) {
       h('div.aw-cm-head', medal(p.kind), h('div.grow', h('h2', nm(p)), h('span.faint', [p.cycle, L(`ينتهي التقييم ${fmtDate(p.evaluation_closes)}`, `Evaluation ends ${fmtDate(p.evaluation_closes)}`), daysText(p.phase.days_left, { verb: 'end' })].filter(Boolean).join(' · '))),
         pending.length ? h('a.btn.primary', { href: href('committee', pending[0].id) }, icon('play'), L('ابدأ التقييم', 'Start scoring')) : null,
         q.is_admin ? h('a.btn', { href: href('committee', 'rank', p.id) }, icon('listOrdered'), L('الترتيب والاعتماد', 'Ranking & finalise')) : null),
-      h('div.aw-cm-grid', p.items.map((x) => queueCard(x)))));
+      // what needs the member first: pending, then reviewed, then recused
+      h('div.aw-cm-grid', [...p.items].sort((a, b) => rankOf(a) - rankOf(b)).map((x) => queueCard(x)))));
   }
   return wrap;
 }
 
+const rankOf = (x) => (x.recusal ? 2 : x.my_review ? 1 : 0);
 function queueCard(x) {
   const who = h('div.aw-cm-who', x.team_name ? h('span.aw-team-ic', icon('usersRound')) : avatar(x.nominee.name_ar), h('div.grow', h('strong', x.team_name || nm(x.nominee)), h('span.faint', x.team_name ? L(`${count(x.team_size, ['عضو واحد', 'عضوان', 'أعضاء', 'عضواً'], ['member', 'members'])} · بقيادة ${nm(x.nominee)}`, `${x.team_size} members · led by ${nm(x.nominee)}`) : dept(x.nominee))));
   if (x.recusal) {

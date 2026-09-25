@@ -926,14 +926,14 @@ function nextAction(user, mine, queue, sponsor, campaigns) {
   if (ni) return { kind: 'needs_info', tone: 'warn', id: ni.id, ar: `طلبت اللجنة معلومات إضافية عن فكرتك «${ni.title}»`, en: `The committee asked for more information on “${ni.title}”`, cta_ar: 'استكمل وأعد الإرسال', cta_en: 'Complete & resubmit', href: `#/sys/ideas/mine/${ni.id}` };
   if (queue.length) {
     const toScore = queue.filter((q) => q.status === 'evaluation' && !q.mine).length;
-    return { kind: 'committee', tone: 'emph', ar: `${queue.length} ${queue.length === 1 ? 'فكرة تنتظر' : queue.length === 2 ? 'فكرتان تنتظران' : 'أفكار تنتظر'} إجراء اللجنة${toScore ? ` — منها ${toScore} بانتظار تقييمك` : ''}`, en: `${queue.length} idea(s) await committee action${toScore ? ` — ${toScore} need your score` : ''}`, cta_ar: 'افتح قائمة اللجنة', cta_en: 'Open committee queue', href: '#/sys/ideas/committee' };
+    return { kind: 'committee', tone: 'emph', ar: `${queue.length} ${queue.length === 1 ? 'فكرة تنتظر' : queue.length === 2 ? 'فكرتان تنتظران' : 'أفكار تنتظر'} إجراء اللجنة${toScore ? ` — منها ${toScore} بانتظار تقييمك` : ''}`, en: `${queue.length} ${queue.length === 1 ? 'idea awaits' : 'ideas await'} committee action${toScore ? ` — ${toScore} ${toScore === 1 ? 'needs' : 'need'} your score` : ''}`, cta_ar: 'افتح قائمة اللجنة', cta_en: 'Open committee queue', href: '#/sys/ideas/committee' };
   }
   const sp = sponsor.find(Boolean);
   if (sp) return { kind: 'sponsor', tone: 'emph', id: sp.id, ar: `أنت راعي تنفيذ الفكرة «${sp.title}»`, en: `You sponsor the implementation of “${sp.title}”`, cta_ar: 'تابع التنفيذ', cta_en: 'Follow implementation', href: `#/sys/ideas/bank/${sp.id}` };
   const dr = mine.ideas.find((i) => i.status === 'draft' && i.is_author);
   if (dr) return { kind: 'draft', tone: null, id: dr.id, ar: `لديك مسودة لم تُرسل بعد: «${dr.title}»`, en: `You have an unsent draft: “${dr.title}”`, cta_ar: 'أكمل المسودة', cta_en: 'Finish the draft', href: `#/sys/ideas/mine/${dr.id}` };
   const c = campaigns[0];
-  if (c) return { kind: 'challenge', tone: c.days_left <= 7 ? 'warn' : null, id: c.id, ar: `«${c.title_ar}» مفتوح للمشاركة — يُغلق خلال ${c.days_left} ${c.days_left === 1 ? 'يوم' : c.days_left === 2 ? 'يومين' : c.days_left <= 10 ? 'أيام' : 'يوماً'}`, en: `“${c.title_en}” is open — closes in ${c.days_left} day(s)`, cta_ar: 'شارك بفكرة', cta_en: 'Share an idea', href: `#/sys/ideas/challenges/${c.id}`, campaign_id: c.id };
+  if (c) return { kind: 'challenge', tone: c.days_left <= 7 ? 'warn' : null, id: c.id, ar: `«${c.title_ar}» مفتوح للمشاركة — يُغلق خلال ${c.days_left} ${c.days_left === 1 ? 'يوم' : c.days_left === 2 ? 'يومين' : c.days_left <= 10 ? 'أيام' : 'يوماً'}`, en: `“${c.title_en}” is open — closes in ${c.days_left} ${c.days_left === 1 ? 'day' : 'days'}`, cta_ar: 'شارك بفكرة', cta_en: 'Share an idea', href: `#/sys/ideas/challenges/${c.id}`, campaign_id: c.id };
   return { kind: 'submit', tone: null, ar: 'هل لديك فكرة لتحسين خدماتنا أو تبسيط إجراء؟ شاركها الآن', en: 'Have an idea to improve a service or simplify a process? Share it now', cta_ar: 'قدّم فكرة', cta_en: 'Submit an idea' };
 }
 

@@ -68,7 +68,7 @@ function hero(app, ov) {
         h('a.btn.lg.ghost', { href: '#/sys/ideas/challenges' }, icon('flag'), L('التحديات المفتوحة', 'Open challenges'), ov.campaigns.length ? h('span.hero-badge.tabular', fmtNum(ov.campaigns.length)) : null)),
       h('p.hero-foot', icon('usersRound'), L(`بمشاركة ${fmtNum(s.participants)} من الزملاء في مختلف الإدارات`, `${fmtNum(s.participants)} colleagues across departments have taken part`))),
     h('div.hero-metrics',
-      metric(num(s.total), L('فكرة في البنك', 'ideas in the bank'), 'lightbulb'),
+      metric(num(s.total), L('إجمالي الأفكار', 'ideas in the bank'), 'lightbulb'),
       metric(num(s.pipeline), L('قيد المراجعة الآن', 'under review now'), 'scale'),
       metric(num(s.adopted + s.implemented), L('اعتُمدت للتنفيذ', 'adopted'), 'badgeCheck', 'good'),
       metric(h('span', compactMoney(s.realized_saving)), L('وفر محقق سنوياً', 'realised annual saving'), 'coins', 'emph')));
@@ -107,7 +107,7 @@ function side(app, ov) {
         ['badgeCheck', L('قرار مع ملاحظات وراعٍ للتنفيذ', 'A decision with feedback and a sponsor')],
         ['rocket', L('مشروع تنفيذ وقياس للأثر المحقق', 'An implementation project and measured benefits')],
       ].map(([ic, t]) => h('li', h('span.hs-ic', icon(ic)), h('span', t)))),
-      h('div.how-points', icon('award'), h('span', L('نقاط التميّز: +٥ عند التقديم (مرة يومياً) · +٢٠ عند الاعتماد · +٤٠ عند التنفيذ', 'Excellence points: +5 on submission (once a day) · +20 when approved · +40 when implemented')))));
+      h('div.how-points', icon('award'), h('span', L('نقاط التميّز: 5+ عند التقديم (مرة يومياً) · 20+ عند الاعتماد · 40+ عند التنفيذ', 'Excellence points: +5 on submission (once a day) · +20 when approved · +40 when implemented')))));
 }
 
 // ================= mine =================
@@ -155,7 +155,7 @@ function mineRow(app, i, action) {
   return h(`article.mine-row${action ? '.act' : ''}`, { 'data-cat': i.category },
     h('div.mr-main',
       h('div.mr-chips', catChip(i.category), chip(i.status), !i.is_author ? h('span.chip.tiny.outline', icon('usersRound'), L('شريك في الفكرة', 'Co-author')) : null, i.author_hidden ? h('span.chip.tiny.outline', icon('eyeOff'), L('مخفية الاسم', 'Name hidden')) : null),
-      h('h3.mr-title', h('a', { href: app.href(i.id), onclick: (e) => { e.preventDefault(); app.open(i.id); } }, i.title)),
+      h('h3.mr-title', { dir: 'auto' }, h('a', { href: app.href(i.id), onclick: (e) => { e.preventDefault(); app.open(i.id); } }, i.title)),
       h('ol.mr-track', { 'aria-label': L(`المرحلة ${Math.min(idx + 1, STEPS.length)} من ${STEPS.length}`, `Stage ${Math.min(idx + 1, STEPS.length)} of ${STEPS.length}`) }, STEPS.map((s, n) => h(`li.${n < idx ? 'done' : n === idx ? (failed ? 'failed' : 'current') : 'todo'}`, { title: L(s.ar, s.en) }, h('span.sr-only', L(s.ar, s.en))))),
       h('p.mr-next', icon(action ? 'arrowRight' : 'info', 'flip-rtl'), L(...NEXT[i.status]))),
     h('div.mr-side',
@@ -185,9 +185,9 @@ function chalCard(app, c, { wide = false } = {}) {
     h('div.ch-time', h('div.progress', { role: 'progressbar', 'aria-valuenow': c.elapsed_pct, 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': L('المدة المنقضية من التحدي', 'Challenge time elapsed') }, h('i', { style: { width: `${c.elapsed_pct}%` } })),
       h('div.ch-dates', h('span', L('بدأ', 'Started'), ' ', fmtDate(c.starts_on)), h('span', L('يُغلق', 'Closes'), ' ', fmtDate(c.ends_on)))),
     h('div.ch-stats',
-      h('div', h('strong.tabular', fmtNum(c.stats.ideas)), h('span', L('فكرة', 'ideas'))),
-      h('div', h('strong.tabular', fmtNum(c.stats.participants)), h('span', L('مشاركاً', 'participants'))),
-      h('div', h('strong.tabular', fmtNum(c.stats.adopted)), h('span', L('معتمدة', 'adopted')))),
+      h('div', h('strong.tabular', fmtNum(c.stats.ideas)), h('span', L('الأفكار', 'Ideas'))),
+      h('div', h('strong.tabular', fmtNum(c.stats.participants)), h('span', L('المشاركون', 'Participants'))),
+      h('div', h('strong.tabular', fmtNum(c.stats.adopted)), h('span', L('المعتمدة', 'Adopted')))),
     c.objective || c.sponsor ? h('div.ch-meta', c.objective ? h('span.chip.tiny.navy', icon('target'), L(c.objective.title_ar, c.objective.title_en)) : null, c.sponsor ? h('span.ch-sponsor', h('span.tiny.faint', L('الراعي', 'Sponsor')), whoChip(c.sponsor)) : null) : null,
     h('div.ch-actions',
       c.state === 'active' ? h('button.btn.primary', { type: 'button', onclick: () => app.newIdea({ campaignId: c.id }) }, icon('plus'), L('شارك بفكرة', 'Share an idea')) : null,
@@ -199,7 +199,7 @@ async function challengeDetail(app, ovP, id) {
     h('a.back-link', { href: '#/sys/ideas/challenges' }, icon('chevronL', 'flip-rtl'), L('كل التحديات', 'All challenges')),
     chalCard(app, c, { wide: true }),
     secHead(L('أفكار التحدي', 'Ideas in this challenge'), L('مرتبة حسب التداول — ادعم ما يعجبك أو شارك بفكرة جديدة', 'Ranked by trend — vote for what you like or add yours'), h('span.ideas-count.tabular', ideasLabel(c.ideas.length))),
-    c.ideas.length ? h('div.idea-grid', c.ideas.map((i) => ideaCard(i, { open: app.open, href: app.href })))
+    c.ideas.length ? h('div.idea-grid', c.ideas.map((i) => ideaCard(i, { open: app.open, href: app.href, hideCampaign: true })))
       : h('section.card', emptyState({ icon: 'lightbulb', title: L('لا توجد أفكار في هذا التحدي بعد', 'No ideas in this challenge yet'), body: c.state === 'active' ? L('كن أول من يشارك — الأفكار المبكرة تحظى بدعم أكبر.', 'Be first — early ideas get more support.') : null, actions: c.state === 'active' ? [{ label: L('شارك بفكرة', 'Share an idea'), primary: true, icon: 'plus', onClick: () => app.newIdea({ campaignId: c.id }) }] : [] })));
 }
 
@@ -224,11 +224,11 @@ export async function committee(app, ovP) {
     statTile({ label: L('جاهزة للقرار', 'Ready to decide'), value: s.ready, icon: 'gavel', tone: s.ready ? 'emph' : null, hint: L(`الحد الأدنى ${q.min_scores} تقييمات`, `Min. ${q.min_scores} scores`) }),
     statTile({ label: L('بانتظار التنفيذ', 'Awaiting implementation'), value: s.approved, icon: 'rocket', hint: L(`${fmtNum(s.in_implementation)} قيد التنفيذ`, `${s.in_implementation} in progress`) }),
   ]);
-  const body = h('div.cm-body');
+  const body = h('div.cq-body');
   const after = q.items.filter((i) => ['approved', 'in_implementation'].includes(i.status));
-  const draw = () => body.replaceChildren(S.committeeView === 'matrix' ? matrix(app, q) : h('div.cm-board', board(COLS, q.items, { columnOf: (i) => i.status, renderCard: (i) => cmCard(app, i), emptyText: L('لا شيء هنا', 'Nothing here') })),
+  const draw = () => body.replaceChildren(...[S.committeeView === 'matrix' ? matrix(app, q) : h('div.cm-board', board(COLS, q.items, { columnOf: (i) => i.status, renderCard: (i) => cmCard(app, i), emptyText: L('لا شيء هنا', 'Nothing here') })),
     S.committeeView === 'matrix' || !after.length ? null : h('section.cm-after', secHead([icon('rocket'), h('span', L('متابعة ما بعد القرار', 'After the decision'))], L('أفكار معتمدة يقودها رعاة التنفيذ — تابع بدء التنفيذ وتسجيل الأثر', 'Approved ideas led by their sponsors — follow the start and the realised benefits')),
-      h('ul.cm-after-list', after.map((i) => h('li', h('button', { type: 'button', 'data-cat': i.category, onclick: () => app.open(i.id) }, chip(i.status), h('span.ca-t', i.title), i.sponsor ? h('span.ca-s', L(`الراعي: ${i.sponsor.name_ar}`, `Sponsor: ${i.sponsor.name_en}`)) : null))))));
+      h('ul.cm-after-list', after.map((i) => h('li', h('button', { type: 'button', 'data-cat': i.category, onclick: () => app.open(i.id) }, chip(i.status), h('span.ca-t', i.title), i.sponsor ? h('span.ca-s', L(`الراعي: ${i.sponsor.name_ar}`, `Sponsor: ${i.sponsor.name_en}`)) : null)))))].filter(Boolean));
   draw();
   const seg = segmented([['board', L('لوحة سير العمل', 'Workflow board')], ['matrix', L('مصفوفة التقييم', 'Scoring matrix')]], S.committeeView, (v) => { S.committeeView = v; draw(); }, { label: L('طريقة العرض', 'View') });
   return h('div.ideas-committee', tiles,

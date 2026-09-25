@@ -77,7 +77,7 @@ const tools = [
     description: 'Create a personal goal for the current user. period_type daily|weekly|monthly|quarterly|yearly (the current period by default, or the period containing date). measure binary (default) or numeric with target_value/unit. Optional objective_code (strategic objective like SO-1.1). Visibility defaults to private for daily/weekly and to the line manager for monthly and longer. Use exactly the title the user gave.',
     input_schema: S({ title: str('goal title', { maxLength: 200 }), period_type: TYPE, date: date('a day inside the target period (optional)'), measure: str('binary|numeric', { enum: ['binary', 'numeric'] }), target_value: num('numeric target', { minimum: 0 }), unit: str('unit', { maxLength: 30 }), objective_code: str('strategic objective code, e.g. SO-1.1', { maxLength: 24 }), visibility: str('private|manager', { enum: ['private', 'manager'] }), description: str('', { maxLength: 2000 }) }, ['title', 'period_type']),
     handler: (user, i) => G.createGoal(user, i),
-    format: (g) => `أضفت هدفاً ${typeAr(g.period_type)} «${g.title}» (${g.period_label})${g.objective?.code ? ` مرتبطاً بـ ${g.objective.code}` : ''} — ${g.visibility === 'manager' ? 'مشترك مع مديرك المباشر' : 'خاص بك'}.`,
+    format: (g) => `أضفت الهدف «${g.title}» — ${typeAr(g.period_type)} · ${g.period_label}${g.objective?.code ? ` · مرتبط بـ ${g.objective.code}` : ''} · ${g.visibility === 'manager' ? 'مشترك مع مديرك المباشر' : 'خاص بك'}.`,
   },
   {
     name: 'goals_checkin', domain: 'goals.personal', mutates: true,

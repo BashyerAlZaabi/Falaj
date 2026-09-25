@@ -249,7 +249,7 @@
 @media (min-width: 760px) { .integ-gift-dialog { grid-template-columns: minmax(0, 1.45fr) minmax(220px, 1fr); } }
 .integ-gift-form .form-grid { gap: var(--space-3); }
 .integ-seg { width: 100%; display: flex; }
-.integ-seg button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.integ-seg button { flex: 1; min-width: 0; padding-inline: var(--space-2); display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
 .integ-seg button .icon { width: 15px; height: 15px; }
 .integ-checks { gap: var(--space-2); }
 .integ-check { display: flex; gap: var(--space-2); align-items: flex-start; font: var(--type-callout); cursor: pointer; }

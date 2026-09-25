@@ -1,7 +1,7 @@
 // «التقارير» — compliance officer and president: aggregates only. Groups smaller
 // than the minimum size are hidden; nothing here identifies an individual.
 import { h, icon, L, fmtNum, fmtDate, statTile, statRow, grid, emptyState } from '../../../sys-kit.js';
-import { call, DECISION, lbl, demoChip, money } from './common.js';
+import { call, DECISION, lbl, money } from './common.js';
 
 export async function reportsTab() {
   const r = await call('/reports');

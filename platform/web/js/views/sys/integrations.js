@@ -28,33 +28,30 @@ function landingTab(ov) {
 }
 
 export async function render(root, ctx) {
-  // Warm the tab module while the overview loads (the landing tab is known when the hash names it).
-  const guess = [...TABS, ...ADMIN_TABS].find((t) => t.key === ctx.params[0]);
+  const isAdmin = !!ctx.user?.is_admin;
+  // Warm the tab module while the overview loads (known when the hash names it; staff land on «ai»).
+  const guess = [...TABS, ...(isAdmin ? ADMIN_TABS : [])].find((t) => t.key === ctx.params[0]) || (isAdmin ? null : TABS[1]);
   if (guess) import(`./integrations/tab-${guess.file}.js`).catch(() => {});
-  let ov;
-  try { ov = await call('/overview'); }
-  catch (e) { root.append(sysHeader(ctx), h('div.card', errorState(e, () => window.dispatchEvent(new HashChangeEvent('hashchange'))))); return; }
-  const tabs = [...TABS, ...(ov.is_admin ? ADMIN_TABS.map((t) => (t.key === 'connectors' && ov.admin.open_requests ? { ...t, count: ov.admin.open_requests } : t)) : [])];
-  const tab = currentTab(ctx, tabs, landingTab(ov));
-  const def = tabs.find((t) => t.key === tab);
+  // …and its data, so the first paint needs one round trip less. Each prefetched
+  // response is used once (a refresh always fetches fresh data).
+  const pre = {};
+  const ENDPOINT = { systems: '/systems', ai: '/ai', apps: '/connectors', activity: '/activity', access: '/admin/matrix', policies: '/admin/domains', connectors: '/admin/connectors' };
+  if (guess && ENDPOINT[guess.key]) { const p = call(ENDPOINT[guess.key]); p.catch(() => {}); pre[ENDPOINT[guess.key]] = p; }
 
   const header = sysHeader(ctx, {
     sub: L('اختر ما يظهر لك، واعرف أين تذهب بياناتك وأين لا تذهب، واربط التطبيقات بأمان.', 'Choose what you see, know where your data goes — and where it never goes — and connect apps safely.'),
-    badges: ov.is_admin ? [h('span.chip.tiny.navy', icon('settings'), L('مدير المنصة: إعدادات فقط — لا وصول لبيانات الأنظمة', 'Platform admin: configuration only — no system data'))] : [],
+    badges: isAdmin ? [h('span.chip.tiny.navy', icon('settings'), L('مدير المنصة: إعدادات فقط — لا وصول لبيانات الأنظمة', 'Platform admin: configuration only — no system data'))] : [],
   });
   // The generic Ask AI chip describes this system's own settings domain; say it precisely.
   header.querySelector('.ai-chip')?.replaceWith(h('span.chip.tiny.outline', { 'data-tip': L('إعداداتك وروابطك في هذا المركز لا يقرؤها المساعد الذكي', 'Your settings and links here are never read by Ask AI') }, icon('lockKeyhole'), L('إعداداتك لا يقرؤها المساعد', 'Ask AI never reads your settings')));
-  const nav = sysTabs(ctx, tabs, tab);
-  nav.classList.add('ic-tabs');
-  if (ov.is_admin) {
-    // visual divider before the admin-only tabs
-    const first = nav.querySelector(`a[href="#/sys/${ctx.key}/access"]`);
-    first?.before(h('span.ic-tab-sep', { role: 'separator', 'aria-hidden': 'true' }));
-  }
-  const body = h(`div.ic-body.ic-tab-${tab}${ctx.soft ? '.soft' : ''}`);
-  root.append(header, nav, body);
+  const navSlot = h('div.ic-nav-slot', { 'aria-hidden': 'true' });
+  const body = h(`div.ic-body${ctx.soft ? '.soft' : ''}`);
+  root.append(header, navSlot, body);
 
-  const env = { ov, tab, sub: ctx.params.slice(1), refresh: null };
+  const env = { ov: null, tab: null, sub: ctx.params.slice(1), refresh: null,
+    // tabs call env.get(path): the prefetched promise the first time, a fresh request afterwards
+    get: (path) => { const p = pre[path]; delete pre[path]; return p || call(path); } };
+  let def = null;
   const load = async (target, soft) => {
     const mod = await import(`./integrations/tab-${def.file}.js`);
     const frag = h('div.ic-frag');
@@ -66,12 +63,29 @@ export async function render(root, ctx) {
     try { env.ov = await call('/overview'); await load(body, true); }
     catch (e) { body.replaceChildren(h('div.card', errorState(e, () => env.refresh()))); }
   };
-  const fill = async () => {
-    try { await load(body, ctx.soft); }
-    catch (e) { body.replaceChildren(h('div.card', errorState(e, () => { body.replaceChildren(skeleton('card', 3)); fill(); }))); }
+  const run = async () => {
+    try {
+      if (!def) {
+        env.ov = await call('/overview');
+        const ov = env.ov;
+        const tabs = [...TABS, ...(ov.is_admin ? ADMIN_TABS.map((t) => (t.key === 'connectors' && ov.admin.open_requests ? { ...t, count: ov.admin.open_requests } : t)) : [])];
+        env.tab = currentTab(ctx, tabs, landingTab(ov));
+        def = tabs.find((t) => t.key === env.tab);
+        const nav = sysTabs(ctx, tabs, env.tab);
+        nav.classList.add('ic-tabs');
+        if (ov.is_admin) nav.querySelector(`a[href="#/sys/${ctx.key}/access"]`)?.before(h('span.ic-tab-sep', { role: 'separator', 'aria-hidden': 'true' }));
+        navSlot.replaceWith(nav);
+        // On narrow screens the tab strip scrolls: keep the current tab in view.
+        if (!ctx.soft) requestAnimationFrame(() => { const on = nav.querySelector('a.on'); if (on && nav.scrollWidth > nav.clientWidth) on.scrollIntoView({ block: 'nearest', inline: 'center' }); });
+        body.classList.add(`ic-tab-${env.tab}`);
+      }
+      await load(body, ctx.soft);
+    } catch (e) {
+      body.replaceChildren(h('div.card', errorState(e, () => { body.replaceChildren(skeleton('card', 3)); run(); })));
+    }
   };
-  if (ctx.soft) { await fill(); return; }
-  // First paint: header + tabs + skeleton immediately, content streams in.
-  body.append(h('div.ic-skel', skeleton('stat', 1), skeleton('card', 3)));
-  fill();
+  if (ctx.soft) { await run(); return; }
+  // First paint: header + skeleton immediately; tabs and content stream in.
+  body.append(h('div.ic-skel', h('div.card', skeleton('stat', 1)), h('div.card', skeleton('card', 3))));
+  run();
 }

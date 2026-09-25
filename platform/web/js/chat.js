@@ -121,7 +121,8 @@ export function init() {
   input.oninput = () => { autosize(); syncSend(); };
   syncSend();
 
-  $('#btn-send').onclick = () => { if (canStop()) stopOutput(); else submit(); };
+  // Stop only when the button shows "stop" (nothing typed); typed text is always sent.
+  $('#btn-send').onclick = () => { if (canStop() && !$('#chat-input').value.trim()) stopOutput(); else submit(); };
   $('#chat-collapse').onclick = () => { $('#chat').classList.remove('expanded'); window.dispatchEvent(new CustomEvent('swp:chat-visible', { detail: false })); };
   $('#chat-expand').onclick = () => { $('#chat').classList.toggle('expanded'); labelControls(); };
   $('#chat-new').onclick = () => newConversation();
@@ -168,15 +169,15 @@ function labelControls() {
   const set = (sel, ic, label) => { const b = $(sel); if (!b) return; b.replaceChildren(icon(ic)); b.setAttribute('aria-label', label); b.title = label; };
   const ex = $('#chat').classList.contains('expanded');
   set('#chat-collapse', 'sidebarR', L('إخفاء المساعد', 'Hide assistant'));
-  set('#chat-new', 'plus', L('محادثة جديدة', 'New conversation'));
-  set('#chat-history', 'history', L('المحادثات السابقة', 'Conversation history'));
+  set('#chat-new', 'plus', t('ai.new'));
+  set('#chat-history', 'history', t('ai.history'));
   set('#chat-expand', ex ? 'shrink' : 'expand', ex ? L('تصغير اللوحة', 'Narrow panel') : L('توسيع اللوحة', 'Widen panel'));
   $('#chat-expand').setAttribute('aria-pressed', String(ex));
   set('#btn-attach', 'clip', L('إرفاق ملف (حتى 8MB)', 'Attach a file (up to 8MB)'));
   set('#btn-send', 'send', L('إرسال', 'Send'));
   $('#btn-send').append(icon('square', 'stop-glyph'));
-  set('#ai-full', 'maximize', L('ملء الشاشة', 'Full screen'));
-  set('#ai-dock', 'sidebarR', L('إرساء بجانب الصفحة', 'Dock beside the page'));
+  set('#ai-full', 'maximize', t('ai.full'));
+  set('#ai-dock', 'sidebarR', t('ai.dock'));
   set('#ai-close', 'x', L('إغلاق المحادثة (Esc)', 'Close conversation (Esc)'));
   set('#ai-rail-toggle', 'sidebar', L('إظهار المحادثات السابقة', 'Show conversation history'));
   const vm = $('#btn-voice-mode');
@@ -338,7 +339,7 @@ function welcomeEl() {
   const el = h('div.msg.assistant.welcome', { 'data-lang': getLang() },
     h('div.w-hero',
       orbEl('w'),
-      h('h3.w-title', L(`كيف أساعدك اليوم يا ${first(u.name_ar)}؟`, `How can I help you today, ${first(u.name_en)}?`)),
+      h('h3.w-title', t('ai.greet').replace('{name}', first(L(u.name_ar, u.name_en || u.name_ar)))),
       h('p.w-sub', L('اكتب طلبك أو تحدّث به، وسأنفّذه ضمن صلاحياتك وأُريك كل خطوة. أفهم «هذا المشروع» و«المستند المفتوح» من الصفحة الحالية.', 'Type or speak a request — I’ll carry it out within your permissions and show every step. I understand “this project” and “the open document” from the current page.')),
       h('ul.trust-row', { 'aria-label': L('ضمانات', 'Safeguards') },
         h('li', icon('shield'), L('ضمن صلاحياتك', 'Within your access')),

@@ -3,10 +3,12 @@
 // confirmation and reasons, document renewal verified by Procurement, contract
 // evaluations by the owner only, private vendor portal, Ask AI opt-in domain,
 // workspace cards and excellence points.
-import test, { after } from 'node:test';
+import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { as, done, stack } from './_stack.js';
 
+// _stack.js starts the stack lazily; start it once before concurrent logins.
+before(async () => { await stack(); });
 after(done);
 const P = '/api/sys/providers';
 const day = (n) => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
@@ -136,6 +138,8 @@ test('contract evaluations: owner only, 1–5, once per quarter; supplier sees i
   assert.ok(o.contracts.every((c) => !('owner' in c)), 'supplier does not see internal owners');
   const g = (await omar.get('/api/game/me')).data;
   assert.ok(g.rules.some((x) => x.key === 'provider_evaluation' && x.points === 8));
+  assert.ok(g.recent.some((e) => e.kind === 'provider_evaluation'), 'points are derived from the real evaluation');
+  assert.equal((await (await as('horizon')).get('/api/game/me')).status, 403, 'suppliers have no excellence points');
 });
 
 test('Ask AI on the opt-in registry domain: refused until the user opts in, then scoped', async () => {

@@ -135,6 +135,14 @@ test('Ask AI: the opt-in domain refuses tools until the user enables it; scope i
   const aTok = (await (await as('ahmed')).post('/api/me/tokens', {})).data.token;
   const r2 = await mcp.post('/mcp', { jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'performance_my_review', arguments: {} } }, { authorization: `Bearer ${aTok}` });
   assert.equal(r2.data.result.isError, true);
+  // the rule-based planner routes «مراجعة أدائي» to the same tool, under the same policy
+  const ahmed = await as('ahmed');
+  assert.match((await ahmed.chat('مراجعة أدائي')).final.text, /سياسة البيانات|لا تسمح/);
+  await ahmed.put('/api/systems/performance/prefs', { ai_enabled: true });
+  const mine = await ahmed.chat('ما هو تقييمي؟');
+  assert.match(mine.final.text, new RegExp(`دورة تقييم الأداء ${Y}`));
+  assert.match(mine.final.text, /أكمل تقييمك الذاتي/);
+  await ahmed.put('/api/systems/performance/prefs', { ai_enabled: false });
 });
 
 test('validation errors are 400', async () => {

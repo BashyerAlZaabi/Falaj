@@ -250,8 +250,9 @@ await step('17. نقاط التميّز: إنجاز مهمة حقيقية يمن
   const after = await gp.evaluate(async () => (await (await fetch('/api/game/me')).json()).xp);
   assert.ok(after > before, `xp ${before} → ${after}`);
   await gp.goto(S.portal + '/#/achievements');
-  await gp.waitForSelector('svg.rings');
-  assert.ok(await gp.locator('.badge-tile.earned').count() >= 1);
+  await gp.waitForSelector('.game-hero-grid svg.rings'); await gp.waitForSelector('.badge-tile');
+  const earnedN = await gp.locator('.badge-tile.earned').count();
+  assert.ok(earnedN >= 1, `no earned badge on the page; API: ${await gp.evaluate(async () => JSON.stringify((await (await fetch('/api/game/me')).json()).badges.map((b) => [b.key, b.have, b.need, b.earned])))}`);
   const sw = gp.locator('.optin input.switch');
   await sw.check();
   await gp.waitForFunction(async () => (await (await fetch('/api/game/me')).json()).prefs.leaderboard_opt_in === true, null, { timeout: 5000 });
@@ -302,7 +303,7 @@ await step('20. أيقونة المساعد تفتح محادثة كاملة ا�
   await ip.focus('#ai-orb');
   await ip.keyboard.press('Enter');
   await ip.waitForSelector('body.ai-immersive #chat.immersive.is-empty');
-  assert.equal(await ip.evaluate(() => document.activeElement?.id), 'chat-input');
+  await ip.waitForFunction(() => document.activeElement?.id === 'chat-input', null, { timeout: 3000 }); // focus moves after the open animation
   assert.equal(await ip.locator('#chat').getAttribute('role'), 'dialog');
   assert.ok(await ip.evaluate(() => document.querySelector('#main').inert), 'the page behind is inert');
   const cards = ip.locator('#ai-starters .starter');
@@ -318,7 +319,7 @@ await step('20. أيقونة المساعد تفتح محادثة كاملة ا�
   await shot(ip, '18-immersive-conversation');
   await ip.keyboard.press('Escape');
   await ip.waitForFunction(() => !document.body.classList.contains('ai-immersive'));
-  assert.equal(await ip.evaluate(() => document.activeElement?.id), 'ai-orb'); // focus restored to where it was
+  await ip.waitForFunction(() => document.activeElement?.id === 'ai-orb', null, { timeout: 3000 }); // focus restored to where it was
   assert.ok(await ip.locator('#chat.collapsed').count());
   assert.equal(await ip.evaluate(() => document.querySelector('#main').inert), false);
   // "/" opens it again; the conversation is still there; «إرساء بجانب الصفحة» docks it beside the page
@@ -346,6 +347,20 @@ await step('21. الصفحة الرئيسية تبدأ بالمحادثة: ال�
   await hp.keyboard.press('Escape');
   await hp.waitForFunction(() => !document.body.classList.contains('ai-immersive'));
   await hp.waitForSelector('.dash-grid .card'); // the dashboard is still there underneath
+  // a reply that arrives after the conversation was closed → the orb asks for attention
+  await hp.click('#ai-orb'); await hp.waitForSelector('body.ai-immersive');
+  const n0 = await hp.locator('#chat-body .msg.assistant:not(.welcome)').count();
+  await hp.evaluate(() => {
+    const i = document.querySelector('#chat-input'); i.value = 'ما مواعيدي؟'; i.dispatchEvent(new Event('input'));
+    document.querySelector('#btn-send').click();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); // closed while the request runs
+  });
+  await hp.waitForFunction((n) => document.querySelectorAll('#chat-body .msg.assistant:not(.welcome)').length > n, n0, { timeout: 20000 });
+  await hp.waitForSelector('#ai-orb-wrap[data-attn="answer"]');
+  assert.match(await hp.getAttribute('#ai-orb', 'aria-label'), /وصل رد جديد/);
+  await shot(hp, '20-orb-attention');
+  await hp.click('#ai-orb'); await hp.waitForSelector('body.ai-immersive');
+  assert.equal(await hp.locator('#ai-orb-wrap[data-attn]').count(), 0);
   await hp.context().close();
 });
 

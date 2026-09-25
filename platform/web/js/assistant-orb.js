@@ -52,7 +52,7 @@ export function init({ setTab, setChatVisible } = {}) {
   // Following a link or opening a page from the conversation shows the page, with the conversation docked beside it.
   window.addEventListener('hashchange', () => { if (isImmersive()) dock({ focus: false }); });
   window.addEventListener('resize', debounce(syncLayout, 120));
-  document.addEventListener('visibilitychange', () => { document.body.classList.toggle('page-hidden', document.hidden); loop(); });
+  document.addEventListener('visibilitychange', () => { document.body.classList.toggle('page-hidden', document.hidden); if (!document.hidden) sync(); loop(); });
   const ed = $('#editor');
   if (ed) new MutationObserver(() => { if (isImmersive() && !ed.classList.contains('collapsed')) dock({ focus: false }); }).observe(ed, { attributes: true, attributeFilter: ['class'] });
   on('ai-busy', (b) => { M.busy = !!b; paint(); });
@@ -96,6 +96,8 @@ function syncInert() {
 }
 
 const focusComposer = () => setTimeout(() => $('#chat-input')?.focus({ preventScroll: true }), 60);
+const shown = (el) => !!el && el.isConnected && el.getClientRects().length > 0 && !el.closest('[inert]');
+const firstShown = (...els) => els.find(shown) || null;
 
 // ------------------------------------------------------------------ immersive view
 export function openImmersive({ focus = true, from = null } = {}) {
@@ -142,8 +144,7 @@ export function closeImmersive({ restoreFocus = true } = {}) {
   emit('ai-mode', mode()); paint();
   if (restoreFocus) {
     const r = M.returnFocus; M.returnFocus = null;
-    const target = r?.isConnected && r.getClientRects().length && !r.closest('[inert]') ? r : $('#ai-orb');
-    target?.focus({ preventScroll: true });
+    firstShown(r, $('#ai-orb'), $('#view'))?.focus({ preventScroll: true });
   }
 }
 
@@ -190,6 +191,7 @@ function buildOrb() {
 
 export function relabel() {
   const orb = $('#ai-orb'); if (!orb) return;
+  if (isImmersive()) chatEl()?.setAttribute('aria-label', L('المحادثة مع المساعد', 'Conversation with the assistant'));
   const base = `${t('ai.orb')} (/)`;
   const extra = M.attn === 'confirm' ? L(' — إجراء بانتظار تأكيدك', ' — an action is waiting for your confirmation') : M.attn ? L(' — وصل رد جديد', ' — a new reply is waiting') : '';
   orb.setAttribute('aria-label', base + extra);
@@ -208,6 +210,7 @@ function paint() {
   const s = orbState();
   const wrap = $('#ai-orb-wrap');
   if (wrap) { wrap.dataset.state = s; wrap.querySelector('.aio').dataset.state = s; }
+  M.fabShown = shown($('#ai-orb')); // read once per state change, never per animation frame
   for (const o of $$('.home-ask .aio, #chat .welcome .aio')) o.dataset.state = s === 'idle' ? 'idle' : s;
   loop();
 }
@@ -242,7 +245,7 @@ function frame(ts) {
     if (!lvl && !Voice.hasMeter()) lvl = 0.14 + 0.08 * Math.sin(ts / 240) + 0.05 * Math.sin(ts / 83); // no meter: a calm "I'm listening" wobble
   } else if (V.phase === 'thinking') lvl = 0.06;
   const v = Math.max(0, Math.min(1, lvl)).toFixed(3);
-  const fab = $('#ai-orb .aio'); if (fab && fab.getClientRects().length) fab.style.setProperty('--lvl', v);
+  if (M.fabShown) $('#ai-orb .aio')?.style.setProperty('--lvl', v);
   if (V.open && V.orb) V.orb.style.setProperty('--lvl', v);
   if (needsLoop()) raf = requestAnimationFrame(frame);
 }
@@ -276,7 +279,7 @@ export function dictate({ input, button, onText }) {
 const V = { open: false, el: null, orb: null, orbBtn: null, phase: 'idle', silent: 0, turn: 0, micMuted: false, confirm: null, misses: 0, returnFocus: null, sayDone: null, readTimer: 0, noVoiceNoted: false, capText: '', capTimer: 0 };
 const YES = /^(نعم|اي|ايوه|ايوا|اجل|بلى|تاكيد|اكد|صحيح|نفذ|موافق|تمام|اكيد|yes|yeah|yep|confirm|ok|okay|sure|correct)/;
 const NO = /^(لا|كلا|الغ|الغاء|توقف|لا تنفذ|no|nope|cancel|stop|dont)/;
-const norm = (s) => String(s || '').toLowerCase().replace(/[ً-ٰٟ]/g, '').replace(/[أإآ]/g, 'ا').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
+const norm = (s) => String(s || '').toLowerCase().replace(/[\u064B-\u065F\u0670]/g, '').replace(/[أإآ]/g, 'ا').replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
 // Readable captions: no markdown marks, ISO dates as local dates (25 سبتمبر), one line per item.
 const niceDate = (d) => { const x = new Date(`${d}T12:00:00Z`); return Number.isNaN(x.getTime()) ? d : x.toLocaleDateString(L('ar-AE', 'en-GB'), { day: 'numeric', month: 'long' }); };
 const plainText = (s) => String(s || '').replace(/\*\*/g, '').replace(/(^|\s)_(.+?)_(?=\s|$)/g, '$1$2').replace(/^\s*[•·\-–*]\s+/gm, '').replace(/^#{1,4}\s+/gm, '').replace(/\|/g, ' ').replace(/\b(\d{4}-\d{2}-\d{2})\b/g, (m, d) => niceDate(d)).replace(/[ \t]+/g, ' ').trim();
@@ -302,14 +305,14 @@ export function openVoice({ from = null } = {}) {
 export function closeVoice() {
   if (!V.open) return;
   V.sayDone?.(false);
-  V.open = false; V.turn++; V.confirm = null;
+  V.open = false; V.turn++; V.confirm = null; V.phase = 'idle';
   clearTimeout(V.readTimer); clearInterval(V.capTimer);
   Voice.abort(); Voice.stopSpeaking(); Voice.closeMeter();
   V.el?.remove(); V.el = null; V.orb = null;
   document.body.classList.remove('ai-voice-open');
   syncInert(); paint(); loop();
   const r = V.returnFocus; V.returnFocus = null;
-  (r?.isConnected && r.getClientRects().length && !r.closest('[inert]') ? r : $('#ai-orb') || $('#chat-input'))?.focus({ preventScroll: true });
+  firstShown(r, $('#ai-orb'), $('#chat-input'), $('#view'))?.focus({ preventScroll: true });
 }
 
 function buildVoice() {
@@ -324,6 +327,7 @@ function buildVoice() {
   V.captions = h('div.vo-captions', V.you, V.ai);
   V.confirmSlot = h('div.vo-confirm', { hidden: true });
   V.note = h('div.vo-note', { hidden: true, role: 'status' });
+  V.live = h('p.sr-only', { 'aria-live': 'polite', 'aria-atomic': 'true' }); // the reply, announced once (captions update word by word)
   V.micBtn = h('button.vo-ctl.vo-mic', { type: 'button', 'aria-pressed': 'false', onclick: toggleMic }, icon('mic'), h('span.vo-ctl-l'));
   V.spkBtn = h('button.vo-ctl.vo-spk', { type: 'button', 'aria-pressed': String(Voice.isMuted()), onclick: toggleSpeaker }, icon(Voice.isMuted() ? 'mute' : 'speaker'), h('span.vo-ctl-l'));
   V.textBtn = h('button.vo-ctl.vo-text-btn', { type: 'button', onclick: () => { closeVoice(); openImmersive(); } }, icon('keyboard'), h('span.vo-ctl-l'));
@@ -335,7 +339,7 @@ function buildVoice() {
     h('header.vo-head', h('span.vo-chip', Chat.waveIcon(), V.title), V.modeChip, h('span.grow'),
       h('button.icon-btn.vo-close', { type: 'button', onclick: closeVoice }, icon('x'))),
     h('div.vo-stage', V.orbBtn, V.status, V.hint),
-    h('div.vo-lower', V.captions, V.confirmSlot, V.note),
+    h('div.vo-lower', V.captions, V.confirmSlot, V.note, V.live),
     h('footer.vo-controls', V.micBtn, V.endBtn, V.spkBtn, V.textBtn));
   V.el.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeVoice(); return; }
@@ -516,6 +520,7 @@ async function heard(text, { confidence = 1 } = {}) {
   if (!V.open || turn !== V.turn) return;
   if (!final) { setPhase('paused', L('طلب آخر قيد التنفيذ — اضغط على الدائرة بعد اكتماله', 'Another request is running — tap the orb once it finishes')); return; }
   const pending = (final.confirmations || [])[0];
+  if (V.live) { V.live.textContent = ''; setTimeout(() => { if (V.live) V.live.textContent = plainText(final.text || '').slice(0, 400); }, 40); }
   if (pending) { askConfirm(pending, final); return; }
   await say(final.text || L('تم.', 'Done.'));
   if (V.open && turn === V.turn) listen();

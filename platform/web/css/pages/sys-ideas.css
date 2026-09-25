@@ -15,6 +15,10 @@
 .chip.idea-cat .icon { color: var(--cat); }
 
 .ideas-body { display: flex; flex-direction: column; gap: var(--space-6); }
+.ideas-bank, .ideas-mine, .ideas-challenges, .ideas-committee { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; }
+.ideas-bank > .ideas-next { margin-top: calc(-1 * var(--space-3)); }
+.ideas-committee > .stat-row, .ideas-committee > .cm-bar { margin-bottom: 0; }
+.ideas-committee { gap: var(--space-4); }
 .ideas-body.is-loading .skel-grid { display: grid; gap: var(--space-4); grid-template-columns: 1fr; }
 @container page (min-width: 760px) { .ideas-body.is-loading .skel-grid { grid-template-columns: repeat(3, 1fr); } }
 .ideas-hero-skel { min-height: 220px; }
@@ -286,7 +290,6 @@
 .ideas-challenge { display: flex; flex-direction: column; gap: var(--space-5); }
 
 /* ---------- committee ---------- */
-.ideas-committee .stat-row { margin-bottom: var(--space-4); }
 .cm-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
 .cm-rules { display: inline-flex; align-items: center; gap: 6px; font: var(--type-footnote); color: var(--text-tertiary); max-width: 70ch; }
 .cm-rules .icon { width: 15px; height: 15px; flex: none; color: var(--emph); }
@@ -303,7 +306,9 @@
 .cm-card .bc-meta .icon { width: 13px; height: 13px; }
 .cm-card .bc-meta > span { display: inline-flex; align-items: center; gap: 4px; }
 .cm-matrix { padding: var(--space-2); }
+.mx-title { min-width: 240px; }
 .mx-title strong { font: 600 14px/1.4 var(--font-text); }
+@media (max-width: 640px) { .mx-title { min-width: 0; } }
 .sc-pill { display: inline-grid; place-items: center; min-width: 30px; height: 28px; padding: 0 6px; border-radius: var(--radius-xs); background: var(--fill-2); color: var(--text-secondary); font: 600 13px/1 var(--font-text); }
 .sc-pill[data-v="1"] { background: var(--red-tint); color: var(--red-text); }
 .sc-pill[data-v="2"] { background: var(--orange-tint); color: var(--orange-text); }
@@ -369,8 +374,15 @@
 .ms-pills { display: flex; flex-wrap: wrap; gap: 6px; }
 .ms-pills .sc-pill { height: auto; display: inline-flex; flex-direction: column; gap: 2px; padding: 5px 9px; }
 .ms-pills .sc-pill small { font: 500 10.5px/1.2 var(--font-text); opacity: 0.85; }
-.score-tbl tr.me td { background: var(--accent-tint); }
-.score-tbl td .who-chip { font-weight: 500; }
+.mem-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.mem-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2) var(--space-3); align-items: center; padding: var(--space-3); border-radius: var(--radius-lg); background: var(--glass-2-bg); }
+.mem-list li.me { box-shadow: inset 0 0 0 1.5px var(--accent-tint-strong); }
+.mem-list .who-chip { font: 500 13px/1.4 var(--font-text); min-width: 0; }
+.mem-list .ms-pills { justify-content: flex-end; }
+.mem-list .ms-pills .sc-pill { padding: 3px 7px; min-width: 42px; }
+.mem-w { font: 600 15px/1 var(--font-text); min-width: 44px; text-align: end; }
+.mem-note { grid-column: 1 / -1; margin: 0; font: var(--type-footnote); color: var(--text-secondary); }
+@container isheet (max-width: 560px) { .mem-list li { grid-template-columns: 1fr; } .mem-list .ms-pills { justify-content: flex-start; } }
 .is-blind { background: var(--glass-5-bg); }
 .is-decision { padding: var(--space-4); border-radius: var(--radius-xl); background: var(--fill-3); }
 .is-decision.good { background: color-mix(in srgb, var(--green) 7%, transparent); }
@@ -486,3 +498,9 @@
   .cb-total { flex-direction: row; justify-content: center; gap: var(--space-3); }
 }
 @media (prefers-reduced-motion: reduce) { .idea-card:hover, .mine-row:hover, .chal-card:hover, .hm:hover { transform: none; } }
+@container page (max-width: 640px) {
+  .ideas .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .ideas .stat-tile { padding: var(--space-3); border-radius: var(--radius-lg); }
+  .ideas .stat-tile .st-value { font-size: 26px; }
+  .ideas .stat-tile .st-hint { display: none; }
+}

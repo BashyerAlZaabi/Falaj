@@ -21,7 +21,7 @@
 
 /* ---------- hero (employee) ---------- */
 .perf-hero {
-  display: grid; grid-template-columns: 1fr; gap: var(--space-5); padding: var(--space-6); margin-bottom: var(--space-5); overflow: hidden;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); padding: var(--space-6); margin-bottom: var(--space-5); overflow: hidden;
   background:
     radial-gradient(120% 140% at 100% 0%, color-mix(in srgb, var(--emph) 7%, transparent) 0%, transparent 55%),
     radial-gradient(90% 120% at 0% 100%, color-mix(in srgb, var(--accent) 8%, transparent) 0%, transparent 60%),
@@ -34,6 +34,7 @@
     var(--glass-2-bg);
 }
 .perf-hero::before { content: ""; position: absolute; inset-block-start: 0; inset-inline-start: var(--space-6); width: 56px; height: 3px; border-radius: 0 0 var(--radius-pill) var(--radius-pill); background: var(--brand-red-bright); opacity: 0.85; }
+.perf-hero > * { min-width: 0; }
 .perf-hero-main { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); min-width: 0; }
 .perf-hero-title { font: var(--type-title1); color: var(--text-primary); margin: 2px 0 0; }
 :lang(en) .perf-hero-title { letter-spacing: var(--track-title1); }
@@ -43,7 +44,7 @@
 .perf-hero-steps { grid-column: 1 / -1; padding-top: var(--space-4); border-top: 1px solid var(--separator); }
 .perf-hero-steps .stepper { margin: 0; }
 @container page (min-width: 760px) {
-  .perf-hero { grid-template-columns: 1fr auto; align-items: center; padding: var(--space-8) var(--space-8) var(--space-5); }
+  .perf-hero { grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: var(--space-8) var(--space-8) var(--space-5); }
   .perf-hero-visual { padding-inline: var(--space-6); }
 }
 
@@ -222,7 +223,7 @@
   .perf-roster { position: sticky; top: var(--space-4); }
 }
 @container page (max-width: 979px) {
-  .perf-team.has-detail .perf-roster { display: none; }
+  .perf-team.has-detail .perf-roster, .perf-teamv.has-detail > .stat-row { display: none; }
 }
 @container page (min-width: 980px) { .perf-back { display: none; } }
 .perf-roster { padding: var(--space-3); border-radius: var(--radius-xl); background: var(--glass-2-bg); border: 1px solid var(--glass-2-border); box-shadow: var(--glass-highlight-soft), var(--shadow-card); }
@@ -267,8 +268,6 @@
 .perf-dhead .stepper { margin: 0; }
 .perf-back { align-self: flex-start; }
 .perf-back.always { display: inline-flex; }
-[dir="ltr"] .perf-back-ic { transform: scaleX(-1); }
-[dir="rtl"] .perf-back-ic { transform: none; }
 .perf-dhead-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-3); }
 .perf-dhead-chips { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .perf-dnext { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding: var(--space-3) var(--space-4); border-radius: var(--radius-lg); background: var(--emph-tint); color: var(--emph-text); font: 600 14px/1.4 var(--font-text); }
@@ -309,7 +308,9 @@
 .perf-comp-row .perf-as-rate { padding-top: 2px; }
 .perf-ai-note { margin-top: var(--space-2); min-height: 0; }
 .perf-sticky { position: sticky; bottom: var(--space-3); z-index: var(--z-raised); margin: var(--space-5) calc(-1 * var(--space-2)) 0; padding: var(--space-3) var(--space-4); border-radius: var(--radius-xl); background: var(--glass-4-bg); border: 1px solid var(--glass-4-border); box-shadow: var(--glass-highlight), var(--shadow-floating); -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)); backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation)); }
-.perf-sticky .perf-form-foot { margin-top: var(--space-3); padding-top: var(--space-3); }
+.perf-sticky { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-5); }
+.perf-sticky .perf-form-foot { flex: 1 1 auto; justify-content: flex-end; margin: 0; padding: 0; border: 0; }
+.perf-sticky .perf-live { flex: 0 1 auto; }
 .perf-live { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5); }
 .perf-live-part { display: flex; align-items: baseline; gap: 6px; font: var(--type-footnote); color: var(--text-tertiary); }
 .perf-live-part b { font: 600 16px/1 var(--font-display); color: var(--text-primary); }
@@ -424,6 +425,7 @@
 /* ---------- mobile ---------- */
 @media (max-width: 640px) {
   .perf-hero { padding: var(--space-5); }
+  .perf-hero-visual { display: none; }
   .perf-hero-title { font: var(--type-title2); }
   .perf-hero-actions .btn { flex: 1 1 auto; }
   .perf-self-a { padding-inline-start: 0; }

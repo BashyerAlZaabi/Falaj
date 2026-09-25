@@ -307,3 +307,82 @@ test('Ask AI & MCP: public tools answer; the locked evaluations domain is always
   const c3 = await ahmed.chat('رشّح سارة لجائزة الموظف المتميز');
   assert.match(c3.final.text, /نظام الجوائز/);
 });
+
+test('declining keeps the reason private; the nominator earns points only for consented nominations (once per programme)', async () => {
+  const sara = await as('sara'); const noura = await as('noura');
+  const hessa = await as('hessa');
+  const p = (await hessa.post(`${B}/programs`, programBody({ name_ar: 'جائزة المبادرة الخضراء' }))).data;
+  ok(await hessa.post(`${B}/programs/${p.id}/transition`, { to: 'nominations' }));
+  const n = (await sara.post(`${B}/nominations`, { program_id: p.id, category_id: p.categories[0].id, nominee_id: 'u_noura', summary: 'مبادرة ترشيد استهلاك الورق في الإدارة', justifications: just(p) })).data;
+  assert.equal((await sara.post(`${B}/nominations/${n.id}/consent`, { accept: false })).status, 403);
+  const d = await noura.post(`${B}/nominations/${n.id}/consent`, { accept: false, decline_reason: 'أفضّل ترشيح زميلتي بدلاً مني' });
+  ok(d, 'decline');
+  assert.equal(d.data.status, 'declined');
+  const seen = (await sara.get(`${B}/nominations/${n.id}`)).data;
+  assert.equal(seen.status, 'declined');
+  assert.equal(seen.decline_reason, undefined, 'the reason stays with the nominee');
+  assert.equal((await noura.get(`${B}/nominations/${n.id}`)).data.decline_reason, 'أفضّل ترشيح زميلتي بدلاً مني');
+  const gs = (await sara.get('/api/game/me')).data;
+  assert.ok(!gs.recent.some((e) => e.id === `awards:nominated:${p.id}`), 'no points for a declined nomination');
+  const ga = (await (await as('ahmed')).get('/api/game/me')).data;
+  assert.ok(ga.recent.some((e) => e.id === `awards:nominated:${P.id}` && e.points === 5), 'ahmed nominated fatima who consented');
+});
+
+test('eligibility and programme rules: employees-only, no self when disallowed, team data only for team awards', async () => {
+  const sara = await as('sara'); const hessa = await as('hessa');
+  const emp = (await sara.get(`${B}/programs/awp_employee_2026`)).data;
+  const r = await sara.post(`${B}/nominations`, { program_id: emp.id, category_id: emp.categories[0].id, nominee_id: 'u_omar', summary: 'قيادة متميزة لإدارة العمليات', justifications: just(emp) });
+  assert.equal(r.status, 400, 'a manager cannot receive an employees-only award');
+  assert.equal((await sara.post(`${B}/nominations`, { program_id: emp.id, category_id: 'awc_inn_ops', nominee_id: 'u_noura', summary: 'فئة من برنامج آخر', justifications: just(emp) })).status, 400, 'category of another programme');
+  assert.equal((await sara.post(`${B}/nominations`, { program_id: emp.id, category_id: emp.categories[0].id, nominee_id: 'u_noura', team_name: 'فريق', team_member_ids: ['u_reem'], summary: 'ترشيح فردي بفريق', justifications: just(emp) })).status, 400);
+  const noSelf = (await hessa.post(`${B}/programs`, programBody({ name_ar: 'جائزة القدوة الحسنة', allow_self: false }))).data;
+  ok(await hessa.post(`${B}/programs/${noSelf.id}/transition`, { to: 'nominations' }));
+  assert.equal((await sara.post(`${B}/nominations`, { program_id: noSelf.id, category_id: noSelf.categories[0].id, summary: 'أرشح نفسي لهذه الجائزة', justifications: just(noSelf) })).status, 400);
+  // team awards: a named team of at least two staff; members follow the status; only the lead consents
+  const team = (await hessa.post(`${B}/programs`, programBody({ name_ar: 'جائزة فريق الإنجاز', kind: 'team', eligibility: 'team' }))).data;
+  ok(await hessa.post(`${B}/programs/${team.id}/transition`, { to: 'nominations' }));
+  assert.equal((await sara.post(`${B}/nominations`, { program_id: team.id, category_id: team.categories[0].id, nominee_id: 'u_fatima', summary: 'فريق بلا اسم ولا أعضاء', justifications: just(team) })).status, 400);
+  assert.equal((await sara.post(`${B}/nominations`, { program_id: team.id, category_id: team.categories[0].id, nominee_id: 'u_fatima', team_name: 'فريق الخدمة', team_member_ids: ['u_ext_oasis'], summary: 'فريق مع عضو خارجي', justifications: just(team) })).status, 400);
+  const t = await sara.post(`${B}/nominations`, { program_id: team.id, category_id: team.categories[0].id, nominee_id: 'u_fatima', team_name: 'فريق مركز الخدمة', team_member_ids: ['u_omar'], summary: 'فريق أعاد تصميم تجربة المتعاملين', justifications: just(team) });
+  ok(t, 'team nomination');
+  assert.equal(t.data.team.length, 2);
+  const omar = await as('omar');
+  assert.equal((await omar.get(`${B}/nominations/${t.data.id}`)).data.view, 'nominee');
+  assert.equal((await omar.post(`${B}/nominations/${t.data.id}/consent`, { accept: true })).status, 403, 'only the team lead consents');
+});
+
+test('excellence summary: attached, refreshed or removed by the nominee only — never by others', async () => {
+  const saeed = await as('saeed'); const hessa = await as('hessa');
+  const p = (await hessa.post(`${B}/programs`, programBody({ name_ar: 'جائزة الإتقان' }))).data;
+  ok(await hessa.post(`${B}/programs/${p.id}/transition`, { to: 'nominations' }));
+  const n = (await saeed.post(`${B}/nominations`, { program_id: p.id, category_id: p.categories[0].id, summary: 'منهجية تدقيق مبنية على المخاطر', justifications: just(p) })).data;
+  assert.equal(n.excellence, null);
+  const on = await saeed.post(`${B}/nominations/${n.id}/excellence`, { attach: true });
+  ok(on, 'attach');
+  assert.equal(typeof on.data.excellence.level.n, 'number');
+  assert.ok(Array.isArray(on.data.excellence.badges));
+  const aisha = await as('aisha');
+  assert.equal((await aisha.post(`${B}/nominations/${n.id}/excellence`, { attach: true })).status, 404, 'not visible to a colleague, even the manager');
+  assert.equal((await saeed.post(`${B}/nominations/${n.id}/excellence`, {})).status, 400);
+  const off = await saeed.post(`${B}/nominations/${n.id}/excellence`, { attach: false });
+  ok(off, 'remove');
+  assert.equal(off.data.excellence, null);
+  assert.equal((await saeed.get(`${B}/excellence-preview`)).data.level.n >= 1, true);
+});
+
+test('lifecycle controls: cancelling needs confirmation, new cycles are admin-only drafts, criteria intent answers publicly', async () => {
+  const hessa = await as('hessa');
+  const p = (await hessa.post(`${B}/programs`, programBody({ name_ar: 'جائزة مؤقتة للاختبار' }))).data;
+  assert.equal((await hessa.post(`${B}/programs/${p.id}/transition`, { to: 'cancelled' })).status, 428);
+  ok(await hessa.post(`${B}/programs/${p.id}/transition`, { to: 'cancelled', confirm: true }), 'cancel');
+  assert.equal((await hessa.post(`${B}/programs/${p.id}/transition`, { to: 'nominations' })).status, 409);
+  assert.equal((await hessa.post(`${B}/programs/${p.id}/transition`, { to: 'launch' })).status, 400);
+  const copyBody = { cycle: 'دورة 2027', nomination_opens: day(30), nomination_closes: day(50), evaluation_closes: day(70), announce_on: day(80) };
+  assert.equal((await (await as('latifa')).post(`${B}/programs/awp_team_2026/copy`, copyBody)).status, 403);
+  const c = await hessa.post(`${B}/programs/awp_team_2026/copy`, copyBody);
+  ok(c, 'copy');
+  assert.equal(c.data.status, 'draft'); assert.equal(c.data.eligibility, 'team'); assert.equal(c.data.criteria.length, 4);
+  assert.equal((await (await as('sara')).get(`${B}/programs/${c.data.id}`)).status, 404);
+  const chat = await (await as('sara')).chat('ما معايير جائزة الابتكار؟');
+  assert.match(chat.final.text, /الأصالة والجِدّة/);
+});

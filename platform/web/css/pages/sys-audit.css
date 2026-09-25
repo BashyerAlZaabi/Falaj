@@ -320,3 +320,18 @@ details.aud-group > summary:focus-visible { outline: none; box-shadow: var(--foc
 .aud-ukeys button:hover { background: var(--fill-hover); }
 .aud-ukeys button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 .aud-col.zero { min-height: 0; }
+
+/* Dark: the same ramp, its own steps (low risk must stay visible on the navy card). */
+:root[data-theme="dark"] .aud { --aud-risk-medium: color-mix(in oklab, var(--series-3) 74%, var(--bg-base)); --aud-risk-low: color-mix(in oklab, var(--series-3) 50%, var(--bg-base)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .aud { --aud-risk-medium: color-mix(in oklab, var(--series-3) 74%, var(--bg-base)); --aud-risk-low: color-mix(in oklab, var(--series-3) 50%, var(--bg-base)); } }
+.aud-access li { gap: var(--space-2); }
+.aud-access .icon { width: 14px; height: 14px; color: var(--text-tertiary); flex: none; }
+.aud-access .title, .aud-access .meta { display: block; }
+@media (max-width: 640px) { .aud-next-more { display: none; } }
+@media (max-width: 640px) {
+  .aud .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .aud-portal .stat-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .aud .stat-tile { padding: var(--space-3); }
+  .aud .stat-tile .st-value { font-size: 28px; }
+}
+.aud [dir="auto"] { text-align: start; }

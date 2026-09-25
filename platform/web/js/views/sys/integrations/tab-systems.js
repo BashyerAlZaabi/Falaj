@@ -10,7 +10,7 @@ import { call, classificationChip, setPrefs, sectionHead, aiState } from './comm
 const FILTERS = ['all', 'shown', 'hidden'];
 
 export async function render(root, ctx, env) {
-  const data = await call('/systems');
+  const data = await env.get('/systems');
   const acc = [...data.accessible].sort((a, b) => CATEGORY_ORDER.indexOf(a.category) - CATEGORY_ORDER.indexOf(b.category));
   const pinned = acc.filter((s) => s.pinned).length;
   const aiOn = acc.filter((s) => s.domains.some((d) => d.ai_active)).length;

@@ -11,7 +11,7 @@
 // Procurement contract (server-side): declaredConflicts(userId), recusalsFor(userId).
 import { defineSystem } from './registry.js';
 import { isStaff, wrap, check, S, str, num, int, bool, arr, date, today, daysBetween, all, one } from './kit.js';
-import { KEY, schema, INTEREST_KINDS, MITIGATION_KINDS, DECISIONS, MITIGATION_LABEL, DECISION_LABEL, PROMPT_DAYS, GIFT_POINTS_PER_YEAR, propose, tokenLimit } from './integrity/model.js';
+import { schema, INTEREST_KINDS, MITIGATION_KINDS, DECISIONS, MITIGATION_LABEL, DECISION_LABEL, PROMPT_DAYS, GIFT_POINTS_PER_YEAR, propose, tokenLimit } from './integrity/model.js';
 import { seed } from './integrity/seed.js';
 import * as Svc from './integrity/service.js';
 

@@ -18,7 +18,7 @@ const adminNote = () => h('div.callout.ic-admin-note', icon('info'), h('span', L
 // ================================================================== permissions
 const ui = { q: '' };
 async function renderAccess(root, ctx, env) {
-  const m = await call('/admin/matrix');
+  const m = await env.get('/admin/matrix');
   const sysKey = m.systems.some((s) => s.key === env.sub[0]) ? env.sub[0] : 'all';
   const deptKey = m.departments.some((d) => d.id === env.sub[1]) ? env.sub[1] : 'all';
   const systems = sysKey === 'all' ? m.systems : m.systems.filter((s) => s.key === sysKey);
@@ -127,7 +127,7 @@ function accessReviewCard(review, counts, env) {
 
 // ================================================================== data policies
 async function renderPolicies(root, ctx, env) {
-  const rows = await call('/admin/domains');
+  const rows = await env.get('/admin/domains');
   const n = (p) => rows.filter((d) => d.ai_policy === p && !d.ai_locked).length;
   root.append(adminNote());
   root.append(statRow([
@@ -179,7 +179,7 @@ function policyRow(d, env) {
 
 // ================================================================== connectors
 async function renderConnectors(root, ctx, env) {
-  const list = await call('/admin/connectors');
+  const list = await env.get('/admin/connectors');
   const open = list.reduce((a, c) => a + c.requests.length, 0);
   root.append(adminNote());
   root.append(statRow([

@@ -8,7 +8,7 @@ const LANES = ['internal', 'confidential', 'restricted'];
 const STATE_ICON = { on: 'spark', optin: 'circleDashed', locked: 'lockKeyhole', off: 'shieldBan' };
 
 export async function render(root, ctx, env) {
-  const data = await call('/ai');
+  const data = await env.get('/ai');
   root.append(hero(data, ctx));
   const optional = data.systems.filter((s) => s.optional);
   const fixed = data.systems.filter((s) => !s.optional);

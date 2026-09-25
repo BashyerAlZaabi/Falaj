@@ -5,6 +5,7 @@
 
 /* ---------------------------------------------------------------- shell */
 .ic-tabs { margin-bottom: var(--space-6); }
+.ic-nav-slot { height: 40px; margin: 0 0 var(--space-6); }
 .ic-tab-sep { flex: none; width: 1px; align-self: stretch; margin: 6px 4px; background: var(--separator-strong); }
 .ic-body { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
 .ic-body > .stat-row { margin-bottom: 0; }
@@ -479,6 +480,10 @@ button.ic-cell:focus-visible { outline: none; box-shadow: var(--focus-ring); }
 
 /* ---------------------------------------------------------------- small screens & touch */
 @container page (max-width: 560px) {
+  .ic-body .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+  .ic-body .stat-tile { padding: var(--space-3); gap: 4px; }
+  .ic-body .stat-tile .st-hint { display: none; }
+  .ic-body .stat-tile .st-value { font-size: 28px; }
   .ic-hero { padding: var(--space-5) var(--space-4) var(--space-4); border-radius: var(--radius-2xl); }
   .ic-hero h2 { font: var(--type-title2); }
   .ic-metric { min-width: 0; flex: 1 1 30%; padding: var(--space-2) var(--space-3); }

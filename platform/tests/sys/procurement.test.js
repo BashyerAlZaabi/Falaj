@@ -3,12 +3,14 @@
 // sealed bids, two-key opening, evaluation + masked analysis, committee, legal,
 // PO → contract), recusal, isolation of external suppliers, leakage checks,
 // Ask AI tools / MCP / intents and validation.
-import test, { after } from 'node:test';
+import test, { after, before } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { as, done, stack } from './_stack.js';
 import { ROOT } from '../helpers.js';
 
+// _stack.js starts the stack lazily; start it once before concurrent logins.
+before(async () => { await stack(); });
 after(done);
 const P = '/api/sys/procurement';
 const day = (n) => { const d = new Date(); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
@@ -330,6 +332,34 @@ test('Ask AI: tools and MCP within scope, intents create drafts and list approva
   assert.ok(names.includes('procurement_my_requests'));
   assert.ok(!names.some((n) => /bid|rfq/.test(n)));
   assert.ok(!names.includes('procurement_undo_request'), 'internal undo tool is not exposed');
+});
+
+test('bidding window: withdrawal needs confirmation, suspended suppliers cannot bid, deadlines only move forward', async () => {
+  const [reem, oasis, horizon, majed] = await Promise.all(['reem', 'oasis', 'horizon', 'majed'].map(as));
+  const inv = (await oasis.get(`${P}/portal/rfqs/rfq_demo_open`)).data;
+  assert.equal(inv.bid, null, 'Oasis has not bid yet');
+  const lines = inv.items.map((i) => ({ item_id: i.id, unit_price: 5200 }));
+  assert.equal((await oasis.put(`${P}/portal/rfqs/rfq_demo_open/bid`, { lines, delivery_days: 0, validity_days: 90 })).status, 400);
+  assert.equal((await oasis.put(`${P}/portal/rfqs/rfq_demo_open/bid`, { lines, delivery_days: 25, validity_days: 90 })).data.bid.status, 'submitted');
+  assert.equal((await majed.get(`${P}/rfqs/rfq_demo_open`)).data.bid_count, 2);
+  assert.equal((await oasis.post(`${P}/portal/rfqs/rfq_demo_open/withdraw`, {})).status, 428);
+  assert.equal((await oasis.post(`${P}/portal/rfqs/rfq_demo_open/withdraw`, { confirm: true })).data.bid.status, 'withdrawn');
+  assert.equal((await majed.get(`${P}/rfqs/rfq_demo_open`)).data.bid_count, 1, 'withdrawn bids are not counted');
+  const hz = (await horizon.get(`${P}/portal/rfqs/rfq_demo_open`)).data;
+  assert.equal(hz.bid.status, 'submitted', 'another supplier’s withdrawal does not touch Horizon’s bid');
+  // a suspended supplier cannot bid
+  assert.equal((await reem.post('/api/sys/providers/providers/pv_oasis/status', { to: 'suspended', reason: 'مراجعة امتثال مؤقتة', confirm: true })).status, 200);
+  assert.equal((await oasis.put(`${P}/portal/rfqs/rfq_demo_open/bid`, { lines, delivery_days: 25, validity_days: 90 })).status, 409);
+  assert.equal((await reem.post('/api/sys/providers/providers/pv_oasis/status', { to: 'approved', reason: 'انتهاء المراجعة', confirm: true })).status, 200);
+  // deadline extension: officer only, forward only, with a reason
+  const q = (await reem.get(`${P}/rfqs/rfq_demo_open`)).data;
+  const later = new Date(Date.parse(q.closes_at) + 2 * 864e5).toISOString();
+  assert.equal((await majed.post(`${P}/rfqs/rfq_demo_open/extend`, { closes_at: later, reason: 'طلب إيضاحات' })).status, 403);
+  assert.equal((await reem.post(`${P}/rfqs/rfq_demo_open/extend`, { closes_at: new Date(Date.parse(q.closes_at) - 864e5).toISOString(), reason: 'تقديم' })).status, 400);
+  const ext = (await reem.post(`${P}/rfqs/rfq_demo_open/extend`, { closes_at: later, reason: 'طلب إيضاحات من الموردين' })).data;
+  assert.equal(ext.closes_at, later);
+  const alerts = JSON.stringify((await horizon.get('/api/alerts')).data);
+  assert.ok(alerts.includes('تمديد موعد'), 'invited suppliers are notified');
 });
 
 test('no excellence points for procurement', async () => {

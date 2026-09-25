@@ -2,7 +2,7 @@
 // permitted manager, read-only for the latter), create/progress dialogs and the
 // quick actions used by every tab. The server enforces ownership & visibility.
 import {
-  h, icon, L, fmtDate, getLang, statusChip, progress, openSheet, formDialog, confirmDialog, toast, act, timeline, accessLogList, sysApi, dateTime, menu, avatar,
+  h, icon, L, getLang, statusChip, progress, openSheet, formDialog, confirmDialog, toast, act, timeline, sysApi, dateTime, menu, avatar,
 } from '../../../sys-kit.js';
 import { ring, nf, pctText } from '../strategy/viz.js';
 import { celebrate } from '../../../game.js';
@@ -51,6 +51,15 @@ export async function progressDialog(btn, g, reload) {
   if (r) { if (r.just_achieved) { celebrate(btn, { big: g.period_type !== 'daily' }); toast(L(`تحقق الهدف «${g.title}»`, `Goal achieved: “${g.title}”`)); } else toast(L('سُجّل التقدم', 'Progress saved')); reload(); }
 }
 
+export async function alignDialog(btn, g, reload) {
+  const objectives = await call('/objectives').catch(() => []);
+  const v = await formDialog({ title: L('ربط الهدف بالاستراتيجية', 'Align this goal'), intro: g.title, values: { objective_id: g.objective?.id || '' }, fields: [
+    { name: 'objective_id', label: L('الهدف الاستراتيجي', 'Strategic objective'), type: 'select', required: true, full: true, options: objectives.map((o) => ({ value: o.id, label: `${o.code} · ${L(o.title_ar, o.title_en)}` })) },
+  ], submitLabel: L('ربط', 'Align') });
+  if (!v) return;
+  const r = await act(btn, () => call(`/goals/${g.id}`, { method: 'PUT', body: { objective_id: v.objective_id } }));
+  if (r) { toast(L('رُبط الهدف بالاستراتيجية', 'Goal aligned')); reload?.(); }
+}
 export async function createDialog(btn, { type = 'daily', parentId, objectiveId, reload } = {}) {
   const [objectives, parents] = await Promise.all([call('/objectives').catch(() => []), call(`/parents?type=${type}`).catch(() => [])]);
   const v = await formDialog({ title: L('هدف جديد', 'New goal'), wide: true, values: { period_type: type, measure: 'binary', parent_id: parentId || '', objective_id: objectiveId || '', visibility: '' }, fields: [
@@ -150,7 +159,7 @@ export async function goalSheet(id, { reload, onClose } = {}) {
     h('p.tiny', g.visibility === 'manager'
       ? L(`مشترك للاطلاع مع: ${(g.shared_with || []).map((u) => u.name_ar).join('، ') || 'لا أحد حالياً'}. لا يراه أي شخص آخر، بما في ذلك الموارد البشرية ومدير المنصة.`, `Shared read-only with: ${(g.shared_with || []).map((u) => u.name_en).join(', ') || 'nobody right now'}. Nobody else — including HR and the platform admin — can see it.`)
       : L('خاص بك تماماً — لا يراه مديرك ولا أي جهة أخرى.', 'Fully private — not visible to your manager or anyone else.')),
-    h('div.tiny.faint', L('من اطّلع على هذا الهدف', 'Who viewed this goal')), accessLogList(g.viewers)) : null;
+    h('div.tiny.faint', L('من اطّلع على هذا الهدف', 'Who viewed this goal')), viewersList(g.viewers)) : null;
 
   const body = h('div.gl-sheet',
     h('div.gl-sheet-hero', ring({ value: g.progress, size: 104, stroke: 9, tone: g.status === 'achieved' ? 'good' : g.status === 'missed' ? 'warn' : g.status === 'cancelled' ? 'none' : 'brand', label: pctText(g.progress), sub: L(STATUS[g.status][0], STATUS[g.status][1]) }), facts),
@@ -161,12 +170,18 @@ export async function goalSheet(id, { reload, onClose } = {}) {
   if (current && current.id === id && current.sheet.el.isConnected) { current.sheet.setBody(body); return current.sheet; }
   const sheet = openSheet(conf);
   current = { id, sheet, close: sheet.close };
+  setTimeout(() => sheet.el.querySelector('.gl-sheet-actions .btn.primary, .gl-sheet-actions .btn')?.focus?.(), 60); // keyboard lands on the next step
   const obs = new MutationObserver(() => { if (!sheet.el.isConnected) { obs.disconnect(); if (current?.sheet === sheet) current = null; onClose?.(id); } });
   obs.observe(document.body, { childList: true });
   return sheet;
 }
 export const openGoalId = () => (current?.sheet?.el?.isConnected ? current.id : null);
 
+const ACTIONS = { view: ['اطّلع', 'viewed', 'eye'], comment: ['علّق', 'commented', 'messageSquare'] };
+function viewersList(rows) {
+  if (!rows?.length) return h('p.tiny.faint', L('لم يطّلع أحد غيرك على هذا الهدف.', 'Nobody but you has viewed this goal.'));
+  return h('ul.list.access-log', rows.map((r) => { const a = ACTIONS[r.action] || [r.action, r.action, 'pencil']; return h('li', icon(a[2]), h('span.grow', L(r.name_ar, r.name_en)), h('span.tiny.faint', `${L(a[0], a[1])} · ${dateTime(r.at)}`)); }));
+}
 async function sendComment(btn, g, text, done) {
   const r = await act(btn, () => call(`/goals/${g.id}/comments`, { method: 'POST', body: { body: text } }));
   if (r) { toast(L('أُرسل التعليق', 'Comment sent')); done(); }

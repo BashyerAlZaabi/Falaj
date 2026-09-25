@@ -1,7 +1,8 @@
 // Internal Audit — finding record page (#/sys/audit/f/<id>): the 4C, the
 // recommendation, the management response and action plan, follow-up timeline
 // and closure validation. Each viewer sees only what their role allows.
-import { sysHeader, stepper, card, grid, timeline, accessLogList, confidentialBanner, confirmDialog, directory, go } from '../../../sys-kit.js';
+import { sysHeader, stepper, card, grid, timeline, confidentialBanner, confirmDialog, directory, go } from '../../../sys-kit.js';
+import { accessList } from './common.js';
 import { h, icon, L, fmtNum, fmtDate, call, HREF, riskChip, findingChip, actionChip, deptChip, dueLabel, docList, docField, formDialog, act, toast, nextCard, btn, back, mount, demoChip, para, state } from './common.js';
 
 const STEPS = [{ ar: 'إثبات الملاحظة', en: 'Drafted' }, { ar: 'الإصدار', en: 'Issued' }, { ar: 'رد الإدارة', en: 'Response' }, { ar: 'التنفيذ', en: 'Implementation' }, { ar: 'التحقق والإغلاق', en: 'Validation' }];
@@ -45,7 +46,7 @@ function page(f, ctx) {
     card(h('div.row.grow', h('h2.card-title', L('سجل المتابعة', 'Follow-up history')), c.note ? btn(L('ملاحظة داخلية', 'Internal note'), { sm: true, tertiary: true, ic: 'lock', onClick: () => note(f) }) : null),
       timeline(f.updates.map((u) => { const k = KIND[u.kind] || [u.kind, u.kind, 'circleDot']; return { at: u.at, ar: `${k[0]}${u.note ? ` — ${u.note}` : ''}`, en: `${k[1]}${u.note ? ` — ${u.note}` : ''}`, who: u.who, icon: k[2], tone: u.internal ? null : k[3] }; }))),
     v.ia && f.raised_by ? card(L('معلومات داخلية', 'Internal details'), h('dl.sys-kv', h('dt', L('أثبتها', 'Raised by')), h('dd', L(f.raised_by.name_ar, f.raised_by.name_en)), h('dt', L('أصدرها', 'Issued by')), h('dd', f.issued_by ? L(f.issued_by.name_ar, f.issued_by.name_en) : '—'), h('dt', L('المهمة', 'Engagement')), h('dd', h('a', { href: `${HREF}/e/${f.engagement.id}` }, f.engagement.title)))) : null,
-    f.access_log ? card(L('سجل الاطلاع', 'Access log'), accessLogList(f.access_log)) : null,
+    f.access_log ? card(L('سجل الاطلاع', 'Access log'), accessList(f.access_log)) : null,
   ];
   return [back(...backTo), head, stepper(STEPS, STEP_OF[f.status], { label: L('مراحل الملاحظة', 'Finding stages') }), nextStep(f, ctx), grid('main-side', h('div.stack', main), h('div.stack', side.filter(Boolean)))];
 }

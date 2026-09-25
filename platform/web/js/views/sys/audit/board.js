@@ -43,7 +43,7 @@ function engagementCard(e) {
   const f = e.findings;
   return h('a.board-card.aud-ecard', { href: `${HREF}/e/${e.id}`, 'aria-label': `${e.title} — ${deptName(e.department)}` },
     h('div.aud-ecard-top', deptChip(e.department), qChip(e.quarter), e.mine ? h('span.chip.tiny.info', icon('user'), L('مهمتي', 'Mine')) : null),
-    h('div.bc-title', e.title),
+    h('div.bc-title', { dir: 'auto' }, e.title),
     h('div.aud-phasebar', { 'aria-hidden': 'true' }, PHASES.slice(1).map((p, i) => h(`i${i < e.phase_index ? '.on' : ''}`))),
     h('div.bc-meta',
       e.lead ? h('span.aud-lead', icon('userCheck'), L(e.lead.name_ar, e.lead.name_en)) : null,

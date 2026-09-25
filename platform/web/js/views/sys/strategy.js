@@ -70,9 +70,11 @@ const skeletonBody = () => h('div.stg-skel', { 'aria-busy': 'true' }, h('div.car
 
 function header(ctx, sum, tab) {
   const actions = [];
-  if (sum.is_admin && sum.queue_actionable) actions.push({ label: L(`راجع القيم المرصودة (${sum.queue_actionable})`, `Review submitted values (${sum.queue_actionable})`), icon: 'badgeCheck', primary: tab !== 'updates', onClick: () => go(ctx, 'updates') });
-  else if (sum.due_count) actions.push({ label: L(`أدخل القيم المطلوبة (${sum.due_count})`, `Enter due values (${sum.due_count})`), icon: 'pencil', primary: tab !== 'updates', onClick: () => go(ctx, 'updates') });
+  // one clear next step per role; on «تحديثاتي» the work itself is the call to action
+  if (tab !== 'updates' && sum.is_admin && sum.queue_actionable) actions.push({ label: L(`راجع القيم المرصودة (${sum.queue_actionable})`, `Review submitted values (${sum.queue_actionable})`), icon: 'badgeCheck', primary: true, onClick: () => go(ctx, 'updates') });
+  else if (tab !== 'updates' && sum.due_count) actions.push({ label: L(`أدخل القيم المطلوبة (${sum.due_count})`, `Enter due values (${sum.due_count})`), icon: 'pencil', primary: true, onClick: () => go(ctx, 'updates') });
   else if (tab !== 'kpis') actions.push({ label: L('بطاقة الأداء', 'Scorecard'), icon: 'gauge', onClick: () => go(ctx, 'kpis') });
+  else actions.push({ label: L('الخريطة الاستراتيجية', 'Strategy map'), icon: 'network', onClick: () => go(ctx, 'map') });
   const badges = [];
   if (sum.plan) badges.push(h('span.chip.tiny.sand', icon('flag'), bidi(L(sum.plan.title_ar, sum.plan.title_en))));
   if (sum.plan?.is_demo) badges.push(h('span.chip.tiny.demo', L('تجريبي', 'Demo')));
@@ -416,7 +418,7 @@ async function renderUpdates(ctx, sum, reload) {
           h('div.grow', h('div.kr-name', h('span.stg-code', k.code), L(k.name_ar, k.name_en)), h('div.kr-meta', kpiValueLine(k))), sparkline(k.spark.map((p) => ({ v: p.v, t: p.t, status: p.status }))), rag(k.status)))))),
       h('section.card', h('div.card-head', h('h2.card-title', L('آخر ما رصدته', 'Recently reported'))),
         u.recent.length ? h('ul.list.stg-recent', u.recent.map((a) => h('li', h('div.grow', h('div', h('span.stg-code', a.code), L(a.name_ar, a.name_en)), h('div.tiny.faint', `${L(a.period_ar, a.period_en)} · ${withUnit(a.value, a.unit_ar, a.unit_en, a.decimals)} · ${dateTime(a.submitted_at)}`), a.review_comment && a.status === 'returned' ? h('div.tiny.stg-warn-text', a.review_comment) : null),
-          a.on_time ? h('span.chip.tiny.outline', { 'data-tip': L('رُصدت في موعدها (+8 نقاط تميّز)', 'Reported on time (+8 pts)') }, icon('timer'), L('في الموعد', 'On time')) : null, statusChip(a.status, ACTUAL))))
+          a.on_time && a.status !== 'returned' ? h('span.chip.tiny.outline', { 'data-tip': L('رُصدت في موعدها (+8 نقاط تميّز)', 'Reported on time (+8 pts)') }, icon('timer'), L('في الموعد', 'On time')) : null, statusChip(a.status, ACTUAL))))
           : h('p.tiny.faint', L('لم ترصد أي قيمة بعد.', 'You have not reported any value yet.')))));
   }
   if (!u.is_admin && !u.owned.length) {

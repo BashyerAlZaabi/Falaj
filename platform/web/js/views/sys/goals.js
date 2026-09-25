@@ -6,7 +6,7 @@ import {
   h, icon, L, fmtDate, getLang, sysHeader, sysTabs, currentTab, go, statusChip, progress, openSheet, toast, act, emptyState, errorState, skeleton, dataTable, avatar, dateTime,
 } from '../../sys-kit.js';
 import { ring, nf, pctText } from './strategy/viz.js';
-import { call, TYPES, TYPE, STATUS, typeLabel, periodName, measureText, objChip, visChip, goalSheet, goalRow, createDialog, openGoalId } from './goals/shared.js';
+import { call, TYPES, TYPE, STATUS, typeLabel, periodName, measureText, objChip, visChip, goalSheet, goalRow, createDialog, alignDialog, openGoalId } from './goals/shared.js';
 
 const RAG = { on_track: ['على المسار', 'On track', 'good'], at_risk: ['معرّض للخطر', 'At risk', 'warn'], off_track: ['خارج المسار', 'Off track', 'crit'], no_data: ['لم يُرصد', 'Not reported', 'outline'] };
 const ui = { lastTab: null, quickType: 'daily', history: 'all' };
@@ -187,7 +187,8 @@ async function renderAlignment(ctx, sum, reload) {
         h('span.gl-type', typeLabel(g.period_type)), h('span.grow', g.title), progress(g.progress, { tone: g.status === 'achieved' ? 'good' : null }), h('span.num.tabular.tiny', pctText(g.progress)))))) : null))))));
   wrap.append(h('div.gl-align-grid', h('section.card.gl-card', h('div.card-head', h('h2.card-title', L('شجرة التوافق', 'Alignment tree'))), a.pillars.length ? tree : emptyState({ compact: true, icon: 'compass', title: L('لا توجد خطة استراتيجية نشطة', 'No active strategic plan') })),
     h('section.card.gl-card', h('div.card-head', h('h2.card-title', L('غير مرتبطة', 'Not aligned')), h('span.chip.tiny.outline', nf(a.unaligned.length, 0))),
-      a.unaligned.length ? h('ul.gl-list', a.unaligned.map((g) => h('li.gl-row', h('span.gl-type', typeLabel(g.period_type)), h('button.gl-row-main', { type: 'button', onclick: () => open(g) }, h('span.gl-title', g.title), h('span.gl-meta', h('span', L('اضغط لفتح الهدف وربطه من «تعديل»', 'Open the goal and align it via “Edit”')))))))
+      a.unaligned.length ? h('ul.gl-list', a.unaligned.map((g) => h('li.gl-row', h('span.gl-type', typeLabel(g.period_type)), h('button.gl-row-main', { type: 'button', onclick: () => open(g) }, h('span.gl-title', g.title), h('span.gl-meta', h('span', periodName(g.period_type, g.period_start, g.period_end, sum.today)))),
+        h('button.btn.sm.tertiary', { type: 'button', onclick: (e) => alignDialog(e.currentTarget, g, reload) }, icon('compass'), L('اربط', 'Align')))))
         : emptyState({ compact: true, icon: 'circleCheck', title: L('كل أهدافك مرتبطة', 'All your goals are aligned'), body: L('ممتاز — عملك يخدم الاستراتيجية مباشرة.', 'Great — your work serves the strategy directly.') }))));
   return wrap;
 }

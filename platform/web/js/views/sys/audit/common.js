@@ -1,7 +1,9 @@
 // Internal Audit UI — shared labels, chips and small building blocks.
-import { h, icon, L, fmtNum, fmtDate, getLang, sysApi, statusChip, openSheet, toast, act, formDialog, api, emptyState, errorState, skeleton, state } from '../../../sys-kit.js';
+import { h, icon, L as baseL, fmtNum, fmtDate, getLang, sysApi, statusChip, openSheet, toast, act, formDialog, api, emptyState, errorState, skeleton, state } from '../../../sys-kit.js';
 
 export const call = sysApi('audit');
+// English copy uses "item(s)" placeholders; resolve them against the number before them.
+export const L = (ar, en) => baseL(ar, typeof en === 'string' ? en.replace(/(\d+)([^\d(]*?)([A-Za-z]+)\(s\)/g, (m, n, mid, w) => `${n}${mid}${w}${n === '1' ? '' : 's'}`) : en);
 export const HREF = '#/sys/audit';
 
 // Ordinal risk uses one hue (gazelle red) stepped toward the surface; never vermilion.
@@ -65,7 +67,7 @@ export function dueLabel(iso, { done = false } = {}) {
 
 export const back = (href, label) => h('a.aud-back', { href }, icon('chevron', 'flip-rtl back-ic'), label);
 export const kv = (pairs) => h('dl.sys-kv', pairs.filter(Boolean).flatMap(([k, v]) => [h('dt', k), h('dd', v ?? '—')]));
-export const para = (text) => (text ? h('p.aud-para', text) : h('p.faint', '—'));
+export const para = (text) => (text ? h('p.aud-para', { dir: 'auto' }, text) : h('p.faint', '—'));
 export function pageFrame(root) { const page = h('div.aud'); root.append(page); return page; }
 
 // Load-then-paint with skeleton on first visit, seamless swap on soft refresh.
@@ -122,5 +124,13 @@ export async function docField() {
     : { name: 'doc_info', type: 'info', label: L('لا توجد مستندات تملكها لإرفاقها. يمكنك إنشاء مستند من «المستندات» ثم إرفاقه.', 'You own no documents to attach. Create one in Documents first.') };
 }
 
+// Access log with readable actions; repeated views by the same person within a minute collapse into one row.
+const ACCESS = { view: ['اطلاع', 'Viewed', 'eye'], list: ['اطلاع على القائمة', 'Viewed list', 'eye'], create: ['إنشاء', 'Created', 'plus'], update: ['تعديل', 'Edited', 'pencil'], review: ['مراجعة واعتماد', 'Reviewed', 'badgeCheck'], issue: ['إصدار', 'Issued', 'send'], issue_report: ['إصدار التقرير', 'Issued report', 'send'], respond: ['رد الإدارة', 'Responded', 'messageSquare'], progress: ['تحديث التنفيذ', 'Progress update', 'loader'], close: ['اعتماد الإغلاق', 'Closed', 'badgeCheck'], return: ['إعادة', 'Returned', 'reply'], withdraw: ['سحب', 'Withdrawn', 'trash'], note: ['ملاحظة داخلية', 'Internal note', 'lock'], release: ['إفراج', 'Released', 'send'] };
+export function accessList(rows = []) {
+  const out = [];
+  for (const r of rows) { const prev = out[out.length - 1]; if (prev && prev.user_id === r.user_id && prev.action === r.action && String(prev.at).slice(0, 16) === String(r.at).slice(0, 16)) { prev.n++; continue; } out.push({ ...r, n: 1 }); }
+  if (!out.length) return h('p.faint.tiny', L('لم يطّلع أحد بعد', 'No access recorded yet'));
+  return h('ul.list.aud-access', out.slice(0, 12).map((r) => { const [ar, en, ic] = ACCESS[r.action] || [r.action, r.action, 'circleDot']; return h('li', icon(ic), h('span.grow', h('span.title', L(r.name_ar, r.name_en)), h('span.meta', `${L(ar, en)}${r.n > 1 ? ` ×${r.n}` : ''}`)), h('span.tiny.faint', `${fmtDate(r.at)}`)); }));
+}
 export const personOpt = (u) => ({ value: u.id, label: `${L(u.name_ar, u.name_en)} — ${L(u.title_ar || '', u.title_en || '')}` });
-export { h, icon, L, fmtNum, fmtDate, getLang, toast, act, formDialog, emptyState, errorState, skeleton, statusChip, openSheet, api, state };
+export { h, icon, fmtNum, fmtDate, getLang, toast, act, formDialog, emptyState, errorState, skeleton, statusChip, openSheet, api, state };

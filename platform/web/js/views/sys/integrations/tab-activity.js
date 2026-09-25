@@ -38,7 +38,7 @@ const OUTCOME = { served: ['جُلب التقويم', 'Feed fetched', 'good', 'c
 let filter = 'all'; // survives soft refreshes of this view
 
 export async function render(root, ctx, env) {
-  const data = await call('/activity');
+  const data = await env.get('/activity');
   const entries = data.entries.map((e) => ({ ...e, d: describe(e) }));
   const groups = [['all', L('الكل', 'All')], ['ai', L('المساعد والبيانات', 'AI & data')], ['links', L('التقويم والطلبات', 'Calendar & requests')], ...(env.ov.is_admin ? [['admin', L('الإدارة', 'Admin')]] : [])];
   if (!groups.some(([k]) => k === filter)) filter = 'all';

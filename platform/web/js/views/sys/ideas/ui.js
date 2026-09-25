@@ -40,7 +40,7 @@ export const HAPPY = { low: ['أثر محدود', 'Low', 1], medium: ['أثر م
 export const CRIT = {
   impact: ['الأثر', 'Impact', 'الوفر والوقت وسعادة المتعاملين المتوقعة', 'Expected savings, time and customer happiness'],
   feasibility: ['قابلية التطبيق', 'Feasibility', 'سهولة التنفيذ بالموارد والأنظمة الحالية', 'Ease of delivery with current resources and systems'],
-  cost: ['الكلفة والجدوى', 'Cost-effectiveness', '٥ = كلفة منخفضة مقابل عائد مرتفع', '5 = low cost for high value'],
+  cost: ['الكلفة والجدوى', 'Cost-effectiveness', '5 = كلفة منخفضة مقابل عائد مرتفع', '5 = low cost for high value'],
   alignment: ['المواءمة الاستراتيجية', 'Strategic alignment', 'ارتباط الفكرة بأهداف الخطة الاستراتيجية', 'Fit with the strategic plan'],
 };
 export const WEIGHTS = { impact: 0.35, feasibility: 0.25, cost: 0.2, alignment: 0.2 };
@@ -124,7 +124,7 @@ export function voteButton(i, { size = 'sm', onChange } = {}) {
 }
 
 // Gallery card. `open(id)` opens the idea sheet without a full route change.
-export function ideaCard(i, { open, href, rank } = {}) {
+export function ideaCard(i, { open, href, rank, hideCampaign = false } = {}) {
   const o = (e) => { if (e.defaultPrevented || e.target.closest('button, a')) return; open(i.id); };
   const imp = i.status === 'implemented' && i.realized ? i.realized : i.impact;
   const impact = [
@@ -134,10 +134,10 @@ export function ideaCard(i, { open, href, rank } = {}) {
   return h(`article.idea-card${i.mine ? '.mine' : ''}${rank ? '.trend' : ''}`, { 'data-cat': i.category, onclick: o },
     rank ? h('span.ic-rank.tabular', { 'aria-hidden': 'true' }, String(rank).padStart(2, '0')) : null,
     h('div.ic-top', catChip(i.category), chip(i.status)),
-    h('h3.ic-title', h('a', { href: href(i.id), onclick: (e) => { e.preventDefault(); open(i.id); } }, rank ? h('span.sr-only', L(`المرتبة ${rank}: `, `Rank ${rank}: `)) : null, i.title)),
-    i.summary ? h('p.ic-sum', i.summary) : null,
+    h('h3.ic-title', { dir: 'auto' }, h('a', { href: href(i.id), onclick: (e) => { e.preventDefault(); open(i.id); } }, rank ? h('span.sr-only', L(`المرتبة ${rank}: `, `Rank ${rank}: `)) : null, i.title)),
+    i.summary ? h('p.ic-sum', { dir: 'auto' }, i.summary) : null,
     impact.length ? h('div.ic-impact', { 'aria-label': L(i.status === 'implemented' ? 'الأثر المحقق' : 'الأثر المتوقع', i.status === 'implemented' ? 'Realised impact' : 'Expected impact') }, impact) : null,
-    i.campaign ? h('div.ic-camp', icon('flag'), h('span', L(i.campaign.title_ar, i.campaign.title_en))) : null,
+    i.campaign && !hideCampaign ? h('div.ic-camp', icon('flag'), h('span', L(i.campaign.title_ar, i.campaign.title_en))) : null,
     h('div.ic-foot', authorLine(i, { withDept: true }),
       h('span.ic-meta', { 'aria-label': L(`${i.comments} تعليق`, `${i.comments} comments`) }, icon('messageSquare'), num(i.comments)),
       voteButton(i)));
