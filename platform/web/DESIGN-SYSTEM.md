@@ -28,6 +28,17 @@ Glass is used **selectively** to express depth — never "everything transparent
 
 Fallbacks: no `backdrop-filter` → opaque surfaces; `prefers-reduced-transparency` → opaque; `prefers-contrast: more` → stronger separators/text.
 
+## Brand palette (v3): white · دم الغزال (gazelle-blood red) · navy · beige
+- **Navy** carries action and selection: `--accent` (icons, rings), `--accent-fill` (primary buttons; white text in light mode, sand fill with navy text in dark mode — always use `--text-on-accent` on it), `--accent-text` (links).
+- **Gazelle-blood red** carries identity and emphasis: `--emph` / `--emph-text` / `--emph-tint` (legacy alias `--purple*`), `--brand-red`, `--brand-mark` (brand gradient). Used for Ask AI, eyebrows, the active-nav indicator, highlights and achievements. It is **never** used for errors.
+- **Vermilion** `--red*` / `--danger-fill` is reserved for critical/destructive states (always with icon + label).
+- **Beige/sand** warms the canvas (`--bg-base`, `--fill-*`) and recognition accents: `--sand`, `--sand-text`, `--sand-tint`, `--gold-*`.
+- **White** is the card surface. Dark mode is designed on deep navy.
+- Charts: `--series-1` navy-blue, `--series-2` sand-bronze, `--series-3` gazelle red, `--series-4` teal (validated per theme).
+
+## Enterprise systems kit
+Systems live in `server/systems/<key>.js` (contract in `server/systems/registry.js`, helpers in `server/systems/kit.js`) and `web/js/views/sys/<key>.js` (UI kit `web/js/sys-kit.js`, shared styles `css/pages/systems.css`, page CSS `css/pages/sys-<key>.css`). Every system page starts with `sysHeader()` (system icon, eyebrow, title, classification chip, Ask AI policy chip), uses hash sub-routes for tabs (`#/sys/<key>/<tab>/<id>`), side-sheets for record details, and the shared stepper/board/timeline/stat tiles.
+
 ## Color
 Neutrals from Apple's palette (`--gray-*`), semantic text `--text-primary/secondary/tertiary` (tertiary ≥ 4.5:1 on cards — never use `--text-quaternary` for readable text).
 Accent: `--accent` (icons, rings, tints) · `--accent-fill` (filled controls with white text, ≥ 4.5:1) · `--accent-text` (links/text) · `--accent-tint` (selected/soft backgrounds).

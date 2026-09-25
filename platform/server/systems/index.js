@@ -70,7 +70,14 @@ export function initSystems(app, { requireAdmin }) {
   }
   registerTools([...SYSTEMS.values()].flatMap((s) => s.tools || []));
 
-  // 2) authorised routers: /api/sys/<key>/… (the user must be allowed to open the system)
+  // 2a) public, token-authenticated routes (e.g. calendar feeds): /pub/sys/<key>/… — no session;
+  //     the system authenticates each request itself with a secret, revocable token.
+  for (const s of SYSTEMS.values()) {
+    if (!s.publicRoutes) continue;
+    const r = express.Router(); s.publicRoutes(r);
+    app.use(`/pub/sys/${s.key}`, (req, res, next) => { res.setHeader('Cache-Control', 'no-store'); res.setHeader('X-Robots-Tag', 'noindex'); r(req, res, next); });
+  }
+  // 2b) authorised routers: /api/sys/<key>/… (the user must be allowed to open the system)
   const routers = new Map();
   for (const s of SYSTEMS.values()) { const r = express.Router(); s.routes?.(r); routers.set(s.key, r); }
   app.use('/api/sys/:key', (req, res, next) => {

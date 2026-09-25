@@ -20,6 +20,8 @@
 //   schema()                             CREATE TABLE IF NOT EXISTS … (idempotent)
 //   seed()                               demo data (idempotent; only when SEED_DEMO != 0)
 //   routes(router)                       express.Router mounted at /api/sys/<key> (access already checked)
+//   publicRoutes(router)                 mounted at /pub/sys/<key> WITHOUT a session (calendar feeds…);
+//                                        every handler must authenticate a secret, revocable token itself
 //   tools: [ { name: '<key>_…', domain, description, input_schema, handler, mutates?, destructive?, format? } ]
 //   agent: { name_ar, name_en, description_ar, description_en, instructions }
 //   intents: [ { test(n, clause) -> bool, plan(user, clause, ctx, helpers) -> steps|null } ]
