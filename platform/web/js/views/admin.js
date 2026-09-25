@@ -240,7 +240,7 @@ function aiTab(d) {
         try {
           await api('/api/admin/ai/routing', { method: 'PUT', body: { capability: c, provider_id: next } });
           const name = byId.get(next)?.name || next;
-          toast(L(`تم توجيه «${capLabel(c)}» إلى «${name}»`, `“${capLabel(c)}” now routes to “${name}”`), { action: prev ? t('undo') : null, onAction: () => { sel.value = prev; sel.dispatchEvent(new Event('change')); } });
+          toast(bidi(L(`تم توجيه «${capLabel(c)}» إلى «${name}»`, `“${capLabel(c)}” now routes to “${name}”`)), { action: prev ? t('undo') : null, onAction: () => { sel.value = prev; sel.dispatchEvent(new Event('change')); } });
         } catch (e) {
           d.routing[c] = prev; sel.value = prev; paint(); paintSummary();
           toast(L(`تعذّر حفظ التوجيه: ${e.message}`, `Could not save routing: ${e.message}`), { kind: 'error' });
@@ -326,7 +326,7 @@ async function testProvider(p, btn) {
   btn?.classList.add('is-loading'); btn?.setAttribute('aria-busy', 'true');
   try {
     const r = await api(`/api/admin/ai/providers/${p.id}/test`, { method: 'POST' });
-    toast(r.ok ? L(`نجح الاتصال بـ «${p.name}»`, `Connected to “${p.name}”`) : L(`تعذّر الاتصال بـ «${p.name}»: ${r.message}`, `Could not connect to “${p.name}”: ${r.message}`), { kind: r.ok ? null : 'error', timeout: 6000 });
+    toast(bidi(r.ok ? L(`نجح الاتصال بـ «${p.name}»`, `Connected to “${p.name}”`) : L(`تعذّر الاتصال بـ «${p.name}»: ${r.message}`, `Could not connect to “${p.name}”: ${r.message}`)), { kind: r.ok ? null : 'error', timeout: 6000 });
     emit('data-changed', {});
   } catch (e) { toast(e.message, { kind: 'error' }); } finally { btn?.classList.remove('is-loading'); btn?.removeAttribute('aria-busy'); }
 }
@@ -375,7 +375,7 @@ async function editProvider(p = {}) {
   });
   if (!ok) return;
   const name = f.name.value.trim();
-  toast(p.id ? L(`حُفظت تعديلات «${name}»`, `Saved “${name}”`) : L(`أُضيف المزوّد «${name}»`, `Added “${name}”`), saved?.id && f.api_key_env.value ? { action: L('اختبار الآن', 'Test now'), onAction: () => testProvider({ ...saved, name }), timeout: 7000 } : {});
+  toast(bidi(p.id ? L(`حُفظت تعديلات «${name}»`, `Saved “${name}”`) : L(`أُضيف المزوّد «${name}»`, `Added “${name}”`)), saved?.id && f.api_key_env.value ? { action: L('اختبار الآن', 'Test now'), onAction: () => testProvider({ ...saved, name }), timeout: 7000 } : {});
   emit('data-changed', {});
 }
 
@@ -428,15 +428,17 @@ function agentsTab([agents, skills, cat]) {
     const q = norm(ui.tools.q.trim());
     const all = cat.tools.filter((x) => (ui.tools.kind === 'all' || kindOf(x) === ui.tools.kind) && (!q || norm(`${x.name} ${x.description}`).includes(q)));
     const filtered = !!q || ui.tools.kind !== 'all';
-    const rows = ui.tools.all || filtered ? all : all.slice(0, LIMIT);
+    all.sort((a, b) => a.name.localeCompare(b.name));
+    const truncated = !ui.tools.all && !filtered && all.length > LIMIT;
+    const rows = truncated ? all.slice(0, LIMIT) : all;
     const more = rows.length < all.length ? h('div.adm-more', h('button.btn.sm.ghost', { type: 'button', onclick: () => { ui.tools.all = true; drawTools(); slot.querySelectorAll('tbody tr')[LIMIT]?.querySelector('code')?.scrollIntoView({ block: 'nearest' }); } }, icon('chevronDown'), L(`عرض كل الأدوات (${fmtNum(all.length)})`, `Show all tools (${fmtNum(all.length)})`))) : null;
     slot.replaceChildren(...[dataTable({
       caption: L('أدوات التنفيذ', 'Execution tools'), sortKey: 'name',
       empty: emptyState({ compact: true, icon: 'search', title: L('لا أدوات مطابقة', 'No matching tools'), actions: [{ label: L('مسح البحث والتصفية', 'Clear search & filter'), icon: 'x', onClick: () => { ui.tools.q = ''; search.value = ''; filter.querySelector('button[data-v="all"]')?.click(); } }] }),
       columns: [
-        { key: 'name', label: L('الأداة', 'Tool'), sort: (x) => x.name, render: (x) => h('code.adm-nowrap', x.name) },
-        { key: 'description', label: L('الوصف', 'Description'), render: (x) => h('span.adm-desc', { dir: 'auto', title: x.description }, x.description) },
-        { key: 'kind', label: L('النوع', 'Type'), sort: (x) => ['read', 'undo', 'confirm'].indexOf(kindOf(x)), render: (x) => { const [tone, ic, ar, en] = KINDCHIP[kindOf(x)]; return h(`span.chip.tiny${tone ? `.${tone}` : ''}`, icon(ic), L(ar, en)); } },
+        { key: 'name', label: L('الأداة', 'Tool'), sort: truncated ? null : (x) => x.name, render: (x) => h('code.adm-nowrap', x.name) },
+        { key: 'description', label: L('الوصف', 'Description'), render: (x) => h('span.adm-desc', { title: x.description }, x.description) },
+        { key: 'kind', label: L('النوع', 'Type'), sort: truncated ? null : (x) => ['read', 'undo', 'confirm'].indexOf(kindOf(x)), render: (x) => { const [tone, ic, ar, en] = KINDCHIP[kindOf(x)]; return h(`span.chip.tiny${tone ? `.${tone}` : ''}`, icon(ic), L(ar, en)); } },
       ],
       rows,
     }), more].filter(Boolean));
@@ -463,14 +465,18 @@ function agentSwitch(a) {
       try {
         await api(`/api/admin/agents/${a.key}`, { method: 'PUT', body: { enabled: on } });
         a.enabled = on ? 1 : 0;
-        toast(on ? L(`فُعِّل «${name}» — صار متاحاً للأدوار المحددة`, `“${name}” is on for its roles`) : L(`أُوقف «${name}» — لن يظهر للمستخدمين حتى تعيد تفعيله`, `“${name}” is paused — hidden from users until you turn it back on`),
+        paintLabel();
+        toast(bidi(on ? L(`فُعِّل «${name}» — صار متاحاً للأدوار المحددة`, `“${name}” is on for its roles`) : L(`أُوقف «${name}» — لن يظهر للمستخدمين حتى تعيد تفعيله`, `“${name}” is paused — hidden from users until you turn it back on`)),
           { action: t('undo'), onAction: () => { cb.checked = !on; cb.dispatchEvent(new Event('change')); } });
       } catch (e) {
-        cb.checked = !on;
-        toast(L(`تعذّر تحديث «${name}»: ${e.message}`, `Could not update “${name}”: ${e.message}`), { kind: 'error' });
+        cb.checked = !on; paintLabel();
+        toast(bidi(L(`تعذّر تحديث «${name}»: ${e.message}`, `Could not update “${name}”: ${e.message}`)), { kind: 'error' });
       } finally { cb.disabled = false; }
     } });
-  return h('label.adm-switch', cb, h('span.adm-switch-label', { 'aria-hidden': 'true' }, a.enabled ? L('مفعّل', 'On') : L('موقوف', 'Off')));
+  const label = h('span.adm-switch-label', { 'aria-hidden': 'true' });
+  const paintLabel = () => { label.textContent = cb.checked ? L('مفعّل', 'On') : L('موقوف', 'Off'); };
+  paintLabel();
+  return h('label.adm-switch', cb, label);
 }
 
 // ================================================================ MCP

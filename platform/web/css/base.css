@@ -83,7 +83,7 @@ hr { border: 0; height: 1px; background: var(--separator); margin: var(--space-4
 .t-caption { font: var(--type-caption); letter-spacing: 0.01em; }
 .t-numeral { font: var(--type-numeral); font-variant-numeric: proportional-nums; }
 .tabular { font-variant-numeric: tabular-nums; }
-.num:not(td):not(th), bdi.num { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+:where(.num):not(td):not(th), bdi.num { direction: ltr; unicode-bidi: isolate; display: inline-block; } /* low specificity: page classes may set display */
 /* Negative tracking only for Latin script — Arabic must never be tracked */
 :lang(en) .t-display { letter-spacing: var(--track-display); }
 :lang(en) .t-large-title { letter-spacing: var(--track-large-title); }

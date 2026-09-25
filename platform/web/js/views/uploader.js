@@ -153,14 +153,14 @@ async function pump() {
         for (const x of queue) if (x.status === 'queued') Object.assign(x, { status: 'failed', error: e.message });
         paintBlocked();
       }
-      toast(L(`تعذّر تسليم «${it.name}»: ${e.message}`, `Could not deliver “${it.name}”: ${e.message}`), { kind: 'error', timeout: 7000 });
+      toast(bidi(L(`تعذّر تسليم «${it.name}»: ${e.message}`, `Could not deliver “${it.name}”: ${e.message}`)), { kind: 'error', timeout: 7000 });
     }
     paintItem(it);
   }
   busy = false; paintBusy();
   if (batch.length === 1) {
     const [it] = batch;
-    toast(L(`سُلِّم «${it.name}» إلى مرصاد — الإيصال ${it.receipt || '—'}`, `“${it.name}” delivered to Marsad — receipt ${it.receipt || '—'}`), it.receipt ? { action: L('نسخ الإيصال', 'Copy receipt'), onAction: () => copyText(it.receipt, L('نُسخ رقم الإيصال', 'Receipt number copied')) } : {});
+    toast(bidi(L(`سُلِّم «${it.name}» إلى مرصاد — الإيصال ${it.receipt || '—'}`, `“${it.name}” delivered to Marsad — receipt ${it.receipt || '—'}`)), it.receipt ? { action: L('نسخ الإيصال', 'Copy receipt'), onAction: () => copyText(it.receipt, L('نُسخ رقم الإيصال', 'Receipt number copied')) } : {});
   } else if (batch.length > 1) {
     toast(L(`سُلِّمت ${countText(batch.length, AR_FILES, EN_FILES)} إلى مرصاد`, `${countText(batch.length, AR_FILES, EN_FILES)} delivered to Marsad`));
   }
@@ -255,7 +255,7 @@ function itemEl(it) {
   return h(`li.su-q.is-${it.status}`, { 'data-q': it.id },
     h('span.su-q-icon', { 'aria-hidden': 'true' }, icon(st[0], it.status === 'sending' ? 'su-spin' : '')),
     h('div.su-q-main',
-      h('div.su-q-top', h('span.su-q-name', h('bdi', it.name)), h('span.su-q-size.num', fmtBytes(it.size))),
+      h('div.su-q-top', h('span.su-q-name', h('bdi', it.name)), h('span.su-q-size.tabular', fmtBytes(it.size))),
       it.status === 'sending' || it.status === 'queued'
         ? h('div.progress.su-q-bar', { role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-valuenow': pct, 'aria-label': L(`تقدّم إرسال ${it.name}`, `Upload progress for ${it.name}`) }, h('i', { style: { width: `${pct}%` } }))
         : null,
@@ -309,7 +309,7 @@ function paintReceipts(list) {
       { key: 'status', label: L('الحالة', 'Status'), sort: (r) => r.status, render: (r) => (r.status === 'delivered'
         ? h('span.chip.tiny.good', icon('circleCheck'), L('سُلِّم', 'Delivered'))
         : h('span.chip.tiny.crit', icon('circleX'), L('تعذّر التسليم', 'Failed'))) },
-      { key: 'size', label: L('الحجم', 'Size'), num: true, sort: (r) => r.size, render: (r) => h('span.num', fmtBytes(r.size)) },
+      { key: 'size', label: L('الحجم', 'Size'), num: true, sort: (r) => r.size, render: (r) => h('span.tabular.su-size', fmtBytes(r.size)) },
       { key: 'time', label: L('الوقت', 'Time'), sort: (r) => r.created_at, render: (r) => h('span.su-time', fmtDate(r.created_at), ' · ', fmtTime(r.created_at)) },
     ],
     rows: list,

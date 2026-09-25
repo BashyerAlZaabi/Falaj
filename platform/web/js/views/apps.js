@@ -43,7 +43,11 @@ export function countText(n, ar, en) {
 }
 
 // Same SSO hand-off the tiles have always used (Vault origin, /sso/start).
-export const vaultHref = (a) => `${a.url.replace(/\/(fs|marsad)$/, '')}/sso/start?next=${encodeURIComponent(a.route)}`;
+// Hands the portal's language and theme to Vault (Vault reads and strips these params).
+export const vaultHref = (a) => {
+  const q = new URLSearchParams({ lang: getLang(), theme: (() => { try { return localStorage.getItem('swp.theme') || 'system'; } catch { return 'system'; } })() });
+  return `${a.url.replace(/\/(fs|marsad)$/, '')}/sso/start?next=${encodeURIComponent(`${a.route}?${q}`)}`;
+};
 
 // Arabic-aware search normalisation
 export const norm = (s) => String(s || '').toLowerCase().replace(/[ً-ٰٟـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
@@ -170,7 +174,7 @@ function group(g, list) {
   return h(`section.ap-group${g.vault ? '.is-vault' : ''}`, { 'aria-labelledby': id, 'data-group': g.key },
     h('div.ap-group-head',
       h(`h2#${id}.ap-group-title`, icon(g.icon), h('span', L(g.ar, g.en)), h('span.ap-group-count.num', fmtNum(list.length))),
-      g.vault ? h('p.ap-group-note', icon('lock', 'sm'), L('تطبيقات Vault تُفتح في نافذة جديدة داخل بيئة معزولة، ولا تقرأ المنصة محتواها.', 'Vault apps open in a new window inside an isolated environment; the platform never reads their content.')) : null),
+      g.vault ? h('p.ap-group-note', L('تطبيقات Vault تُفتح في نافذة جديدة داخل بيئة معزولة، ولا تقرأ المنصة محتواها.', 'Vault apps open in a new window inside an isolated environment; the platform never reads their content.')) : null),
     h('div.ap-grid', list.map((a) => tile(a))));
 }
 

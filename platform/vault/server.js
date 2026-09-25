@@ -141,7 +141,12 @@ app.get('/sso/callback', (req, res) => {
   const next = decodeURIComponent(nextEnc || '/');
   res.redirect(next.startsWith('/') && !next.startsWith('//') ? next : '/');
 });
-app.post('/logout', (req, res) => { res.setHeader('Set-Cookie', 'vault_session=; Path=/; Max-Age=0'); res.redirect('/'); });
+// Logout invalidates the server-side session row, not only the cookie.
+app.post('/logout', (req, res) => {
+  const id = cookie(req);
+  if (id) vdb.prepare('DELETE FROM sessions WHERE id=?').run(crypto.createHash('sha256').update(id).digest('hex'));
+  res.setHeader('Set-Cookie', 'vault_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0'); res.redirect('/');
+});
 
 function requireVaultUser(req, res, next) {
   const u = vaultUser(req);
@@ -164,7 +169,7 @@ app.use((req, res, next) => { // CSRF for vault API mutations
   if (req.path.startsWith('/api/') && req.method !== 'GET' && req.headers['x-requested-with'] !== 'vault') return res.status(403).json({ error: 'csrf' });
   next();
 });
-app.get('/api/me', (req, res) => res.json({ user: req.vuser, local_ai: cfg.internalModelUrl ? 'internal-model' : 'extractive', egress_allow: egress.allowed }));
+app.get('/api/me', (req, res) => res.json({ user: req.vuser, local_ai: cfg.internalModelUrl ? 'internal-model' : 'extractive', egress_allow: egress.allowed, portal_url: cfg.identityUrl }));
 app.get('/api/fs', (req, res) => {
   const [w, p] = fsScope(req.vuser);
   res.json(vdb.prepare(`SELECT id,kind,title,amount,currency,period,department_id,received_at FROM fs_records WHERE ${w} ORDER BY received_at DESC LIMIT 200`).all(...p));
@@ -214,6 +219,7 @@ app.get('/api/fs/summary', (req, res) => {
 
 // ---------------- Vault UI (same origin only) ----------------
 app.use('/fonts', express.static(path.join(ROOT, 'node_modules/@fontsource/ibm-plex-sans-arabic/files'), { maxAge: '30d' }));
+app.use('/fonts', express.static(path.join(ROOT, 'node_modules/@fontsource-variable/inter/files'), { maxAge: '30d' }));
 const page = fs.readFileSync(path.join(ROOT, 'vault/web/index.html'), 'utf8');
 app.get(['/', '/fs', '/marsad'], requireVaultUser, (req, res) => res.type('html').send(page));
 app.use('/static', express.static(path.join(ROOT, 'vault/web')));
