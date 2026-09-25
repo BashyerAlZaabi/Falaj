@@ -106,7 +106,8 @@ function buildNav() {
   $$('#kbd-hint, .search-trigger kbd').forEach((k) => { k.textContent = isMac ? '⌘K' : 'Ctrl K'; });
   const tb = $('#tabbar'); tb.replaceChildren();
   const tab = (id, ic, label, fn) => tb.append(h('button', { type: 'button', 'data-tab': id, onclick: fn, 'aria-label': label }, icon(ic), h('span', label)));
-  tab('home', 'home', t('tab.home'), () => { setTab(['apps', 'uploader'].includes(state.route) ? 'home' : 'home'); if (!['home', 'adaa', 'projects', 'tasks', 'documents', 'office'].includes(state.route)) location.hash = '#/home'; });
+  // The first tab is the workspace (whatever page is open), not only the Home page.
+  tab('home', 'home', t('tab.home'), () => { setTab('home'); if (['apps', 'uploader', 'admin'].includes(state.route)) location.hash = '#/home'; });
   tab('chat', 'chat', t('tab.chat'), () => setTab('chat'));
   tab('doc', 'doc', t('tab.doc'), () => { if (state.openDocumentId) setTab('doc'); else { location.hash = '#/documents'; setTab('home'); toast(L('افتح مستنداً من قائمة المستندات', 'Open a document from the list'), { kind: 'info' }); } });
   tab('apps', 'grid', t('tab.apps'), () => { location.hash = '#/apps'; setTab('apps'); });
@@ -225,7 +226,7 @@ export async function route({ soft = false } = {}) {
   const key = ROUTES[r] ? r : 'home';
   if (key === 'projects' && params[0]) state.selectedProjectId = params[0];
   state.route = key; state.params = params;
-  if (innerWidth <= 900 && !['chat', 'doc'].includes(document.body.dataset.tab)) setTab(['apps', 'uploader'].includes(key) ? 'apps' : 'home');
+  if (innerWidth <= 900 && !['chat', 'doc'].includes(document.body.dataset.tab)) setTab(['apps', 'uploader', 'admin'].includes(key) ? 'apps' : 'home');
   $$('#nav a.item').forEach((a) => { const on = a.dataset.route === key; a.classList.toggle('on', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
   toggleNav(false);
   const seq = ++renderSeq;

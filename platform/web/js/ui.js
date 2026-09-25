@@ -65,7 +65,9 @@ function trapFocus(container, e) {
 
 // ---------- Modal / bottom sheet (GlassModal) ----------
 let modalSeq = 0;
-export function modal(title, body, actions = [], { wide = false, dismissible = true } = {}) {
+// initialFocus: 'auto' (first field, else primary action) | 'close' | 'primary'.
+// closeOnNavigate: a route change while the dialog is open dismisses it (resolves null).
+export function modal(title, body, actions = [], { wide = false, dismissible = true, initialFocus = 'auto', closeOnNavigate = dismissible } = {}) {
   return new Promise((resolve) => {
     const prevFocus = document.activeElement;
     const id = `mdl-${++modalSeq}`;
@@ -74,11 +76,13 @@ export function modal(title, body, actions = [], { wide = false, dismissible = t
       if (done) return; done = true;
       wrap.classList.add('leaving');
       document.removeEventListener('keydown', onKey, true);
-      setTimeout(() => { wrap.remove(); prevFocus?.focus?.(); }, 200);
+      window.removeEventListener('hashchange', onNav);
+      setTimeout(() => { wrap.remove(); if (prevFocus?.isConnected) prevFocus.focus?.(); }, 200);
       resolve(v);
     };
+    const onNav = () => close(null);
     const onKey = (e) => { if (e.key === 'Escape' && dismissible) { e.stopPropagation(); close(null); } else trapFocus(dlg, e); };
-    const dlg = h(`div.modal.glass-4${wide ? '.wide' : ''}`, { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': id },
+    const dlg = h(`div.modal.glass-4${wide ? '.wide' : ''}`, { role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': id, tabindex: -1 },
       h('div.sheet-grabber', { 'aria-hidden': 'true' }),
       h('h3', { id }, title),
       dismissible ? h('button.icon-btn.modal-close', { type: 'button', 'aria-label': t('close'), onclick: () => close(null) }, icon('x')) : null,
@@ -87,9 +91,12 @@ export function modal(title, body, actions = [], { wide = false, dismissible = t
     const wrap = h('div.modal-wrap', { onclick: (e) => { if (e.target === wrap && dismissible) close(null); } }, dlg);
     document.body.append(wrap);
     document.addEventListener('keydown', onKey, true);
+    if (closeOnNavigate) window.addEventListener('hashchange', onNav);
     // Enter submits the primary action from single-line inputs
     dlg.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.matches('input:not([type=checkbox]):not([type=radio])')) { const p = actions.find((a) => a.primary); if (p) { e.preventDefault(); close(p.value); } } });
-    setTimeout(() => (dlg.querySelector('input,textarea,select') || dlg.querySelector('.actions .btn.primary, .actions .btn.danger') || dlg).focus?.(), 40);
+    const primaryBtn = () => dlg.querySelector('.actions .btn.primary, .actions .btn.danger');
+    const first = initialFocus === 'close' ? dlg.querySelector('.modal-close') : initialFocus === 'primary' ? primaryBtn() : dlg.querySelector('input,textarea,select') || primaryBtn();
+    setTimeout(() => (first || dlg).focus?.(), 40);
   });
 }
 export const confirmDialog = (title, text, { danger, confirmLabel } = {}) => modal(title, h('p.muted', { style: { margin: 0 } }, text), [{ label: t('cancel'), value: false }, { label: confirmLabel || t('confirm'), value: true, primary: !danger, danger }]);

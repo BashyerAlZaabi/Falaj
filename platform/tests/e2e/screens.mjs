@@ -10,7 +10,7 @@ const argv = process.argv.slice(2);
 const opt = (k, d) => (argv.find((a) => a.startsWith(`--${k}=`))?.split('=')[1]?.split(',') ?? d);
 const OUT = argv.find((a) => !a.startsWith('--')) || path.join(ROOT, 'tests/e2e/screens');
 fs.mkdirSync(OUT, { recursive: true });
-const DEVICES = { desktop: { width: 1440, height: 900 }, laptop: { width: 1280, height: 800 }, tablet: { width: 1024, height: 1366 }, mobile: { width: 390, height: 844 } };
+const DEVICES = { wide: { width: 1920, height: 1080 }, desktop: { width: 1440, height: 900 }, laptop: { width: 1280, height: 800 }, tablet: { width: 1024, height: 1366 }, mobile: { width: 390, height: 844 } };
 const themes = opt('themes', ['light', 'dark']); const devices = opt('devices', ['desktop', 'mobile']); const langs = opt('langs', ['ar']);
 const only = opt('only', null);
 

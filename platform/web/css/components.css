@@ -309,6 +309,7 @@ table.tbl tr:hover .row-actions, table.tbl tr:focus-within .row-actions { opacit
   position: relative; width: min(520px, 100%); max-height: min(88vh, 860px); overflow: auto; padding: var(--space-6) var(--space-6) var(--space-5);
   border-radius: var(--radius-modal); animation: pop-in var(--dur-slow) var(--ease-spring);
 }
+.modal:focus { outline: none; }
 .modal.wide { width: min(760px, 100%); }
 .modal h3, .modal .modal-title { margin: 0 0 var(--space-4); font: var(--type-title3); padding-inline-end: 40px; }
 .modal .modal-close { position: absolute; top: 18px; inset-inline-end: 18px; }

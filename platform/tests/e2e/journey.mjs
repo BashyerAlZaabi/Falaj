@@ -212,7 +212,7 @@ await step('14. Vault: فتح مرصاد عبر الدخول الموحد، وا
   await vp.context().close();
 });
 
-await step('15. الهاتف: تبويبات واضحة (الرئيسية، المحادثة، المستند)', async () => {
+await step('15. الهاتف: تبويبات واضحة (مساحة العمل، المحادثة، المستند)', async () => {
   const mp = await newPage({ width: 390, height: 844 });
   await login(mp, 'ahmed');
   await shot(mp, '11-mobile-home');
@@ -230,6 +230,29 @@ await step('16. الإنجليزية واتجاه LTR', async () => {
   await ep.goto(S.portal + '/#/adaa'); await ep.waitForSelector('text=Monitoring');
   await shot(ep, '13-adaa-english');
   await ep.context().close();
+});
+
+await step('17. نقاط التميّز: إنجاز مهمة حقيقية يمنح نقاطاً، وصفحة الإنجازات، والانضمام الاختياري للوحة', async () => {
+  const gp = await newPage();
+  await login(gp, 'ahmed');
+  await gp.waitForSelector('#level-chip-host .level-chip');
+  const before = await gp.evaluate(async () => (await (await fetch('/api/game/me')).json()).xp);
+  const id = await gp.evaluate(async () => (await (await fetch('/api/tasks?mine=1')).json()).find((t) => t.title === 'خطة الرجوع عند الفشل')?.id);
+  assert.ok(id, 'seeded overdue task exists');
+  const r = await gp.evaluate(async (tid) => (await fetch('/api/tools/update_task', { method: 'POST', headers: { 'content-type': 'application/json', 'x-requested-with': 'swp' }, body: JSON.stringify({ input: { id: tid, status: 'done' } }) })).json(), id);
+  assert.equal(r.status, 'ok');
+  await gp.waitForSelector('#toast >> text=/نقطة تميّز|مستوى جديد/', { timeout: 8000 }); // realtime → server-derived score changed
+  const after = await gp.evaluate(async () => (await (await fetch('/api/game/me')).json()).xp);
+  assert.ok(after > before, `xp ${before} → ${after}`);
+  await gp.goto(S.portal + '/#/achievements');
+  await gp.waitForSelector('svg.rings');
+  assert.ok(await gp.locator('.badge-tile.earned').count() >= 1);
+  const sw = gp.locator('.optin input.switch');
+  await sw.check();
+  await gp.waitForFunction(async () => (await (await fetch('/api/game/me')).json()).prefs.leaderboard_opt_in === true, null, { timeout: 5000 });
+  await gp.waitForSelector('.people-board li.me');
+  await shot(gp, '14-achievements');
+  await gp.context().close();
 });
 
 await browser.close();
