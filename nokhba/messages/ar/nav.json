@@ -1,0 +1,9 @@
+{
+  "home": "الرئيسية", "programs": "البرامج", "courses": "الدورات", "enterprise": "المؤسسات", "about": "عن نخبة",
+  "learn": "تعلّم", "explore": "استكشف", "projects": "المشاريع", "skills": "المهارات", "aiTutor": "المرشد الذكي", "analytics": "التحليلات", "certificates": "الشهادات", "profile": "الملف الشخصي",
+  "instructorDashboard": "المدرّب", "instructorCourses": "دوراتي", "instructorStudents": "المتعلّمون", "instructorReviews": "مراجعة المشاريع", "instructorQuestions": "الأسئلة",
+  "orgOverview": "المؤسسة", "orgPeople": "الأفراد", "orgPrograms": "البرامج", "orgSkillsGap": "فجوة المهارات", "orgAnalytics": "التحليلات",
+  "adminOverview": "الإدارة", "adminUsers": "المستخدمون", "adminCourses": "الدورات", "adminPaths": "المسارات التعليمية", "adminInstructors": "المدرّبون", "adminProjects": "المشاريع", "adminAssessments": "الاختبارات", "adminCertificates": "الشهادات", "adminCategories": "التصنيفات", "adminAi": "إعدادات الذكاء الاصطناعي", "adminAnnouncements": "الإعلانات", "adminAnalytics": "التحليلات", "adminOrganizations": "المؤسسات", "adminAudit": "سجل التدقيق",
+  "sections": { "learning": "التعلّم", "teaching": "التدريس", "organization": "المؤسسة", "administration": "الإدارة" },
+  "collapse": "طيّ القائمة", "expand": "توسيع القائمة", "menu": "القائمة", "openCommandPalette": "البحث والأوامر", "settings": "الإعدادات", "notes": "الملاحظات"
+}

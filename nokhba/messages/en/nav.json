@@ -1,0 +1,9 @@
+{
+  "home": "Home", "programs": "Programs", "courses": "Courses", "enterprise": "Enterprise", "about": "About",
+  "learn": "Learn", "explore": "Explore", "projects": "Projects", "skills": "Skills", "aiTutor": "AI Tutor", "analytics": "Analytics", "certificates": "Certificates", "profile": "Profile",
+  "instructorDashboard": "Instructor", "instructorCourses": "My courses", "instructorStudents": "Students", "instructorReviews": "Project reviews", "instructorQuestions": "Questions",
+  "orgOverview": "Organization", "orgPeople": "People", "orgPrograms": "Programs", "orgSkillsGap": "Skills gap", "orgAnalytics": "Analytics",
+  "adminOverview": "Admin", "adminUsers": "Users", "adminCourses": "Courses", "adminPaths": "Learning paths", "adminInstructors": "Instructors", "adminProjects": "Projects", "adminAssessments": "Assessments", "adminCertificates": "Certificates", "adminCategories": "Categories", "adminAi": "AI settings", "adminAnnouncements": "Announcements", "adminAnalytics": "Analytics", "adminOrganizations": "Organizations", "adminAudit": "Audit log",
+  "sections": { "learning": "Learning", "teaching": "Teaching", "organization": "Organization", "administration": "Administration" },
+  "collapse": "Collapse navigation", "expand": "Expand navigation", "menu": "Menu", "openCommandPalette": "Search & commands", "settings": "Settings", "notes": "Notes"
+}

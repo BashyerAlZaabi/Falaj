@@ -1,0 +1,24 @@
+{
+  "app": { "name": "Nokhba", "tagline": "Learn differently. Powered by intelligence." },
+  "actions": {
+    "continue": "Continue", "back": "Back", "next": "Next", "previous": "Previous", "save": "Save", "saved": "Saved", "cancel": "Cancel",
+    "close": "Close", "delete": "Delete", "edit": "Edit", "create": "Create", "publish": "Publish", "submit": "Submit", "retry": "Try again",
+    "search": "Search", "filter": "Filters", "clear": "Clear", "viewAll": "View all", "learnMore": "Learn more", "getStarted": "Get started",
+    "startLearning": "Start learning", "explorePrograms": "Explore programs", "enroll": "Enroll", "enrolled": "Enrolled", "resume": "Resume",
+    "markComplete": "Mark complete", "completed": "Completed", "bookmark": "Bookmark", "bookmarked": "Bookmarked", "share": "Share", "copyLink": "Copy link",
+    "linkCopied": "Link copied", "download": "Download", "signIn": "Sign in", "signUp": "Create account", "signOut": "Sign out", "apply": "Apply", "askAi": "Ask AI",
+    "generate": "Generate", "regenerate": "Regenerate", "loadMore": "Load more", "dismiss": "Dismiss", "confirm": "Confirm", "yes": "Yes", "no": "No"
+  },
+  "status": { "loading": "Loading…", "saving": "Saving…", "empty": "Nothing here yet", "error": "Something went wrong", "errorHint": "Please try again. If it keeps happening, contact support.", "offline": "You appear to be offline", "notFound": "Not found", "unauthorized": "You don't have access to this page", "comingSoon": "Coming soon", "beta": "Beta", "new": "New", "optional": "Optional", "required": "Required" },
+  "theme": { "label": "Appearance", "light": "Light", "dark": "Dark", "system": "System" },
+  "language": { "label": "Language", "en": "English", "ar": "العربية", "switch": "Switch language" },
+  "time": { "minutes": "{n} min", "hours": "{n} h", "hoursLong": "{n} hours", "weeks": "{n} weeks", "days": "{n} days", "perWeek": "/ week", "today": "Today", "yesterday": "Yesterday", "streak": "{n}-day streak", "ago": "{time} ago" },
+  "level": { "beginner": "Beginner", "intermediate": "Intermediate", "advanced": "Advanced", "BEGINNER": "Beginner", "INTERMEDIATE": "Intermediate", "ADVANCED": "Advanced" },
+  "roles": { "LEARNER": "Learner", "INSTRUCTOR": "Instructor", "COURSE_MANAGER": "Course manager", "ORG_MANAGER": "Organization manager", "ADMIN": "Administrator", "SUPER_ADMIN": "Super administrator" },
+  "greeting": { "morning": "Good morning, {name}.", "afternoon": "Good afternoon, {name}.", "evening": "Good evening, {name}.", "ready": "Ready to continue learning?" },
+  "ai": { "tutor": "AI Tutor", "companion": "Study Companion", "thinking": "Thinking…", "placeholder": "Ask anything about this lesson…", "companionPlaceholder": "What should I study today?", "disclaimer": "AI can make mistakes. Check important details against the lesson.", "stop": "Stop", "send": "Send", "newChat": "New conversation", "explanationLevel": "Explanation level", "guidedMode": "Guided Learning Mode", "guidedModeHint": "The tutor guides you with questions instead of giving answers.", "levels": { "simple": "Simple", "standard": "Standard", "technical": "Technical", "expert": "Expert" }, "chips": { "explain": "Explain", "simpler": "Explain simply", "summarize": "Summarize", "quiz": "Quiz me", "example": "Example", "practice": "Practice", "flashcards": "Flashcards", "remember": "What to remember", "weak": "Where am I weak?" }, "unavailable": "The AI assistant is unavailable right now.", "rateLimited": "You're sending messages too quickly. Give it a moment." },
+  "palette": { "placeholder": "Type a command or search…", "hint": "Search courses, lessons, notes and more", "noResults": "No results", "groups": { "actions": "Actions", "courses": "Courses", "lessons": "Lessons", "paths": "Learning paths", "notes": "Notes", "navigation": "Navigate" }, "commands": { "continue": "Continue current lesson", "askAi": "Ask the AI companion", "notes": "Open my notes", "skills": "View my skills", "certificates": "View certificates", "theme": "Toggle theme", "language": "Switch language" } },
+  "footer": { "product": "Product", "company": "Company", "resources": "Resources", "legal": "Legal", "privacy": "Privacy", "terms": "Terms", "verify": "Verify a certificate", "rights": "© {year} Nokhba. All rights reserved." },
+  "notifications": { "title": "Notifications", "empty": "You're all caught up", "markAllRead": "Mark all as read", "viewAll": "View all notifications" },
+  "form": { "email": "Email", "password": "Password", "confirmPassword": "Confirm password", "name": "Full name", "required": "This field is required", "invalidEmail": "Enter a valid email address", "passwordRules": "At least 8 characters with a number", "passwordsMismatch": "Passwords don't match" }
+}

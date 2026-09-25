@@ -1,0 +1,24 @@
+{
+  "app": { "name": "نخبة", "tagline": "تعلّم بطريقة مختلفة. مدعومًا بالذكاء." },
+  "actions": {
+    "continue": "متابعة", "back": "رجوع", "next": "التالي", "previous": "السابق", "save": "حفظ", "saved": "تم الحفظ", "cancel": "إلغاء",
+    "close": "إغلاق", "delete": "حذف", "edit": "تعديل", "create": "إنشاء", "publish": "نشر", "submit": "إرسال", "retry": "إعادة المحاولة",
+    "search": "بحث", "filter": "تصفية", "clear": "مسح", "viewAll": "عرض الكل", "learnMore": "اعرف المزيد", "getStarted": "ابدأ الآن",
+    "startLearning": "ابدأ التعلّم", "explorePrograms": "استكشف البرامج", "enroll": "التحق", "enrolled": "ملتحق", "resume": "استئناف",
+    "markComplete": "وضع علامة مكتمل", "completed": "مكتمل", "bookmark": "حفظ", "bookmarked": "محفوظ", "share": "مشاركة", "copyLink": "نسخ الرابط",
+    "linkCopied": "تم نسخ الرابط", "download": "تنزيل", "signIn": "تسجيل الدخول", "signUp": "إنشاء حساب", "signOut": "تسجيل الخروج", "apply": "تطبيق", "askAi": "اسأل الذكاء الاصطناعي",
+    "generate": "توليد", "regenerate": "إعادة التوليد", "loadMore": "تحميل المزيد", "dismiss": "تجاهل", "confirm": "تأكيد", "yes": "نعم", "no": "لا"
+  },
+  "status": { "loading": "جارٍ التحميل…", "saving": "جارٍ الحفظ…", "empty": "لا يوجد شيء هنا بعد", "error": "حدث خطأ ما", "errorHint": "حاول مرة أخرى. إذا استمرت المشكلة تواصل مع الدعم.", "offline": "يبدو أنك غير متصل بالإنترنت", "notFound": "غير موجود", "unauthorized": "ليست لديك صلاحية الوصول إلى هذه الصفحة", "comingSoon": "قريبًا", "beta": "تجريبي", "new": "جديد", "optional": "اختياري", "required": "مطلوب" },
+  "theme": { "label": "المظهر", "light": "فاتح", "dark": "داكن", "system": "حسب النظام" },
+  "language": { "label": "اللغة", "en": "English", "ar": "العربية", "switch": "تغيير اللغة" },
+  "time": { "minutes": "{n} د", "hours": "{n} س", "hoursLong": "{n} ساعات", "weeks": "{n} أسابيع", "days": "{n} أيام", "perWeek": "/ الأسبوع", "today": "اليوم", "yesterday": "أمس", "streak": "سلسلة {n} يوم", "ago": "منذ {time}" },
+  "level": { "beginner": "مبتدئ", "intermediate": "متوسط", "advanced": "متقدم", "BEGINNER": "مبتدئ", "INTERMEDIATE": "متوسط", "ADVANCED": "متقدم" },
+  "roles": { "LEARNER": "متعلّم", "INSTRUCTOR": "مدرّب", "COURSE_MANAGER": "مدير دورات", "ORG_MANAGER": "مدير مؤسسة", "ADMIN": "مسؤول", "SUPER_ADMIN": "مسؤول أعلى" },
+  "greeting": { "morning": "صباح الخير يا {name}.", "afternoon": "مساء الخير يا {name}.", "evening": "مساء الخير يا {name}.", "ready": "جاهز لمتابعة التعلّم؟" },
+  "ai": { "tutor": "المرشد الذكي", "companion": "رفيق الدراسة", "thinking": "يفكّر…", "placeholder": "اسأل أي شيء عن هذا الدرس…", "companionPlaceholder": "ماذا أدرس اليوم؟", "disclaimer": "قد يخطئ الذكاء الاصطناعي. تحقّق من التفاصيل المهمة في الدرس.", "stop": "إيقاف", "send": "إرسال", "newChat": "محادثة جديدة", "explanationLevel": "مستوى الشرح", "guidedMode": "وضع التعلّم الموجَّه", "guidedModeHint": "يوجّهك المرشد بالأسئلة بدلًا من إعطاء الإجابات.", "levels": { "simple": "مبسّط", "standard": "قياسي", "technical": "تقني", "expert": "خبير" }, "chips": { "explain": "اشرح", "simpler": "اشرح ببساطة", "summarize": "لخّص", "quiz": "اختبرني", "example": "مثال", "practice": "تدريب", "flashcards": "بطاقات", "remember": "ما الذي أتذكّره؟", "weak": "أين نقاط ضعفي؟" }, "unavailable": "المساعد الذكي غير متاح حاليًا.", "rateLimited": "ترسل الرسائل بسرعة كبيرة. انتظر لحظة." },
+  "palette": { "placeholder": "اكتب أمرًا أو ابحث…", "hint": "ابحث في الدورات والدروس والملاحظات وغيرها", "noResults": "لا توجد نتائج", "groups": { "actions": "إجراءات", "courses": "الدورات", "lessons": "الدروس", "paths": "المسارات التعليمية", "notes": "الملاحظات", "navigation": "التنقل" }, "commands": { "continue": "متابعة الدرس الحالي", "askAi": "اسأل رفيق الدراسة", "notes": "فتح ملاحظاتي", "skills": "عرض مهاراتي", "certificates": "عرض الشهادات", "theme": "تبديل المظهر", "language": "تغيير اللغة" } },
+  "footer": { "product": "المنتج", "company": "الشركة", "resources": "الموارد", "legal": "قانوني", "privacy": "الخصوصية", "terms": "الشروط", "verify": "تحقّق من شهادة", "rights": "© {year} نخبة. جميع الحقوق محفوظة." },
+  "notifications": { "title": "الإشعارات", "empty": "لا إشعارات جديدة", "markAllRead": "تعيين الكل كمقروء", "viewAll": "عرض كل الإشعارات" },
+  "form": { "email": "البريد الإلكتروني", "password": "كلمة المرور", "confirmPassword": "تأكيد كلمة المرور", "name": "الاسم الكامل", "required": "هذا الحقل مطلوب", "invalidEmail": "أدخل بريدًا إلكترونيًا صحيحًا", "passwordRules": "٨ أحرف على الأقل مع رقم", "passwordsMismatch": "كلمتا المرور غير متطابقتين" }
+}
