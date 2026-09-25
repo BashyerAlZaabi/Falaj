@@ -149,7 +149,7 @@ function head(apps, search) {
   return h('header.page-head.ap-head',
     h('div.ap-titles',
       h('span.eyebrow', L('مساحة التطبيقات', 'App launcher')),
-      h('h1', L('تطبيقاتي', 'My Apps'), apps.length ? h('span.ap-count.num', { 'aria-label': countText(apps.length, AR_APPS, EN_APPS) }, fmtNum(apps.length)) : null),
+      h('h1', L('تطبيقاتي', 'My Apps'), apps.length ? h('span.ap-count', { 'aria-label': countText(apps.length, AR_APPS, EN_APPS) }, fmtNum(apps.length)) : null),
       h('p.sub',
         h('span', L(`لديك ${countText(apps.length, AR_APPS, EN_APPS)} حسب دورك (${role}) وإدارتك (${dept}).`, `${countText(apps.length, AR_APPS, EN_APPS)} for your role (${role}) and department (${dept}).`)), ' ',
         h('span.sub-more', L('ظهور التطبيق لا يمنح صلاحية على بياناته — كل تطبيق يتحقق من صلاحياتك بنفسه.', 'Seeing an app never grants access to its data — each app checks your permissions itself.')))),

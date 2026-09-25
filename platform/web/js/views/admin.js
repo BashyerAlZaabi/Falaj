@@ -19,7 +19,7 @@ const TABS = () => [
 ];
 let lastTab = 'ai';
 let loadSeq = 0;
-const ui = { users: { q: '', role: 'all', dept: 'all' }, tools: { q: '', kind: 'all' }, flashUser: null, token: null };
+const ui = { users: { q: '', role: 'all', dept: 'all' }, tools: { q: '', kind: 'all', all: false }, flashUser: null, token: null };
 
 const CAPS = () => ({
   chat: [L('المحادثة وفهم الطلبات', 'Chat & intent'), 'chat'],
@@ -141,14 +141,14 @@ const reloadTab = (body) => loadTab(body, lastTab, { soft: true });
 function cardHead(id, title, { count, sub, actions } = {}) {
   return h('div.card-head.adm-card-head',
     h('div.adm-card-titles',
-      h(`h2#${id}.card-title`, title, count != null ? h('span.adm-count.num', fmtNum(count)) : null),
+      h(`h2#${id}.card-title`, title, count != null ? h('span.adm-count', fmtNum(count)) : null),
       sub ? h('p.card-sub', sub) : null),
     actions ? h('div.adm-card-actions', actions) : null);
 }
 function stat({ icon: ic, label, value, sub, tone = '' }) {
   return h(`div.card.adm-stat${tone ? `.is-${tone}` : ''}`,
     h('div.adm-stat-top', h('span.adm-stat-icon', { 'aria-hidden': 'true' }, icon(ic)), h('span.adm-stat-label', label)),
-    h('div.adm-stat-value.num', value),
+    h('div.adm-stat-value', value),
     sub ? h('div.adm-stat-sub', sub) : null);
 }
 const STATE = {
@@ -171,6 +171,7 @@ function formError(body, msg) {
 function setFieldError(control, msg) {
   const wrap = control.closest('.form-field'); if (!wrap) return;
   wrap.querySelector('.error-text')?.remove();
+  wrap.querySelector('.helper')?.classList.toggle('hidden', !!msg);
   if (msg) {
     const id = `${control.id}-err`;
     control.setAttribute('aria-invalid', 'true'); control.setAttribute('aria-describedby', id);
@@ -422,19 +423,23 @@ function agentsTab([agents, skills, cat]) {
   const search = h('input.field#adm-tools-search', { type: 'search', value: ui.tools.q, placeholder: L('ابحث في الأدوات…', 'Search tools…'), 'aria-label': L('ابحث في أدوات التنفيذ', 'Search execution tools'), autocomplete: 'off', oninput: debounce((e) => { ui.tools.q = e.target.value; drawTools(); }, 120) });
   const filter = segmented([['all', L('الكل', 'All'), fmtNum(counts.all)], ['read', L('قراءة', 'Read'), fmtNum(counts.read)], ['undo', L('قابل للتراجع', 'Undoable'), fmtNum(counts.undo)], ['confirm', L('يتطلب تأكيداً', 'Needs confirmation'), fmtNum(counts.confirm)]], ui.tools.kind, (v) => { ui.tools.kind = v; drawTools(); }, { label: L('تصفية الأدوات حسب النوع', 'Filter tools by type') });
   const KINDCHIP = { read: ['good', 'eye', 'قراءة', 'Read'], undo: ['', 'undo', 'قابل للتراجع', 'Undoable'], confirm: ['warn', 'shieldAlert', 'يتطلب تأكيداً', 'Needs confirmation'] };
+  const LIMIT = 10;
   function drawTools() {
     const q = norm(ui.tools.q.trim());
-    const rows = cat.tools.filter((x) => (ui.tools.kind === 'all' || kindOf(x) === ui.tools.kind) && (!q || norm(`${x.name} ${x.description}`).includes(q)));
-    slot.replaceChildren(dataTable({
+    const all = cat.tools.filter((x) => (ui.tools.kind === 'all' || kindOf(x) === ui.tools.kind) && (!q || norm(`${x.name} ${x.description}`).includes(q)));
+    const filtered = !!q || ui.tools.kind !== 'all';
+    const rows = ui.tools.all || filtered ? all : all.slice(0, LIMIT);
+    const more = rows.length < all.length ? h('div.adm-more', h('button.btn.sm.ghost', { type: 'button', onclick: () => { ui.tools.all = true; drawTools(); slot.querySelectorAll('tbody tr')[LIMIT]?.querySelector('code')?.scrollIntoView({ block: 'nearest' }); } }, icon('chevronDown'), L(`عرض كل الأدوات (${fmtNum(all.length)})`, `Show all tools (${fmtNum(all.length)})`))) : null;
+    slot.replaceChildren(...[dataTable({
       caption: L('أدوات التنفيذ', 'Execution tools'), sortKey: 'name',
       empty: emptyState({ compact: true, icon: 'search', title: L('لا أدوات مطابقة', 'No matching tools'), actions: [{ label: L('مسح البحث والتصفية', 'Clear search & filter'), icon: 'x', onClick: () => { ui.tools.q = ''; search.value = ''; filter.querySelector('button[data-v="all"]')?.click(); } }] }),
       columns: [
         { key: 'name', label: L('الأداة', 'Tool'), sort: (x) => x.name, render: (x) => h('code.adm-nowrap', x.name) },
-        { key: 'description', label: L('الوصف', 'Description'), render: (x) => h('span.adm-desc', bidi(x.description)) },
+        { key: 'description', label: L('الوصف', 'Description'), render: (x) => h('span.adm-desc', { dir: 'auto', title: x.description }, x.description) },
         { key: 'kind', label: L('النوع', 'Type'), sort: (x) => ['read', 'undo', 'confirm'].indexOf(kindOf(x)), render: (x) => { const [tone, ic, ar, en] = KINDCHIP[kindOf(x)]; return h(`span.chip.tiny${tone ? `.${tone}` : ''}`, icon(ic), L(ar, en)); } },
       ],
       rows,
-    }));
+    }), more].filter(Boolean));
   }
   drawTools();
   const toolsCard = h('section.card.adm-card', { 'aria-labelledby': 'adm-tools-title' },
@@ -514,9 +519,9 @@ function mcpTab() {
   const guide = h('section.card.adm-card.adm-guide', { 'aria-labelledby': 'adm-guide-title' },
     cardHead('adm-guide-title', L('ربط عميل MCP', 'Connect an MCP client')),
     h('ol.adm-steps',
-      h('li', h('span.adm-step-n.num', '1'), h('div', h('strong', L('أنشئ رمزاً شخصياً', 'Create a personal token')), h('span', L('من البطاقة المجاورة، وانسخه فوراً.', 'From the card alongside — copy it right away.')))),
-      h('li', h('span.adm-step-n.num', '2'), h('div', h('strong', L('أضف الخادم في العميل', 'Add the server to your client')), h('span', L('استخدم نقطة الاتصال والترويسة كما في الإعداد التالي.', 'Use the endpoint and header as in the config below.')))),
-      h('li', h('span.adm-step-n.num', '3'), h('div', h('strong', L('جرّب أداة قراءة أولاً', 'Try a read tool first')), h('span', bidi(L('مثل get_daily_summary للتأكد من الاتصال والصلاحيات.', 'Such as get_daily_summary, to confirm access and permissions.')))))),
+      h('li', h('span.adm-step-n', '1'), h('div', h('strong', L('أنشئ رمزاً شخصياً', 'Create a personal token')), h('span', L('من البطاقة المجاورة، وانسخه فوراً.', 'From the card alongside — copy it right away.')))),
+      h('li', h('span.adm-step-n', '2'), h('div', h('strong', L('أضف الخادم في العميل', 'Add the server to your client')), h('span', L('استخدم نقطة الاتصال والترويسة كما في الإعداد التالي.', 'Use the endpoint and header as in the config below.')))),
+      h('li', h('span.adm-step-n', '3'), h('div', h('strong', L('جرّب أداة قراءة أولاً', 'Try a read tool first')), h('span', bidi(L('مثل get_daily_summary للتأكد من الاتصال والصلاحيات.', 'Such as get_daily_summary, to confirm access and permissions.')))))),
     h('div.adm-snippet',
       h('div.adm-snippet-head', h('span', L('إعداد العميل (JSON)', 'Client config (JSON)')), h('button.btn.sm.ghost', { type: 'button', onclick: () => copyText(snippet.textContent, L('نُسخ الإعداد', 'Config copied')) }, icon('copy'), t('copy'))),
       h('pre', { dir: 'ltr' }, snippet)));
@@ -577,7 +582,7 @@ function usersTab([users, depts]) {
   const admins = users.filter((u) => u.is_admin).length;
 
   const hadFocus = document.activeElement?.id === 'adm-users-search' ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
-  const search = h('input.field#adm-users-search', { type: 'search', value: ui.users.q, placeholder: L('ابحث بالاسم أو اسم المستخدم…', 'Search by name or username…'), 'aria-label': L('ابحث في المستخدمين', 'Search users'), autocomplete: 'off',
+  const search = h('input.field#adm-users-search', { type: 'search', value: ui.users.q, placeholder: L('ابحث عن مستخدم…', 'Search users…'), 'aria-label': L('ابحث في المستخدمين', 'Search users'), autocomplete: 'off',
     oninput: debounce((e) => { ui.users.q = e.target.value; draw(); }, 120),
     onkeydown: (e) => { if (e.key === 'Escape' && e.target.value) { e.preventDefault(); e.stopPropagation(); e.target.value = ''; ui.users.q = ''; draw(); } } });
   const roles = segmented([['all', L('الكل', 'All'), fmtNum(users.length)], ...ROLES.map((r) => [r, t(`role.${r}`), fmtNum(roleCounts[r])])], ui.users.role, (v) => { ui.users.role = v; draw(); }, { label: L('تصفية حسب الدور', 'Filter by role') });
@@ -592,7 +597,7 @@ function usersTab([users, depts]) {
     const q = norm(ui.users.q.trim());
     const rows = users.filter((u) => (ui.users.role === 'all' || u.role === ui.users.role) && (ui.users.dept === 'all' || u.department_id === ui.users.dept)
       && (!q || norm(`${u.name_ar} ${u.name_en || ''} ${u.username}`).includes(q)));
-    result.textContent = rows.length === users.length ? countText(users.length, AR_USERS, ['user', 'users']) : L(`${fmtNum(rows.length)} من ${fmtNum(users.length)}`, `${fmtNum(rows.length)} of ${fmtNum(users.length)}`);
+    result.textContent = rows.length === users.length ? '' : L(`يظهر ${fmtNum(rows.length)} من ${fmtNum(users.length)}`, `Showing ${fmtNum(rows.length)} of ${fmtNum(users.length)}`);
     slot.replaceChildren(dataTable({
       caption: L('المستخدمون وصلاحياتهم', 'Users and their permissions'), sortKey: 'name',
       rowAttrs: (u) => ({ 'data-user': u.id, class: [u.id === flash ? 'adm-row-new' : '', u.active === 0 ? 'adm-row-off' : ''].filter(Boolean).join(' ') || null }),
@@ -609,7 +614,7 @@ function usersTab([users, depts]) {
               u.active === 0 ? h('span.chip.tiny', L('غير نشط', 'Inactive')) : null))) },
         { key: 'dept', label: L('الإدارة', 'Department'), sort: (u) => deptName(u.department_id, u.dept_ar), render: (u) => deptName(u.department_id, u.dept_ar) },
         { key: 'role', label: L('الدور', 'Role'), sort: (u) => ROLES.indexOf(u.role), render: (u) => h(`span.chip${ROLE_TONE[u.role] || ''}`, t(`role.${u.role}`)) },
-        { key: 'actions', label: '', render: (u) => h('button.btn.sm', { type: 'button', onclick: () => editUser(u, depts), 'aria-label': L(`تغيير الصلاحيات — ${u.name_ar}`, `Change permissions — ${u.name_en || u.name_ar}`) }, icon('userCog'), L('تغيير الصلاحيات', 'Change permissions')) },
+        { key: 'actions', label: '', render: (u) => h('button.btn.sm.ghost.adm-perm-btn', { type: 'button', onclick: () => editUser(u, depts), 'aria-label': L(`تغيير الصلاحيات — ${u.name_ar}`, `Change permissions — ${u.name_en || u.name_ar}`) }, icon('userCog'), L('تغيير الصلاحيات', 'Change permissions')) },
       ],
       rows,
     }));
@@ -684,14 +689,14 @@ async function newUser(depts) {
   const paint = () => { summary.replaceChildren(icon('shield', 'sm'), h('span', L(`سيحصل المستخدم على صلاحيات «${t(`role.${role.value}`)}» ضمن «${deptLabel(depts, dept.value)}».`, `The user gets “${t(`role.${role.value}`)}” access within “${deptLabel(depts, dept.value)}”.`))); };
   role.addEventListener('change', paint); dept.addEventListener('change', paint); paint();
   const body = h('div.adm-form',
-    field(L('اسم المستخدم', 'Username'), f.username, { helper: L('3–40 حرفاً: أحرف إنجليزية صغيرة وأرقام و . _ -', '3–40 characters: lowercase letters, digits, . _ -') }),
+    field(L('اسم المستخدم', 'Username'), f.username, { helper: [L('من 3 إلى 40 حرفاً: أحرف إنجليزية صغيرة وأرقام، ويُسمح بالرموز ', '3 to 40 characters: lowercase letters and digits; allowed symbols '), h('bdi', h('code', '. _ -'))] }),
     h('div.form-grid', field(L('الاسم (عربي)', 'Name (Arabic)'), f.name_ar), field(L('الاسم (إنجليزي)', 'Name (English)'), f.name_en)),
     field(L('كلمة المرور المؤقتة', 'Temporary password'), f.password, { helper: L('8 أحرف على الأقل. سلّمها للمستخدم بطريقة آمنة.', 'At least 8 characters. Hand it over securely.') }),
     h('div.form-grid', field(L('الدور', 'Role'), role), field(L('الإدارة', 'Department'), dept)),
     summary);
   const validate = () => {
     const errs = [
-      [f.username, /^[a-z0-9._-]{3,40}$/.test(f.username.value) ? null : L('3–40 حرفاً من الأحرف الإنجليزية الصغيرة والأرقام و . _ - فقط', '3–40 lowercase letters, digits, . _ - only')],
+      [f.username, /^[a-z0-9._-]{3,40}$/.test(f.username.value) ? null : L('اسم المستخدم غير صالح — استخدم من 3 إلى 40 حرفاً إنجليزياً صغيراً أو رقماً.', 'Invalid username — use 3 to 40 lowercase letters or digits.')],
       [f.password, f.password.value.length >= 8 ? null : L('كلمة المرور 8 أحرف على الأقل', 'At least 8 characters')],
     ];
     errs.forEach(([c, m]) => setFieldError(c, m));

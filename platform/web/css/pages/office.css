@@ -25,6 +25,8 @@
   :lang(en) .office-head h1 { letter-spacing: var(--track-large-title); }
 }
 @container page (max-width: 480px) {
+  /* the floating toolbar already names the page on phones: keep the H1 for assistive tech only */
+  .office-head h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .office-head .actions { width: 100%; }
   .office-head .actions .btn { flex: 1; }
 }
@@ -106,6 +108,7 @@
 }
 @container page (max-width: 420px) {
   .op-cell { padding: var(--space-3) var(--space-4); }
+  .op-badge { display: none; }
   .op-value { font: var(--type-title1); }
   .op-value.is-text { font: var(--type-headline); }
 }

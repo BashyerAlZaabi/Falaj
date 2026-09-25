@@ -76,7 +76,6 @@ const PLURAL = new Intl.PluralRules('ar');
 const NOUN = {
   action: ['إجراء واحد', 'إجراءان', 'إجراءات', 'إجراءً', 'إجراء', 'action', 'actions'],
   proposal: ['مقترح واحد', 'مقترحان', 'مقترحات', 'مقترحاً', 'مقترح', 'proposal', 'proposals'],
-  point: ['نقطة واحدة', 'نقطتان', 'نقاط', 'نقطة', 'نقطة', 'point', 'points'],
 };
 function count(n, noun) {
   const f = NOUN[noun];
@@ -467,8 +466,8 @@ function proposalItem(r, it, d, onChange) {
 async function approveAll(ctx, btn, selectedTotal) {
   const cards = ctx.cards.filter((c) => c.selected());
   if (!cards.length) { toast(L('لم تحدّد أي إجراء في المقترحات', 'No items are selected in any proposal'), { kind: 'info' }); return; }
-  const ok = await confirmDialog(L(`اعتماد ${count(cards.length, 'proposal')}؟`, `Approve ${count(cards.length, 'proposal')}?`),
-    L(`سيُنفَّذ ${count(selectedTotal, 'action')} محددة في كل المقترحات بصلاحياتك، ويمكنك التراجع عن كل إجراء من سجل التشغيل.`, `${count(selectedTotal, 'action')} selected across all proposals will run with your permissions; you can undo each from the run history.`),
+  const ok = await confirmDialog(L('اعتماد كل المقترحات؟', `Approve all ${fmtNum(cards.length)} proposals?`),
+    L(`المقترحات: ${fmtNum(cards.length)} · الإجراءات المحددة: ${fmtNum(selectedTotal)}. تُنفَّذ بصلاحياتك، ويمكنك التراجع عن كل إجراء من سجل التشغيل.`, `${count(selectedTotal, 'action')} selected across ${count(cards.length, 'proposal')} will run with your permissions; you can undo each one from the run history.`),
     { confirmLabel: L('اعتماد الكل', 'Approve all') });
   if (!ok) return;
   busy(btn, true);
@@ -484,8 +483,8 @@ async function approveAll(ctx, btn, selectedTotal) {
   busy(btn, false);
   if (!runs) return;
   if (done) celebrate(btn, { big: true });
-  toast(bad ? L(`اعتمدت ${count(runs, 'proposal')}: نُفّذ ${count(done, 'action')} وتعذّر ${count(bad, 'action')}`, `Approved ${count(runs, 'proposal')}: ${count(done, 'action')} done, ${count(bad, 'action')} failed`)
-    : L(`اعتمدت ${count(runs, 'proposal')} — نُفّذ ${count(done, 'action')}`, `Approved ${count(runs, 'proposal')} — ${count(done, 'action')} done`), { kind: bad ? 'error' : null });
+  toast(bad ? L(`اعتُمد ${count(runs, 'proposal')}: نُفّذ ${count(done, 'action')} وتعذّر ${count(bad, 'action')}`, `Approved ${count(runs, 'proposal')}: ${count(done, 'action')} done, ${count(bad, 'action')} failed`)
+    : L(`اعتُمد ${count(runs, 'proposal')} — نُفّذ ${count(done, 'action')}`, `Approved ${count(runs, 'proposal')} — ${count(done, 'action')} done`), { kind: bad ? 'error' : null });
   if (doc) Editor.open(doc);
   emit('data-changed', { entity: 'office' });
 }
