@@ -109,11 +109,16 @@ export function celebrate(anchor, { big = false } = {}) {
 
 // Watch real data changes: award feedback only when the SERVER-derived score changed.
 let chipHost = null;
+// `seen` is the profile the celebration logic last compared against. Other
+// callers (the Home hero) may call loadGame() first, so `last` alone is not a
+// reliable baseline.
+let seen = null;
 export function initGame(host) {
   chipHost = host;
   const refresh = debounce(async () => {
-    const prev = last;
+    const prev = seen;
     try { await loadGame(); } catch { return; }
+    seen = last;
     renderChip();
     if (!prev) return;
     const gained = last.xp - prev.xp;
@@ -130,7 +135,7 @@ export function initGame(host) {
     for (const q of newQuests) toast(L(`أنجزت مهمة اليوم: ${q.ar}`, `Quest complete: ${q.en}`), { timeout: 3500 });
   }, 600);
   on('data-changed', (ev) => { if (!ev || ['task', 'project', 'document', 'office', 'all'].includes(ev.entity) || String(ev.entity).includes(',')) refresh(); });
-  loadGame().then(renderChip).catch(() => {});
+  loadGame().then(() => { seen ||= last; renderChip(); }).catch(() => {});
 }
 function renderChip() { if (chipHost && last) chipHost.replaceChildren(sidebarChip(last)); }
 export { state };
