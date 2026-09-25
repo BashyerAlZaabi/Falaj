@@ -124,6 +124,11 @@ app.get('/api/users/assignable', wrap((req, res) => res.json(P.assignableUsers(r
 app.get('/api/users/directory', wrap((req, res) => res.json(all("SELECT u.id,u.name_ar,u.name_en,u.department_id,u.role,u.title_ar,u.title_en,d.name_ar AS dept_ar,d.name_en AS dept_en FROM users u JOIN departments d ON d.id=u.department_id WHERE u.active=1 AND u.user_type='staff' ORDER BY d.name_ar, u.name_ar"))));
 app.get('/api/departments', wrap((req, res) => res.json(all('SELECT id,name_ar,name_en,parent_id FROM departments WHERE is_external=0 ORDER BY name_ar'))));
 
+// Personal MCP tokens: list (never the secret) and revoke.
+app.get('/api/me/tokens', wrap((req, res) => res.json(all('SELECT id,label,created_at,revoked FROM api_tokens WHERE user_id=? ORDER BY created_at DESC', req.user.id))));
+app.delete('/api/me/tokens/:id', wrap((req, res) => { run('UPDATE api_tokens SET revoked=1 WHERE id=? AND user_id=?', req.params.id, req.user.id); res.json({ ok: true }); }));
+// Smart Uploader readiness (lets the page show a paused dropzone before any upload).
+app.get('/api/su/status', wrap(async (req, res) => res.json({ configured: !!config.suServiceToken, vault_reachable: (await vaultHealth()).reachable })));
 app.post('/api/me/tokens', wrap((req, res) => res.json({ token: I.createApiToken(req.user.id, req.body?.label || 'MCP client'), note: 'يظهر الرمز مرة واحدة فقط' })));
 
 // ---------------- realtime ----------------

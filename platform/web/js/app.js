@@ -276,7 +276,7 @@ export async function route({ soft = false } = {}) {
   const key = ROUTES[r] ? r : 'home';
   if (key === 'projects' && params[0]) state.selectedProjectId = params[0];
   state.route = key; state.params = params;
-  if (innerWidth <= 900 && !['chat', 'doc'].includes(document.body.dataset.tab)) setTab(['apps', 'uploader', 'admin'].includes(key) ? 'apps' : 'home');
+  if (innerWidth <= 900 && !['chat', 'doc'].includes(document.body.dataset.tab)) setTab({ apps: 'apps', uploader: 'apps', admin: 'menu' }[key] || 'home');
   const navKey = key === 'sys' ? `sys:${params[0]}` : key;
   $$('#nav a.item').forEach((a) => { const on = a.dataset.route === navKey; a.classList.toggle('on', on); on ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current'); });
   toggleNav(false);
