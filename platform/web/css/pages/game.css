@@ -14,7 +14,7 @@
 /* ---------- Level orb ---------- */
 .level-orb {
   --orb: 56px; position: relative; width: var(--orb); height: var(--orb); border-radius: 50%; flex: none; display: grid; place-items: center; align-content: center; color: #fff;
-  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.55), transparent 42%), conic-gradient(from 210deg, var(--series-1), var(--series-3), var(--series-4), var(--series-1));
+  background: radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.55), transparent 42%), conic-gradient(from 210deg, var(--series-1), var(--series-3), var(--series-2), var(--series-1));
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35), 0 6px 22px color-mix(in srgb, var(--series-1) 35%, transparent), 0 0 0 5px color-mix(in srgb, var(--series-3) 12%, transparent);
 }
 .level-orb::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--series-3) 30%, transparent); animation: orb-breathe 4s var(--ease-in-out) infinite; }
@@ -120,13 +120,13 @@
 .levels .lv em { font-style: normal; color: var(--text-tertiary); }
 .levels .lv.past b { background: var(--green); color: #fff; }
 .levels .lv.on { background: var(--accent-tint); color: var(--text-primary); }
-.levels .lv.on b { background: var(--accent-fill); color: #fff; }
+.levels .lv.on b { background: var(--accent-fill); color: var(--text-on-accent); }
 
 /* ---------- Sidebar level chip ---------- */
 .level-chip { display: flex; align-items: center; gap: 10px; margin: var(--space-2) 4px 0; padding: 8px 10px; border-radius: var(--radius-lg); color: inherit; text-decoration: none; background: linear-gradient(120deg, color-mix(in srgb, var(--series-1) 10%, transparent), color-mix(in srgb, var(--series-3) 10%, transparent)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-3) 16%, transparent); transition: transform var(--dur-fast) var(--ease-spring), box-shadow var(--transition-fast); }
 .level-chip:hover { text-decoration: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--series-3) 32%, transparent), 0 4px 16px color-mix(in srgb, var(--series-3) 16%, transparent); }
 .level-chip:active { transform: scale(0.98); }
-.lc-n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; color: #fff; font: 700 13px/1 var(--font-display); background: conic-gradient(from 210deg, var(--series-1), var(--series-3), var(--series-4), var(--series-1)); box-shadow: 0 0 10px color-mix(in srgb, var(--series-3) 40%, transparent); }
+.lc-n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; flex: none; color: #fff; font: 700 13px/1 var(--font-display); background: conic-gradient(from 210deg, var(--series-1), var(--series-3), var(--series-2), var(--series-1)); box-shadow: 0 0 10px color-mix(in srgb, var(--series-3) 40%, transparent); }
 .lc-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .lc-name { font: 600 12.5px/1.2 var(--font-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lc-body .progress { height: 4px; }

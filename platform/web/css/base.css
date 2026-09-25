@@ -99,6 +99,7 @@ hr { border: 0; height: 1px; background: var(--separator); margin: var(--space-4
 .small { font: var(--type-callout); }
 .tiny { font: var(--type-footnote); }
 .eyebrow { font: var(--type-caption); color: var(--text-tertiary); text-transform: none; letter-spacing: 0.02em; }
+.page-head .eyebrow { color: var(--emph-text); }
 
 /* ---------- Layout utilities ---------- */
 .stack { display: flex; flex-direction: column; gap: var(--space-3); }
