@@ -19,6 +19,7 @@ import { seedAll, seedConfig, seedPeople } from './seed.js';
 import { initSystems, systemsFor } from './systems/index.js';
 import * as O from './services/office.js';
 import * as G from './services/game.js';
+import { buildSpec } from './openapi.js';
 import { db } from './db.js';
 import { migrate, schemaVersion, MIGRATIONS } from './migrations.js';
 import { setupLogging, requestLogger, rateLimit, validateConfig, scheduleBackups, log } from './lib/ops.js';
@@ -434,7 +435,14 @@ app.post('/mcp', express.json({ limit: '1mb' }), (req, res, next) => {
 app.get('/mcp', (req, res) => res.status(405).set('Allow', 'POST').end());
 
 // ---------------- enterprise systems (/api/sys/<key>, /api/systems, /api/workspace) ----------------
-initSystems(app, { requireAdmin: I.requireAdmin });
+const { routers: systemRouters } = initSystems(app, { requireAdmin: I.requireAdmin });
+
+// ---------------- API documentation (OpenAPI 3.1, generated per user) ----------------
+app.get('/api/openapi.json', wrap((req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.json(buildSpec({ app, systemRouters, user: req.user, serverUrl: config.publicUrl }));
+}));
+app.get('/docs', (req, res) => res.sendFile(path.join(ROOT, 'web', 'developers.html')));
 
 // ---------------- static web app ----------------
 app.use('/fonts', express.static(path.join(ROOT, 'node_modules/@fontsource/ibm-plex-sans-arabic/files'), { maxAge: '30d' }));

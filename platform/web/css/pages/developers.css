@@ -1,0 +1,64 @@
+/* Developer docs (/docs) — self-hosted OpenAPI reference in the platform's glass style. */
+.devdocs { min-height: 100vh; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.dd-top { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: var(--space-3); padding: 14px 28px; background: color-mix(in srgb, var(--bg-base) 78%, transparent); backdrop-filter: blur(20px) saturate(1.4); border-bottom: 1px solid var(--separator); }
+.dd-brand { font-weight: 600; color: var(--text-secondary); text-decoration: none; }
+.dd-sep { color: var(--text-tertiary); }
+.dd-title { font: var(--type-title-3, 600 20px/1.3 var(--font-display)); margin: 0; }
+.dd-top-actions { margin-inline-start: auto; display: flex; gap: var(--space-2); align-items: center; }
+.dd-search input { width: 300px; max-width: 42vw; min-height: 32px; padding: 0 12px; border-radius: var(--radius-sm); border: 1px solid var(--separator); background: var(--control-bg, var(--glass-2-bg)); color: var(--text-primary); font: inherit; }
+.dd-search input:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+.dd-layout { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 24px; padding: 24px 28px 64px; max-width: 1400px; margin: 0 auto; }
+.dd-nav { position: sticky; top: 76px; align-self: start; max-height: calc(100vh - 100px); overflow: auto; display: flex; flex-direction: column; gap: 2px; padding: 10px; }
+.dd-nav a { display: flex; justify-content: space-between; gap: 8px; padding: 7px 10px; border-radius: var(--radius-sm); color: var(--text-secondary); text-decoration: none; font-size: 13px; }
+.dd-nav a:hover { background: var(--fill-hover); color: var(--text-primary); }
+.dd-main { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+.dd-intro { padding: 22px 24px; }
+.dd-intro h2 { margin: 0 0 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.dd-stats { display: flex; gap: 22px; margin-top: 14px; color: var(--text-secondary); }
+.dd-stats strong { color: var(--accent-text); font-size: 20px; margin-inline-end: 4px; }
+.dd-section { display: flex; flex-direction: column; gap: 8px; scroll-margin-top: 80px; }
+.dd-tag { font-size: 17px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+.dd-count { font-size: 11px; font-weight: 600; color: var(--text-tertiary); background: var(--fill-hover); border-radius: 999px; padding: 1px 7px; }
+.dd-op { padding: 0; overflow: hidden; scroll-margin-top: 80px; }
+.dd-op > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 11px 14px; flex-wrap: wrap; }
+.dd-op > summary::-webkit-details-marker { display: none; }
+.dd-op > summary:hover { background: var(--fill-hover); }
+.dd-op[open] > summary { border-bottom: 1px solid var(--separator); }
+.dd-method { font: 700 11px/1 var(--font-mono); padding: 5px 7px; border-radius: 6px; min-width: 52px; text-align: center; color: #fff; }
+.m-get { background: #1F5BA8; } .m-post { background: #1E7F6C; } .m-put { background: #9A6B1F; } .m-patch { background: #9A6B1F; } .m-delete { background: var(--danger-fill); }
+.dd-path { font: 600 13px/1.4 var(--font-mono); direction: ltr; unicode-bidi: isolate; }
+.dd-sum { color: var(--text-secondary); font-size: 13px; flex: 1 1 200px; }
+.dd-flag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--accent-tint); color: var(--accent-text); }
+.dd-flag.danger { background: var(--red-tint); color: var(--red-text); }
+.dd-flag.muted { background: var(--fill-hover); color: var(--text-secondary); }
+.dd-op-body { padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 14px; }
+.dd-op-body h4 { margin: 0 0 6px; font-size: 12px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .04em; }
+.dd-desc-block { margin: 0; line-height: 1.65; color: var(--text-primary); }
+.dd-desc-block code, .dd-schema code { font-family: var(--font-mono); font-size: 12px; background: var(--fill-hover); padding: 1px 5px; border-radius: 4px; }
+.dd-schema { list-style: none; margin: 0; padding-inline-start: 0; display: flex; flex-direction: column; gap: 5px; direction: ltr; text-align: left; }
+.dd-schema .dd-schema { flex-basis: 100%; padding-left: 18px; border-left: 2px solid var(--separator); margin-top: 5px; }
+.dd-schema li { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.dd-prop { font-weight: 600; }
+.dd-req { font-size: 10px; font-weight: 700; color: var(--red-text); text-transform: uppercase; }
+.dd-type { font: 12px var(--font-mono); color: var(--accent-text); }
+.dd-enum { font: 11px var(--font-mono); color: var(--text-tertiary); }
+.dd-desc { font-size: 12px; color: var(--text-secondary); flex-basis: 100%; }
+.dd-code { border: 1px solid var(--separator); border-radius: var(--radius-sm); overflow: hidden; }
+.dd-code-head { display: flex; justify-content: space-between; align-items: center; padding: 4px 6px 4px 12px; font-size: 12px; color: var(--text-tertiary); background: var(--fill-hover); direction: ltr; }
+.dd-code pre, .dd-try-out { margin: 0; padding: 12px; font: 12px/1.55 var(--font-mono); overflow: auto; direction: ltr; text-align: left; white-space: pre; }
+.dd-try { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dd-param { display: flex; gap: 6px; align-items: center; }
+.dd-param input { min-height: 28px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--separator); background: transparent; color: var(--text-primary); font: 12px var(--font-mono); }
+.dd-try-out { flex-basis: 100%; max-height: 360px; border: 1px solid var(--separator); border-radius: var(--radius-sm); }
+.dd-empty { padding: 32px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.dd-muted { color: var(--text-tertiary); }
+@media (max-width: 900px) {
+  .dd-layout { grid-template-columns: 1fr; padding: 16px; }
+  .dd-nav { position: static; max-height: none; flex-direction: row; flex-wrap: wrap; }
+  .dd-top { padding: 12px 16px; flex-wrap: wrap; }
+  .dd-search input { width: 100%; max-width: none; }
+  .dd-top-actions { width: 100%; }
+  .dd-search { flex: 1; }
+}
+.dd-nav:empty { display: none; }

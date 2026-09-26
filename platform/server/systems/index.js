@@ -145,6 +145,7 @@ export function initSystems(app, { requireAdmin }) {
     audit(req.user, 'domain.ai_policy', d.key, { from: d.ai_policy, to: b.ai_policy });
     res.json(one('SELECT * FROM data_domains WHERE key=?', d.key));
   });
+  return { routers };
 }
 
 export { SYSTEMS, canAccess };

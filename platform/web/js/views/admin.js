@@ -520,7 +520,8 @@ function mcpTab() {
       h('h3.adm-sub-title', L('رمز وصول شخصي', 'Personal access token')),
       h('p.adm-muted', L('يُنشأ باسمك ويعمل بصلاحياتك، ويظهر مرة واحدة فقط.', 'Created in your name, acts with your permissions, and is shown only once.')),
       create, tokenOut),
-    h('div.callout.adm-callout', icon('info'), h('span', L('الموافقة على أعمال وكلاء المكتب لا تتم عبر الرموز؛ تتطلب جلسة تفاعلية.', 'Approving Agents Office work is not possible with tokens; it needs an interactive session.'))));
+    h('div.callout.adm-callout', icon('info'), h('span', L('الموافقة على أعمال وكلاء المكتب لا تتم عبر الرموز؛ تتطلب جلسة تفاعلية.', 'Approving Agents Office work is not possible with tokens; it needs an interactive session.'))),
+    h('a.btn.tertiary', { href: '/docs', target: '_blank', rel: 'noopener' }, icon('doc'), L('توثيق الواجهات (OpenAPI)', 'API reference (OpenAPI)')));
 
   const guide = h('section.card.adm-card.adm-guide', { 'aria-labelledby': 'adm-guide-title' },
     cardHead('adm-guide-title', L('ربط عميل MCP', 'Connect an MCP client')),

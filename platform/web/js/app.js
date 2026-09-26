@@ -87,7 +87,7 @@ $('#login-form').addEventListener('submit', async (e) => {
   try {
     await api('/api/auth/login', { method: 'POST', body: { username: u.value, password: p.value } });
     const next = new URLSearchParams(location.search).get('next');
-    if (next && next.startsWith('/api/identity/sso/authorize')) { location.href = next; return; }
+    if (next && (next.startsWith('/api/identity/sso/authorize') || next === '/docs')) { location.href = next; return; }
     sessionExpired = false;
     await boot();
   } catch (err) { $('#lg-err').textContent = err.message; p.setAttribute('aria-invalid', 'true'); p.select(); }
