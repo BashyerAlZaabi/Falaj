@@ -111,7 +111,7 @@ function localNarrative(f, ev, q) {
   return lines.join('\n');
 }
 export async function runAnalysis(user, id) {
-  const q = analysable(user, id);
+  const q = await analysable(user, id);
   const f = findings(q);
   const ev = evaluation(q);
   let text; let mode = 'local'; let model = null;

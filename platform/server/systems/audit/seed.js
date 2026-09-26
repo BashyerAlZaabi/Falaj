@@ -239,7 +239,9 @@ export function seed() {
     run('INSERT INTO audit_links (id,kind,ref_id,document_id,title,linked_by,linked_at) VALUES (?,?,?,?,?,?,?)', uid('al_'), 'pbc', 'ar_demo_i3', d1, 'سجل الحسابات ذات الصلاحيات العليا — الأنظمة الرئيسية', 'u_mariam', at(-7, 15));
     const d2 = doc(majed, `سجل الأصول الثابتة ${y - 1} — ملخص معتمد`, 'report',
       `<h2>ملخص سجل الأصول الثابتة كما في 31 ديسمبر ${y - 1}</h2><table><thead><tr><th>الفئة</th><th>الرصيد الافتتاحي</th><th>الإضافات</th><th>الاستبعادات</th><th>الرصيد الختامي</th></tr></thead><tbody><tr><td>مبانٍ وتحسينات</td><td>18,450,000</td><td>620,000</td><td>0</td><td>19,070,000</td></tr><tr><td>أجهزة وتقنية المعلومات</td><td>4,210,000</td><td>1,140,000</td><td>385,000</td><td>4,965,000</td></tr><tr><td>أثاث ومعدات مكتبية</td><td>1,380,000</td><td>96,000</td><td>54,000</td><td>1,422,000</td></tr><tr><td>مركبات</td><td>2,050,000</td><td>310,000</td><td>240,000</td><td>2,120,000</td></tr></tbody></table><p>المبالغ بالدرهم الإماراتي. جدول الإهلاك التفصيلي متاح عند الطلب.</p>`, at(-14, 12));
-    run('INSERT INTO audit_links (id,kind,ref_id,document_id,title,linked_by,linked_at) VALUES (?,?,?,?,?,?,?)', uid('al_'), 'ext', 'ax_demo_1', d2, `سجل الأصول الثابتة ${y - 1} — ملخص معتمد`, 'u_majed', at(-14, 13));
+    // released to the external auditor → the released snapshot is frozen with it
+    run('INSERT INTO audit_links (id,kind,ref_id,document_id,title,linked_by,linked_at,released_html,released_title) VALUES (?,?,?,?,?,?,?,?,?)', uid('al_'), 'ext', 'ax_demo_1', d2, `سجل الأصول الثابتة ${y - 1} — ملخص معتمد`, 'u_majed', at(-14, 13),
+      one('SELECT content_html FROM documents WHERE id=?', d2)?.content_html ?? '', `سجل الأصول الثابتة ${y - 1} — ملخص معتمد`);
     // Issued reports for the two completed engagements (owned by the Chief Audit Executive, shared read-only).
     for (const [engId, issuedAt] of [['ae_demo_hr_recruit', at(-160, 11)], ['ae_demo_ops_cs', at(-80, 11)]]) {
       const e = one('SELECT e.*, d.name_ar dept_ar FROM audit_engagements e JOIN departments d ON d.id=e.department_id WHERE e.id=?', engId);

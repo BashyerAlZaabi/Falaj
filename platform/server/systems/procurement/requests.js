@@ -15,6 +15,7 @@ import {
 } from '../kit.js';
 import { SYS, THRESHOLD, CATEGORIES, PR_STATUS, PR_FLOW, labelsAr, nextNumber, isOfficer, isFinance, isBudget } from './schema.js';
 import { providerEligibility, providerBrief, providerUserIds, createContract, eligibleProviders } from '../providers.js';
+import { userConflictWith } from './conflicts.js';
 
 const PR_AR = labelsAr(PR_STATUS);
 export const STEPS = ['draft', 'pending_manager', 'pending_finance', 'pending_procurement', 'sourcing', 'ordered'];
@@ -364,9 +365,11 @@ export function markOfficer(user, r) {
   }
 }
 // Direct purchase (below the RFQ threshold): eligible provider + quotation → PO → contract.
-export function directPurchase(user, id, { provider_id, amount, quote_ref, note }) {
+export async function directPurchase(user, id, { provider_id, amount, quote_ref, note }) {
   const r = visibleRequest(user, id);
   markOfficer(user, r);
+  // The officer alone picks the supplier here: a declared conflict with it bars the purchase.
+  if (await userConflictWith(user.id, [one('SELECT id,name_ar,name_en,org_id FROM providers_companies WHERE id=?', provider_id)])) throw new Forbidden('لديك تضارب مصالح مُفصح عنه مع هذا المورد — لا يمكنك الشراء المباشر منه؛ يتولاه زميل آخر');
   if (r.est_total >= THRESHOLD) throw new Conflict(`القيمة التقديرية ${r.est_total} د.إ تتجاوز حد الشراء المباشر (${THRESHOLD} د.إ) — يلزم طلب عروض`);
   if (!(amount > 0) || amount >= THRESHOLD) throw new BadRequest(`قيمة أمر الشراء المباشر يجب أن تكون أقل من ${THRESHOLD} د.إ`);
   const el = providerEligibility(provider_id);

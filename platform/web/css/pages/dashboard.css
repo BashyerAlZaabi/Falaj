@@ -29,6 +29,8 @@
 .btn.dash-ai { --btn-bg: var(--purple-tint); --btn-fg: var(--purple-text); --btn-border: transparent; --btn-shadow: none; }
 .btn.dash-ai:hover { --btn-bg: color-mix(in srgb, var(--purple) 24%, transparent); }
 .btn.dash-ai .icon { color: var(--purple); }
+/* the label span shares the global .lbl (form label) class — reset it to the button's own type */
+.dash-edit-btn .lbl { display: inline; margin: 0; font: inherit; color: inherit; }
 .btn.dash-edit-btn.is-on { --btn-bg: var(--accent-tint); --btn-fg: var(--accent-text); --btn-border: transparent; --btn-shadow: none; }
 .dash-refresh.is-spinning .icon { animation: spin calc(var(--dur-slower) * 2) linear infinite; }
 

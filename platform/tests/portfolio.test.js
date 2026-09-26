@@ -83,3 +83,36 @@ test('employees cannot create strategic projects or allocate people; external us
   assert.equal((await ext.get('/api/portfolio')).status, 403);
   assert.equal((await ext.get('/api/allocations')).status, 403);
 });
+
+test('allocation ids outside the caller\'s scope are 404 — never a 403 that confirms they exist', async () => {
+  for (const u of ['hessa', 'fatima']) {
+    const cl = await c(u);
+    for (const decision of ['confirm', 'end', 'withdraw']) {
+      const r = await cl.tool('decide_allocation', { id: allocId, decision, reason: 'اختبار' });
+      assert.notEqual(r.data.status, 'ok');
+      assert.equal(r.data.code, 'not_found', `${u} ${decision}: ${JSON.stringify(r.data)}`);
+    }
+    assert.equal((await cl.get(`/api/allocations/${allocId}`)).status, 404);
+  }
+  // the person's own manager still gets the real (state) answer
+  const again = await (await c('mariam')).tool('decide_allocation', { id: allocId, decision: 'confirm' });
+  assert.equal(again.data.code, 'bad_input', JSON.stringify(again.data));
+});
+
+test('SPMO un-designating a project saves cleanly; capacity never leaks out-of-scope allocation details', async () => {
+  const lat = await c('latifa');
+  // a second strategic project keeps ahmed inside the SPMO capacity view
+  const r2 = await lat.tool('create_strategic_project', { name: 'مشروع قياس الأثر', department_id: 'dept_it', owner_id: 'u_mariam', due_date: day(40),
+    allocations: [{ user_id: 'u_ahmed', percent: 10, role_ar: 'مهندس' }] });
+  assert.equal(r2.data.status, 'ok', JSON.stringify(r2.data));
+  const un = await lat.tool('update_project', { id: projectId, is_strategic: false });
+  assert.equal(un.data.status, 'ok', `designation removed without an error: ${JSON.stringify(un.data)}`);
+  assert.equal((await lat.get(`/api/projects/${projectId}`)).status, 404, 'no longer in the SPMO scope');
+  const cap = (await (await c('hamad')).get('/api/capacity/team')).data;
+  const ahmed = cap.people.find((p) => p.id === 'u_ahmed');
+  assert.ok(ahmed, 'ahmed is on strategic work');
+  const hidden = ahmed.allocations.filter((a) => !a.project_name);
+  assert.ok(hidden.length >= 1, 'the ordinary project allocation counts toward the load');
+  for (const a of hidden) { assert.equal(a.project_id, null); assert.equal(a.role_ar, null); assert.equal(a.id, null); }
+  assert.ok(!JSON.stringify(cap).includes(projectId), 'no trace of the out-of-scope project id');
+});

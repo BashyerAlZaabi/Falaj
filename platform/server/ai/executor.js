@@ -110,7 +110,9 @@ export async function resolveConfirmation(user, id, accept) {
   const claimed = run("UPDATE confirmations SET status=? WHERE id=? AND status='pending'", accept ? 'confirmed' : 'cancelled', id);
   if (!claimed.changes) return { status: 'error', error: 'تمت معالجة طلب التأكيد مسبقاً' };
   if (!accept) return { status: 'cancelled', confirmation: c };
-  const r = await executeTool(user, c.tool, json(c.input), { conversationId: c.conversation_id, confirmed: true, requestId: `confirm:${id}` });
+  // Keep the data-domain AI policy on the confirmation path: a confirmation born in an Ask AI
+  // conversation is still an assistant action.
+  const r = await executeTool(user, c.tool, json(c.input), { conversationId: c.conversation_id, confirmed: true, requestId: `confirm:${id}`, source: c.conversation_id ? 'assistant' : 'ui' });
   if (r.status !== 'ok') run("UPDATE confirmations SET status='failed' WHERE id=?", id);
   return { ...r, confirmation: c };
 }

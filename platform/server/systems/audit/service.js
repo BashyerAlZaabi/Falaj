@@ -57,8 +57,9 @@ export function viewLink(user, id) {
     ok = !!x && (isIA(user) || (isStaff(user) && x.assigned_to === user.id) || (isExtAuditor(user) && x.requester_id === user.id && x.status === 'released'));
   } else if (l.kind === 'action') ok = canSeeFinding(user, l.ref_id);
   if (!ok) throw new NotFound();
-  const d = one('SELECT title,content_html,updated_at FROM documents WHERE id=? AND deleted_at IS NULL', l.document_id);
   logAccess(user, KEY, 'link', id, 'view');
+  if (l.kind === 'ext' && isExtAuditor(user) && l.released_html != null) return { id: l.id, title: l.released_title || l.title, content_html: l.released_html, updated_at: null, missing: false };
+  const d = one('SELECT title,content_html,updated_at FROM documents WHERE id=? AND deleted_at IS NULL', l.document_id);
   return { id: l.id, title: d?.title || l.title, content_html: d?.content_html || '', updated_at: d?.updated_at || null, missing: !d };
 }
 
@@ -613,8 +614,8 @@ function decorateFinding(f, user, { full = false } = {}) {
       issue_blocked_sod: isHead(user) && f.status === 'draft' && f.raised_by === user.id,
       respond: auditee && f.status === 'issued',
       progress: owner && f.status === 'in_follow_up' && ['open', 'in_progress'].includes(a?.status),
-      close: isHead(user) && f.status === 'implemented' && f.raised_by !== user.id,
-      close_blocked_sod: isHead(user) && f.status === 'implemented' && f.raised_by === user.id,
+      close: isHead(user) && f.status === 'implemented' && ![f.raised_by, f.response_by, a?.owner_id].includes(user.id),
+      close_blocked_sod: isHead(user) && f.status === 'implemented' && [f.raised_by, f.response_by, a?.owner_id].includes(user.id),
       note: ia && f.status !== 'closed',
     };
     out.viewer = { ia, head: isHead(user), auditee, owner, committee: isCommittee(user) };
@@ -754,9 +755,12 @@ export function closeFinding(user, id, b) {
   const to = b.decision === 'close' ? 'closed' : 'in_follow_up';
   transition(f.status, to, { implemented: ['closed', 'in_follow_up'] }, FINDING_AR);
   if (f.raised_by === user.id) throw new Forbidden('فصل المهام: لا تعتمد إغلاق ملاحظة أثبتّها بنفسك');
+  const a = actionOf(id);
+  // The validator must be independent of the remediation as well: not the manager who
+  // answered the finding nor the owner who reported the action plan as implemented.
+  if (a?.owner_id === user.id || f.response_by === user.id) throw new Forbidden('فصل المهام: لا تتحقق من تنفيذ خطة معالجة أنت مسؤول عنها أو قدّمت رد الإدارة عليها');
   const note = clean(b.note, 3000);
   if (to === 'in_follow_up' && note.length < 5) throw new BadRequest('اذكر سبب إعادة الخطة للتنفيذ');
-  const a = actionOf(id);
   tx(() => {
     if (to === 'closed') {
       run('UPDATE audit_findings SET status=?, closed_by=?, closed_at=?, updated_at=? WHERE id=?', 'closed', user.id, now(), now(), id);
@@ -815,7 +819,10 @@ function decorateExt(x, user) {
 export function listExt(user, { status } = {}) {
   const s = extScope(user);
   let sql = `SELECT x.* FROM audit_ext_requests x WHERE ${s.sql}`; const params = [...s.params];
-  if (status) { sql += ' AND x.status=?'; params.push(status); }
+  // The external auditor only knows submitted / in progress / released: internal routing
+  // states (assigned vs prepared) must not be inferable through the filter.
+  if (status && isExtAuditor(user) && ['assigned', 'prepared'].includes(status)) sql += " AND x.status IN ('assigned','prepared')";
+  else if (status) { sql += ' AND x.status=?'; params.push(status); }
   sql += " ORDER BY CASE x.status WHEN 'submitted' THEN 0 WHEN 'prepared' THEN 1 WHEN 'assigned' THEN 2 ELSE 3 END, x.created_at DESC";
   return all(sql, ...params).map((x) => decorateExt(x, user));
 }
@@ -889,7 +896,15 @@ export function releaseExt(user, id, b) {
   requireConfirm(b, 'الإفراج عن الرد يتيحه للمدقق الخارجي ويتطلب تأكيداً صريحاً');
   const text = clean(b.released_text ?? x.response_text, 6000);
   if (text.length < 5) throw new BadRequest('نص الرد المُفرج عنه مطلوب');
-  run('UPDATE audit_ext_requests SET status=?, released_text=?, released_by=?, released_at=?, updated_at=? WHERE id=?', 'released', text, user.id, now(), now(), id);
+  tx(() => {
+    run('UPDATE audit_ext_requests SET status=?, released_text=?, released_by=?, released_at=?, updated_at=? WHERE id=?', 'released', text, user.id, now(), now(), id);
+    // Freeze what was reviewed: the external auditor reads this snapshot, never the live
+    // document (which its internal owner could keep editing after the release).
+    for (const l of all("SELECT id, document_id FROM audit_links WHERE kind='ext' AND ref_id=?", id)) {
+      const d = one('SELECT title, content_html FROM documents WHERE id=? AND deleted_at IS NULL', l.document_id);
+      run('UPDATE audit_links SET released_html=?, released_title=? WHERE id=?', d?.content_html ?? '', d?.title ?? null, l.id);
+    }
+  });
   audit(user, 'audit.ext.release', id, { docs: linksOf('ext', id).length });
   logAccess(user, KEY, 'ext', id, 'release');
   alert(x.requester_id, { level: 'info', title: 'تم الرد على طلبك', body: x.title, system: KEY, id });

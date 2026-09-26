@@ -13,7 +13,7 @@
 import * as K from '../kit.js';
 import * as W from '../../services/work.js';
 import * as D from '../../services/documents.js';
-import { canAssignTo, documentAccess } from '../../policy.js';
+import { canAssignTo, canViewProject, documentAccess } from '../../policy.js';
 import { getUser } from '../../identity.js';
 import { complete } from '../../ai/services.js';
 
@@ -210,7 +210,8 @@ export function detail(user, m) {
   const hist = all('SELECT h.*, u.name_ar, u.name_en FROM meetings_history h LEFT JOIN users u ON u.id=h.user_id WHERE h.meeting_id=? ORDER BY h.at DESC LIMIT 40', m.id)
     .map((x) => ({ action: x.action, at: x.at, detail: K.json(x.detail), who: x.user_id ? { id: x.user_id, name_ar: x.name_ar, name_en: x.name_en } : null }));
   const revs = reviewers(m);
-  const project = m.project_id ? one('SELECT id,name FROM projects WHERE id=? AND deleted_at IS NULL', m.project_id) : null;
+  // The linked project is named only to invitees who may see that project themselves.
+  const project = m.project_id && canViewProject(user, m.project_id) ? one('SELECT id,name FROM projects WHERE id=? AND deleted_at IS NULL', m.project_id) : null;
   const cm = committeeBrief(m.committee_id);
   return {
     id: m.id, title: m.title, description: m.description || '', type: m.type,

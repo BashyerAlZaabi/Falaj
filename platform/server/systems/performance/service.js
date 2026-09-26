@@ -56,22 +56,27 @@ function requirePhase(c, phases, msg) {
 
 // ---------------- scope & relation ----------------
 // SQL scope of reviews a user may see at all (lists, counts, detail, tools).
+// The department-manager path covers the department's employees only: a fellow
+// manager (or the president) of the same department is a peer, never an assessor —
+// their review belongs to their own line manager (review.manager_id).
+const PEER_SQL = (a) => `NOT EXISTS (SELECT 1 FROM users pe WHERE pe.id=${a}.employee_id AND pe.role IN ('manager','president'))`;
 export function scopeSql(user, a = 'r') {
   if (!isStaff(user)) return { sql: '0', params: [] };
   if (isHR(user)) return { sql: '1', params: [] };
   return {
-    sql: `(${a}.employee_id=? OR (${a}.employee_id<>? AND (${a}.manager_id=? OR (?='manager' AND ${a}.department_id=?))))`,
+    sql: `(${a}.employee_id=? OR (${a}.employee_id<>? AND (${a}.manager_id=? OR (?='manager' AND ${a}.department_id=? AND ${PEER_SQL(a)}))))`,
     params: [user.id, user.id, user.id, user.role, user.department_id],
   };
 }
-// Reviews this user assesses (line manager, or manager of the employee's department; never themselves).
+// Reviews this user assesses (line manager, or manager of the employee's department; never themselves or a peer manager).
 export function teamSql(user, a = 'r') {
   if (!isStaff(user)) return { sql: '0', params: [] };
-  return { sql: `(${a}.employee_id<>? AND (${a}.manager_id=? OR (?='manager' AND ${a}.department_id=?)))`, params: [user.id, user.id, user.role, user.department_id] };
+  return { sql: `(${a}.employee_id<>? AND (${a}.manager_id=? OR (?='manager' AND ${a}.department_id=? AND ${PEER_SQL(a)})))`, params: [user.id, user.id, user.role, user.department_id] };
 }
+const isPeerManager = (employeeId) => !!one("SELECT 1 FROM users WHERE id=? AND role IN ('manager','president')", employeeId);
 export function relation(user, r) {
   const own = r.employee_id === user.id;
-  const mgr = !own && isStaff(user) && (r.manager_id === user.id || (user.role === 'manager' && user.department_id === r.department_id));
+  const mgr = !own && isStaff(user) && (r.manager_id === user.id || (user.role === 'manager' && user.department_id === r.department_id && !isPeerManager(r.employee_id)));
   const hr = !own && isHR(user);
   return { own, mgr, hr };
 }
@@ -82,11 +87,12 @@ export function reviewRow(user, id) {
   return r;
 }
 // Everyone who may see this review (realtime refresh targets).
+const deptManagersFor = (r) => (isPeerManager(r.employee_id) ? [] : all("SELECT id FROM users WHERE role='manager' AND department_id=? AND active=1 AND user_type='staff'", r.department_id).map((x) => x.id));
 export function viewersOf(r) {
-  const deptMgrs = all("SELECT id FROM users WHERE role='manager' AND department_id=? AND active=1 AND user_type='staff'", r.department_id).map((x) => x.id);
+  const deptMgrs = deptManagersFor(r);
   return [...new Set([r.employee_id, r.manager_id, ...deptMgrs, ...usersWithCap(M.HR_CAP)].filter(Boolean))];
 }
-const managersOf = (r) => [...new Set([r.manager_id, ...all("SELECT id FROM users WHERE role='manager' AND department_id=? AND active=1 AND user_type='staff'", r.department_id).map((x) => x.id)].filter((u) => u && u !== r.employee_id))];
+const managersOf = (r) => [...new Set([r.manager_id, ...deptManagersFor(r)].filter((u) => u && u !== r.employee_id))];
 // Access log for the confidential domain. Views are de-duplicated for 10 minutes
 // (live refreshes re-read the record); every change is always logged.
 export function logView(user, reviewId, action = 'view') {

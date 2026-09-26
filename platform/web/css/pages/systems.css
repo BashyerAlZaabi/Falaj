@@ -22,6 +22,12 @@
 .sys-tabs a.on .icon { color: var(--emph); }
 .sys-tabs .count { min-width: 18px; padding: 1px 6px; border-radius: var(--radius-pill); background: var(--emph-tint); color: var(--emph-text); font: 600 11px/16px var(--font-text); text-align: center; }
 .sys-tabs a:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+/* phones: wrap into a multi-row segmented control so every tab — and the active one — stays visible
+   (a scrolling strip clipped the selected tab off the inline-end edge with no affordance) */
+@media (max-width: 640px) {
+  .sys-tabs { flex-wrap: wrap; width: auto; overflow: visible; gap: 3px; }
+  .sys-tabs a { flex: 1 1 auto; justify-content: center; padding: 0 12px; min-height: 38px; }
+}
 
 /* ---------- layout ---------- */
 .sys-grid { display: grid; gap: var(--space-4); grid-template-columns: 1fr; margin-bottom: var(--space-4); }
@@ -38,6 +44,10 @@
 .stat-tile.clickable { cursor: pointer; }
 .stat-tile.clickable:hover { transform: translateY(-2px); box-shadow: var(--shadow-card-hover); text-decoration: none; }
 .stat-tile:focus-visible { outline: none; box-shadow: var(--focus-ring), var(--shadow-card); }
+/* align values across a row even when one label wraps to two lines (label / value / hint share row tracks) */
+@supports (grid-template-rows: subgrid) {
+  .stat-row > .stat-tile { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 6px; align-content: start; }
+}
 .stat-tile .st-top { display: flex; align-items: center; gap: var(--space-2); color: var(--text-secondary); font: var(--type-subheadline); }
 .stat-tile .st-ic { width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center; background: var(--accent-tint); color: var(--accent-text); flex: none; }
 .stat-tile .st-ic .icon { width: 15px; height: 15px; }

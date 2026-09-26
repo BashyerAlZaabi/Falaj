@@ -293,3 +293,16 @@ test('cycle administration: officer only, reminders rate-limited, closing requir
   const n = await yousef.post(`${API}/cycles`, { year: new Date().getUTCFullYear() + 1, due_on: `${new Date().getUTCFullYear() + 1}-03-31` });
   S(n, 200); assert.equal(n.data.status, 'open');
 });
+
+// ---------------- adversarial review (regressions) ----------------
+test('procurement contract: declared conflicts survive a new cycle and a return for clarification', async () => {
+  // the previous test closed the seeded cycle and opened next year's: nobody has declared in it yet
+  const m = await contract();
+  assert.ok(m.declaredConflicts('u_ahmed').some((x) => x.provider_id === 'ext_v_horizon'), 'last cycle’s mitigation still applies until a new declaration is filed');
+  const yousef = await as('yousef'); const salem = await as('salem');
+  const d = (await salem.put(`${API}/declarations/current`, { no_conflict: false, interests: [{ kind: 'relative', party_name: 'مؤسسة الواحة للتوريدات', provider_id: 'ext_v_oasis', details: 'قريب يعمل في المبيعات' }] })).data;
+  S(await salem.post(`${API}/declarations/${d.id}/submit`, { attest: true }), 200);
+  assert.ok(m.declaredConflicts('u_salem').some((x) => x.provider_id === 'ext_v_oasis'));
+  S(await yousef.post(`${API}/declarations/${d.id}/return`, { note: 'يرجى توضيح طبيعة العلاقة بالمؤسسة.' }), 200);
+  assert.ok(m.declaredConflicts('u_salem').some((x) => x.provider_id === 'ext_v_oasis'), 'a declaration returned for clarification still discloses the conflict');
+});

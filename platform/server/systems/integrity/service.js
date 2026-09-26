@@ -537,17 +537,24 @@ export function reports(user) {
 // Provider-related interests a person has declared that are active (submitted and
 // not superseded) or cleared with mitigation. Minimal fields — never details.
 export function declaredConflicts(userId) {
-  const c = currentCycle();
   const out = [];
-  if (c) {
-    for (const r of all(`SELECT i.id, i.party_name, i.provider_id, i.kind, d.status FROM integrity_interests i JOIN integrity_declarations d ON d.id=i.declaration_id
-      WHERE d.user_id=? AND d.cycle_id=? AND ${ACTIVE_CASE('d')} AND (i.kind='provider' OR i.provider_id IS NOT NULL) ORDER BY i.sort`, userId, c.id)) out.push({ id: r.id, party_name: r.party_name, provider_id: r.provider_id || null, kind: r.kind, status: statusOf(r.status) });
+  // The person's latest annual declaration that has ever been submitted — across cycles,
+  // so opening a new cycle does not wipe last year's declared conflicts before the new
+  // declaration is filed, and a declaration returned for clarification (back to draft)
+  // still counts: the conflict has been disclosed.
+  const d = one(`SELECT d.id, d.status, d.outcome FROM integrity_declarations d JOIN integrity_cycles c ON c.id=d.cycle_id
+    WHERE d.user_id=? AND COALESCE(d.first_submitted_at, d.submitted_at) IS NOT NULL ORDER BY c.year DESC LIMIT 1`, userId);
+  if (d && (ACTIVE.includes(d.status) || (d.status === 'closed' && d.outcome === 'mitigation') || d.status === 'draft')) {
+    for (const r of all("SELECT i.id, i.party_name, i.provider_id, i.kind FROM integrity_interests i WHERE i.declaration_id=? AND (i.kind='provider' OR i.provider_id IS NOT NULL) ORDER BY i.sort", d.id)) {
+      out.push({ id: r.id, party_name: r.party_name, provider_id: r.provider_id || null, kind: r.kind, status: d.status === 'draft' ? 'pending_review' : statusOf(d.status) });
+    }
   }
   for (const r of all(`SELECT x.id, x.related_party, x.provider_id, x.status FROM integrity_disclosures x WHERE x.user_id=? AND x.provider_id IS NOT NULL AND ${ACTIVE_CASE('x')} ORDER BY x.submitted_at`, userId)) {
     out.push({ id: r.id, party_name: r.related_party, provider_id: r.provider_id, kind: 'provider', status: statusOf(r.status) });
   }
   return out;
 }
+const ACTIVE = ['submitted', 'under_review', 'mitigation'];
 // active = submitted and awaiting review; or decided with mitigation (still in force when closed)
 const ACTIVE_CASE = (a) => `(${a}.status IN ('submitted','under_review','mitigation') OR (${a}.status='closed' AND ${a}.outcome='mitigation'))`;
 const statusOf = (s) => (s === 'submitted' || s === 'under_review' ? 'pending_review' : 'mitigation');

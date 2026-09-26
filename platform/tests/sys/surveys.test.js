@@ -2,6 +2,7 @@
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
 import { as, done } from './_stack.js';
+import { segmentByDepartment, computeResults, MIN_GROUP } from '../../server/systems/surveys/analysis.js';
 
 after(done);
 let survey;
@@ -58,4 +59,26 @@ test('external identities cannot reach surveys; individual responses are AI-lock
   const domains = (await (await as('mariam')).get('/api/admin/domains')).data;
   const d = domains.find((x) => x.key === 'surveys.responses');
   assert.equal(d.ai_policy, 'off'); assert.equal(d.ai_locked, 1);
+});
+
+test('segments: an optional question never lets a small group be derived as overall minus the published groups', () => {
+  // Department A: 6 responses, all answer q1 (3). Department B: 5 responses, only 4 answer q1 (5).
+  const q1 = { id: 'q1', type: 'rating', text: 'optional rating', required: 0 };
+  const q2 = { id: 'q2', type: 'rating', text: 'required rating', required: 1 };
+  const responses = [...Array(6)].map((_, i) => ({ id: `a${i}`, dept_id: 'A' })).concat([...Array(5)].map((_, i) => ({ id: `b${i}`, dept_id: 'B' })));
+  const answers = [];
+  for (const r of responses) {
+    answers.push({ response_id: r.id, question_id: 'q2', num: r.dept_id === 'A' ? 4 : 2 });
+    if (r.dept_id === 'A') answers.push({ response_id: r.id, question_id: 'q1', num: 3 });
+    else if (r.id !== 'b4') answers.push({ response_id: r.id, question_id: 'q1', num: 5 });
+  }
+  const seg = segmentByDepartment({ questions: [q1, q2], responses, answers, departments: [{ id: 'A', name_ar: 'أ' }, { id: 'B', name_ar: 'ب' }] });
+  const A = seg.rows.find((r) => r.id === 'A'); const B = seg.rows.find((r) => r.id === 'B');
+  assert.equal(B.metrics.q1, null, 'B has only 4 answers to q1');
+  // overall (10 answers) − A (6 answers) would reveal the 4 answers of B
+  assert.ok(!(seg.overall.q1 != null && A.metrics.q1 != null), `q1 must not be published for A alongside the overall (A=${A.metrics.q1}, overall=${seg.overall.q1})`);
+  // the complete question is unaffected
+  assert.equal(A.metrics.q2, 4); assert.equal(B.metrics.q2, 2);
+  const res = computeResults({ questions: [q1, q2], sections: [], responses, answers, departments: [{ id: 'A' }, { id: 'B' }] });
+  assert.equal(res.hidden, false); assert.ok(MIN_GROUP === 5);
 });

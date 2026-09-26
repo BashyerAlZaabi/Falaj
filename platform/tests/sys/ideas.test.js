@@ -337,3 +337,23 @@ test('MCP: ideas tools follow the data-domain AI policy set by the admin (off �
   assert.equal(r3.result.isError, false);
   assert.equal(r3.result.structuredContent.result.status, 'draft');
 });
+
+test('committee members never moderate comments on their own idea; new co-authors lose any vote they cast', async () => {
+  const latifa = await as('latifa'); const mariam = await as('mariam'); const fatima = await as('fatima'); const sara = await as('sara');
+  const idea = ok(await latifa.post(`${A}/ideas`, { title: 'لوحة متابعة موحدة للمبادرات', problem: LONG_P, solution: LONG_S, submit: true }));
+  const cm = ok(await sara.post(`${A}/ideas/${idea.id}/comments`, { body: 'أرى أن الكلفة أعلى من الأثر المتوقع' }));
+  const own = ok(await latifa.get(`${A}/ideas/${idea.id}`));
+  assert.equal(own.comments.find((c) => c.id === cm.id).can_hide, false, 'no moderation button on one\'s own idea');
+  assert.equal((await latifa.post(`${A}/ideas/${idea.id}/comments/${cm.id}/hide`, { reason: 'خارج الموضوع', confirm: true })).status, 403, 'the author cannot silence critics');
+  // another member still can (not needed here) — the comment stays visible
+  assert.equal(ok(await fatima.get(`${A}/ideas/${idea.id}`)).comments.find((c) => c.id === cm.id).body, 'أرى أن الكلفة أعلى من الأثر المتوقع');
+  // needs_info → editable by the author and still open to votes
+  ok(await mariam.post(`${A}/ideas/${idea.id}/transition`, { to: 'screening' }));
+  ok(await mariam.post(`${A}/ideas/${idea.id}/transition`, { to: 'needs_info', note: 'نرجو تقدير الكلفة وعدد المستخدمين' }));
+  const v = ok(await fatima.post(`${A}/ideas/${idea.id}/vote`, { on: true }));
+  assert.equal(v.votes, 1);
+  const upd = ok(await latifa.put(`${A}/ideas/${idea.id}`, { coauthor_ids: ['u_fatima'] }));
+  assert.equal(upd.votes, 0, 'the co-author\'s earlier vote no longer counts');
+  const fv = ok(await fatima.get(`${A}/ideas/${idea.id}`));
+  assert.equal(fv.my_vote, false); assert.equal(fv.can.vote, false);
+});

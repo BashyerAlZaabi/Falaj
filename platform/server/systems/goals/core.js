@@ -136,6 +136,7 @@ function decorate(rows, { viewer, ownerPool, objectives = objectivesMap() } = {}
   }
   const byParent = new Map();
   for (const g of pool) if (g.parent_id) { if (!byParent.has(g.parent_id)) byParent.set(g.parent_id, []); byParent.get(g.parent_id).push(g); }
+  const canSee = (c) => !viewer || c.owner_id === viewer.id || c.visibility === 'manager';
   const progress = new Map();
   const prog = (g) => {
     if (progress.has(g.id)) return progress.get(g.id);
@@ -143,17 +144,19 @@ function decorate(rows, { viewer, ownerPool, objectives = objectivesMap() } = {}
     if (g.status === 'achieved') p = 100;
     else if (g.measure === 'numeric') p = g.target_value > 0 ? Math.max(0, Math.min(100, Math.round((g.current_value / g.target_value) * 100))) : 0;
     else if (g.measure === 'checklist') { const its = items.get(g.id) || []; p = its.length ? Math.round((its.filter((i) => i.done_at).length / its.length) * 100) : 0; }
-    else if (g.measure === 'rollup') { const kids = (byParent.get(g.id) || []).filter((c) => c.status !== 'cancelled'); p = kids.length ? Math.round(kids.reduce((s, c) => s + prog(c), 0) / kids.length) : 0; }
+    // A viewer other than the owner only ever sees SHARED sub-goals, so a roll-up
+    // never reveals (even as an aggregate) the progress of private sub-goals.
+    else if (g.measure === 'rollup') { const kids = (byParent.get(g.id) || []).filter((c) => c.status !== 'cancelled' && canSee(c)); p = kids.length ? Math.round(kids.reduce((s, c) => s + prog(c), 0) / kids.length) : 0; }
     progress.set(g.id, p);
     return p;
   };
   const visibleIds = new Set(rows.map((g) => g.id));
   return rows.map((g) => {
-    const kids = (byParent.get(g.id) || []).filter((c) => !viewer || c.owner_id === viewer.id || c.visibility === 'manager');
+    const kids = (byParent.get(g.id) || []).filter(canSee);
     const o = g.objective_id ? objectives.get(g.objective_id) : null;
     const its = items.get(g.id) || [];
     const parent = g.parent_id ? pool.find((p) => p.id === g.parent_id) : null;
-    const parentVisible = parent && (!viewer || parent.owner_id === viewer.id || parent.visibility === 'manager');
+    const parentVisible = parent && canSee(parent);
     return {
       id: g.id, owner_id: g.owner_id, title: g.title, description: g.description, period_type: g.period_type, period_start: g.period_start, period_end: g.period_end,
       period_label: periodLabel(g.period_type, g.period_start, g.period_end), measure: g.measure, target_value: g.target_value, current_value: g.current_value, unit: g.unit,
@@ -364,6 +367,7 @@ export function createGoal(user, input) {
   const today = localToday();
   const p = periodFor(type, input.date || today);
   if (p.end < today) throw new BadRequest('لا يمكن إضافة هدف لفترة انتهت');
+  if (p.start > addDays(today, 366)) throw new BadRequest('لا يمكن التخطيط لفترة تتجاوز سنة من اليوم');
   const measure = input.measure || 'binary';
   if (!MEASURES.includes(measure)) throw new BadRequest('طريقة القياس غير صالحة');
   let target = null;
@@ -594,7 +598,7 @@ export function goalsForReviewData(userId, year, { includePrivate = false } = {}
   const y = String(year);
   const rows = all(`SELECT * FROM goals_goals WHERE owner_id=? AND period_type IN ('yearly','quarterly') AND substr(period_start,1,4)=? ${includePrivate ? '' : "AND visibility='manager'"} ORDER BY period_type DESC, period_start`, userId, y);
   const objs = objectivesMap();
-  return decorate(rows, { ownerPool: ownPool(userId), objectives: objs }).map((g) => ({ id: g.id, title: g.title, period_type: g.period_type, progress: g.progress, status: g.status, objective_code: g.objective?.code || null }));
+  return decorate(rows, { ownerPool: ownPool(userId), objectives: objs, viewer: includePrivate ? null : { id: null } }).map((g) => ({ id: g.id, title: g.title, period_type: g.period_type, progress: g.progress, status: g.status, objective_code: g.objective?.code || null }));
 }
 
 // ---------------------------------------------------------------- excellence points (derived; anti-farming)
@@ -612,7 +616,7 @@ export function gameEvents(userId) {
   const used = new Map();
   for (const g of all("SELECT id, title, period_type, period_start, period_end, created_at, achieved_at FROM goals_goals WHERE owner_id=? AND status='achieved' AND achieved_at IS NOT NULL ORDER BY achieved_at", userId)) {
     const day = localDay(g.achieved_at);
-    if (day > g.period_end || g.created_at > g.achieved_at) continue; // achieved within its own period, after it was set
+    if (day > g.period_end || day < g.period_start || g.created_at > g.achieved_at) continue; // achieved within its own period (never before it starts), after it was set
     if (g.period_type !== 'daily' && localDay(g.created_at) >= day) continue; // planned at least a day ahead: no instant create-and-complete
     const bucket = `${g.period_type}:${g.period_type === 'daily' ? day : g.period_start}`;
     const n = used.get(bucket) || 0;

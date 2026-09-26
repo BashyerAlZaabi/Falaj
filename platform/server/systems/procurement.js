@@ -115,11 +115,11 @@ function routes(r) {
   }));
   r.put('/rfqs/:id/scores', wrap(async (req) => { await Q.score(req.user, req.params.id, check(SCORE, req.body)); return Q.getRfq(req.user, req.params.id); }));
   r.post('/rfqs/:id/analysis', wrap(async (req) => ({ ...(await runAnalysis(req.user, req.params.id)), rfq: await Q.getRfq(req.user, req.params.id) })));
-  r.post('/rfqs/:id/finalize', wrap((req) => { Q.finalize(req.user, req.params.id); return Q.getRfq(req.user, req.params.id); }));
-  r.post('/rfqs/:id/recommend', wrap((req) => { Q.recommend(req.user, req.params.id, check(RECOMMEND, req.body)); return Q.getRfq(req.user, req.params.id); }));
-  r.post('/rfqs/:id/vote', wrap((req) => { Q.vote(req.user, req.params.id, check(VOTE, req.body)); return Q.getRfq(req.user, req.params.id); }));
-  r.post('/rfqs/:id/legal', wrap((req) => { Q.legalReview(req.user, req.params.id, check(LEGAL, req.body)); return Q.getRfq(req.user, req.params.id); }));
-  r.post('/rfqs/:id/award', wrap((req) => ({ ...Q.award(req.user, req.params.id), rfq: null })));
+  r.post('/rfqs/:id/finalize', wrap(async (req) => { await Q.finalize(req.user, req.params.id); return Q.getRfq(req.user, req.params.id); }));
+  r.post('/rfqs/:id/recommend', wrap(async (req) => { const b = check(RECOMMEND, req.body); await Q.recommend(req.user, req.params.id, b); return Q.getRfq(req.user, req.params.id); }));
+  r.post('/rfqs/:id/vote', wrap(async (req) => { const b = check(VOTE, req.body); await Q.vote(req.user, req.params.id, b); return Q.getRfq(req.user, req.params.id); }));
+  r.post('/rfqs/:id/legal', wrap(async (req) => { const b = check(LEGAL, req.body); await Q.legalReview(req.user, req.params.id, b); return Q.getRfq(req.user, req.params.id); }));
+  r.post('/rfqs/:id/award', wrap(async (req) => ({ ...(await Q.award(req.user, req.params.id)), rfq: null })));
   // provider portal (external identities; own invitations and own bid only)
   r.get('/portal/invitations', wrap((req) => Q.portalInvitations(req.user)));
   r.get('/portal/rfqs/:id', wrap((req) => Q.portalInvitation(req.user, req.params.id)));

@@ -4,7 +4,9 @@
 // confirmations, access log, opt-in Ask AI, workspace and anti-farming points.
 import test, { after } from 'node:test';
 import assert from 'node:assert/strict';
-import { as, done } from './_stack.js';
+import { DatabaseSync } from 'node:sqlite';
+import path from 'node:path';
+import { as, done, stack } from './_stack.js';
 
 after(done);
 const G = '/api/sys/goals';
@@ -187,4 +189,32 @@ test('home workspace and excellence points (derived, capped, not gameable)', asy
   const after = (await sara.get('/api/game/me')).data;
   assert.equal(countWeekly(after), countWeekly(before));
   assert.ok(!after.recent.some((e) => e.ref === 'هدف لحظي للتجربة'));
+});
+
+test('a shared roll-up never reveals the progress of private sub-goals to the manager', async () => {
+  const sara = await as('sara');
+  const parent = (await sara.post(`${G}/goals`, { title: 'رفع جودة تحليل المتطلبات', period_type: 'yearly', measure: 'rollup', visibility: 'manager' })).data;
+  const child = (await sara.post(`${G}/goals`, { title: 'هدف فرعي خاص جداً', period_type: 'weekly', parent_id: parent.id, visibility: 'private' })).data;
+  assert.equal((await sara.post(`${G}/goals/${child.id}/checkin`, { done: true })).status, 200);
+  assert.equal((await sara.get(`${G}/goals/${parent.id}`)).data.progress, 100, 'the owner sees the full roll-up');
+  const mariam = await as('mariam');
+  const seen = (await mariam.get(`${G}/goals/${parent.id}`)).data;
+  assert.equal(seen.progress, 0, 'the manager’s roll-up only counts shared sub-goals');
+  assert.deepEqual(seen.children, []);
+  const team = (await mariam.get(`${G}/team/u_sara`)).data.goals.find((g) => g.id === parent.id);
+  assert.equal(team.progress, 0);
+});
+
+test('goals planned for a future period earn no points when "achieved" before the period starts', async () => {
+  const sara = await as('sara');
+  const future = new Date(Date.now() + 4 * 3600e3 + 21 * 864e5).toISOString().slice(0, 10);
+  assert.equal((await sara.post(`${G}/goals`, { title: 'هدف بعيد جداً', period_type: 'yearly', date: '2099-06-01' })).status, 400, 'no planning decades ahead');
+  const g = (await sara.post(`${G}/goals`, { title: 'هدف أسبوع قادم للتجربة', period_type: 'weekly', date: future })).data;
+  assert.ok(g.period_start > localToday());
+  // planned "ahead" (backdated creation) so only the period rule can stop it
+  const db = new DatabaseSync(path.join((await stack()).dataDir, 'portal.db'));
+  try { db.prepare('UPDATE goals_goals SET created_at=? WHERE id=?').run(new Date(Date.now() - 3 * 864e5).toISOString(), g.id); } finally { db.close(); }
+  assert.equal((await sara.post(`${G}/goals/${g.id}/checkin`, { done: true })).status, 200);
+  const game = (await sara.get('/api/game/me')).data;
+  assert.ok(!game.recent.some((e) => e.id === `goals:${g.id}`), 'no points for a period that has not started');
 });

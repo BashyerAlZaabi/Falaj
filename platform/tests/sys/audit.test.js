@@ -338,3 +338,39 @@ test('closure validation and excellence points derived from validated records', 
   assert.ok(majed.recent.some((e) => e.kind === 'audit_info_on_time') || majed.xp >= 5);
   assert.ok(!JSON.stringify(majed.recent).includes('تجزئة')); // no audit details in game history
 });
+
+// ---------------- adversarial review (regressions) ----------------
+test('closure is validated independently of the remediation: the head cannot close a finding she answered and implemented', async () => {
+  const saeed = await as('saeed'); const aisha = await as('aisha');
+  // an engagement on Internal Audit's own office: the head is also the auditee manager
+  const e = (await saeed.post(A('/engagements'), { title: 'تدقيق إجراءات أرشفة ملفات التدقيق', department_id: 'dept_ia', quarter: 4 })).data;
+  assert.equal((await saeed.post(A(`/engagements/${e.id}/phase`), { to: 'planning' })).status, 200);
+  assert.equal((await saeed.post(A(`/engagements/${e.id}/phase`), { to: 'fieldwork' })).status, 200);
+  const f = (await saeed.post(A(`/engagements/${e.id}/findings`), { title: 'ملفات تدقيق دون أرشفة إلكترونية', condition: 'ثلاثة ملفات غير مؤرشفة.', risk: 'low', recommendation: 'أرشفة الملفات خلال أسبوع من الإغلاق.' })).data;
+  assert.equal((await aisha.post(A(`/findings/${f.id}/issue`), { confirm: true })).status, 200);
+  assert.equal((await aisha.post(A(`/findings/${f.id}/respond`), { position: 'agree', response_text: 'نتفق مع الملاحظة', action_description: 'أرشفة جميع الملفات المفتوحة', owner_id: 'u_aisha', due_date: day(10) })).status, 200);
+  assert.equal((await aisha.post(A(`/findings/${f.id}/progress`), { status: 'implemented', note: 'أُرشفت جميع الملفات في النظام' })).status, 200);
+  const view = (await aisha.get(A(`/findings/${f.id}`))).data;
+  assert.equal(view.can.close, false);
+  const r = await aisha.post(A(`/findings/${f.id}/close`), { decision: 'close', note: 'تم' });
+  assert.equal(r.status, 403, 'the action owner / responder cannot validate her own remediation');
+  assert.match(r.data.message, /فصل المهام/);
+  assert.equal((await aisha.get(A(`/findings/${f.id}`))).data.status, 'implemented');
+});
+
+test('external auditor: released documents are frozen at release; the status filter hides internal routing', async () => {
+  const rashid = await as('rashid'); const aisha = await as('aisha'); const majed = await as('majed');
+  const ids = async (status) => (await rashid.get(A(`/ext?status=${status}`))).data.map((x) => x.id).sort();
+  assert.deepEqual(await ids('prepared'), await ids('assigned'), 'assigned vs prepared is internal');
+  const x = (await rashid.post(A('/ext'), { title: 'تزويدنا بسياسة الاعتمادات المالية', due_date: day(7) })).data;
+  await aisha.post(A(`/ext/${x.id}/assign`), { to_user_id: 'u_majed' });
+  const docId = (await majed.tool('create_document', { title: 'سياسة الاعتمادات', kind: 'note', content_html: '<p>النسخة المعتمدة</p>' })).data.result.id;
+  const prepared = (await majed.post(A(`/ext/${x.id}/prepare`), { response_text: 'مرفق نص السياسة المعتمدة', doc_ids: [docId] })).data;
+  assert.equal((await aisha.post(A(`/ext/${x.id}/release`), { confirm: true })).status, 200);
+  // the owner keeps editing the document after the release
+  const cur = (await majed.get(`/api/documents/${docId}`)).data;
+  assert.equal((await majed.put(`/api/documents/${docId}`, { content_html: '<p>مسودة داخلية لم تُراجع</p>', base_version: cur.version })).status, 200);
+  const seen = (await rashid.get(A(`/links/${prepared.docs[0].id}`))).data;
+  assert.match(seen.content_html, /النسخة المعتمدة/);
+  assert.ok(!seen.content_html.includes('مسودة داخلية'), 'unreviewed edits never reach the external auditor');
+});

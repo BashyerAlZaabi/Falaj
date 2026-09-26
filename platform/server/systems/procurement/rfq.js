@@ -16,6 +16,7 @@ import { SYS, CATEGORIES, RFQ_STATUS, RFQ_FLOW, labelsAr, nextNumber, isOfficer,
 import { visibleRequest, requestRow, itemsOf, event, markOfficer, toSourcing, backToProcurement, issuePo, prRecipients } from './requests.js';
 import { providerEligibility, providerBrief, providerUserIds, eligibleProviders, shortlist as providerShortlist } from '../providers.js';
 import { providerOfUser } from '../providers/service.js';
+import { declaredConflicts, conflictWith, userConflictWith } from './conflicts.js';
 
 const RFQ_AR = labelsAr(RFQ_STATUS);
 export const OPENED = ['opened', 'evaluated', 'recommended', 'committee_approved', 'legal_approved', 'awarded'];
@@ -27,25 +28,12 @@ export const isClosed = (q) => !!q.closes_at && Date.parse(q.closes_at) <= nowMs
 export const displayStatus = (q) => (q.status === 'open' && isClosed(q) ? 'closed' : q.status);
 
 // ---------------- conflicts of interest (integrity system, optional) ----------------
-let integrity;
-async function declaredConflicts(userId) {
-  if (integrity === undefined) { try { integrity = await import('../integrity.js'); } catch { integrity = null; } }
-  const fn = integrity?.declaredConflicts;
-  if (typeof fn !== 'function') return [];
-  try { const out = await fn(userId); return Array.isArray(out) ? out : []; } catch { return []; }
-}
-const INACTIVE = new Set(['withdrawn', 'rejected', 'cancelled', 'draft', 'closed_no_conflict']);
-const normName = (s) => String(s || '').toLowerCase().replace(/[ً-ْـ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/\s+/g, ' ').trim();
-function conflictWith(conflicts, providers) {
-  for (const c of conflicts) {
-    if (INACTIVE.has(String(c.status || '').toLowerCase())) continue;
-    for (const p of providers) {
-      const pn = [normName(p.name_ar), normName(p.name_en)].filter(Boolean);
-      const cn = normName(c.party_name);
-      if ((c.provider_id && (c.provider_id === p.id || c.provider_id === p.org_id)) || (cn && cn.length > 3 && pn.some((n) => n.includes(cn) || cn.includes(n)))) return { conflict: c, provider: p };
-    }
-  }
-  return null;
+const providerFull = (id) => (id ? one('SELECT id,name_ar,name_en,org_id FROM providers_companies WHERE id=?', id) : null);
+const bidProvider = (bidId) => providerFull(one('SELECT provider_id FROM procurement_bids WHERE id=?', bidId || '')?.provider_id);
+// The officer and the legal reviewer act on the award itself: a declared conflict
+// with the provider concerned bars them from recommending / approving / awarding it.
+async function requireNoConflict(user, providers, what) {
+  if (await userConflictWith(user.id, providers)) throw new Forbidden(`لديك تضارب مصالح مُفصح عنه مع أحد الموردين المعنيين — لا يمكنك ${what}؛ يتولاه زميل آخر`);
 }
 // Members with a declared vendor conflict (with any invited provider) are recused: they
 // cannot hold an opening key, score or vote, and their scores are excluded.
@@ -522,9 +510,10 @@ export async function score(user, id, { bid_id, scores }) {
   notify(rfqRow(id));
   return id;
 }
-export function finalize(user, id) {
-  const q = visibleRfq(user, id);
+export async function finalize(user, id) {
+  let q = visibleRfq(user, id);
   requireOfficer(user);
+  if (await syncRecusals(q)) q = rfqRow(id);
   transition(q.status, 'evaluated', RFQ_FLOW, RFQ_AR);
   const ev = evaluation(q);
   if (ev.completion.length < 2) throw new Conflict('يلزم عضوان على الأقل غير متنحّيين لاعتماد التقييم');
@@ -537,13 +526,18 @@ export function finalize(user, id) {
   notify(rfqRow(id));
   return id;
 }
-export function recommend(user, id, { bid_id, note }) {
-  const q = visibleRfq(user, id);
+export async function recommend(user, id, { bid_id, note }) {
+  let q = visibleRfq(user, id);
   requireOfficer(user);
+  if (await syncRecusals(q)) q = rfqRow(id);
   transition(q.status, 'recommended', RFQ_FLOW, RFQ_AR);
   const ev = evaluation(q);
   const row = ev.rows.find((r) => r.bid_id === bid_id);
   if (!row) throw new NotFound('العرض غير موجود');
+  // An officer with a declared conflict with a bidder may not recommend that bidder,
+  // nor use discretion to depart from the committee's ranking.
+  await requireNoConflict(user, [bidProvider(bid_id)], 'التوصية بالترسية على هذا المورد');
+  if (bid_id !== ev.top && await userConflictWith(user.id, ev.rows.map((r) => providerFull(r.provider_id)))) throw new Forbidden('لديك تضارب مصالح مُفصح عنه مع أحد المتقدمين — لا يمكنك التوصية بغير العرض الأعلى تقييماً؛ يتولاه زميل آخر');
   if (!row.complete) throw new Conflict('لا يمكن التوصية بعرض غير مكتمل التسعير');
   if (!row.passed) throw new Conflict('العرض لم يجتز حد القبول الفني');
   const el = providerEligibility(row.provider_id);
@@ -558,8 +552,9 @@ export function recommend(user, id, { bid_id, note }) {
   notify(rfqRow(id));
   return id;
 }
-export function vote(user, id, { decision, note }) {
-  const q = visibleRfq(user, id);
+export async function vote(user, id, { decision, note }) {
+  let q = visibleRfq(user, id);
+  if (await syncRecusals(q)) q = rfqRow(id);
   requireActiveMember(user, q);
   if (q.status !== 'recommended') throw new Conflict('لا توجد توصية بانتظار التصويت');
   const pr = requestRow(q.request_id);
@@ -587,12 +582,14 @@ export function vote(user, id, { decision, note }) {
   notify(rfqRow(id));
   return id;
 }
-export function legalReview(user, id, { decision, note }) {
+export async function legalReview(user, id, { decision, note }) {
   const q = visibleRfq(user, id);
   if (!isLegal(user)) throw new Forbidden('المراجعة القانونية من صلاحية الشؤون القانونية');
   const pr = requestRow(q.request_id);
   if ([pr.requester_id, q.officer_id].includes(user.id)) throw new Forbidden('لا يراجع قانونياً من قدّم الطلب أو أعدّ التوصية');
   if (q.status !== 'committee_approved') throw new Conflict('لا توجد ترسية بانتظار المراجعة القانونية');
+  if (memberOf(q, user.id)?.recused) throw new Forbidden('أنت متنحٍّ عن هذا الطلب بسبب تضارب مصالح — لا يمكنك مراجعته قانونياً');
+  await requireNoConflict(user, [bidProvider(q.recommended_bid)], 'المراجعة القانونية لهذه الترسية');
   const why = clean(note, 1000);
   if (decision === 'return' && why.length < 5) throw new BadRequest('اذكر الملاحظات القانونية');
   if (decision === 'approve') {
@@ -612,11 +609,12 @@ export function legalReview(user, id, { decision, note }) {
   notify(rfqRow(id));
   return id;
 }
-export function award(user, id) {
+export async function award(user, id) {
   const q = visibleRfq(user, id);
   requireOfficer(user);
   if (q.status !== 'legal_approved') throw new Conflict('تصدر الترسية بعد اعتماد اللجنة والمراجعة القانونية');
   const bid = one('SELECT * FROM procurement_bids WHERE id=?', q.recommended_bid);
+  await requireNoConflict(user, [providerFull(bid.provider_id)], 'إصدار أمر الشراء لهذا المورد');
   const el = providerEligibility(bid.provider_id);
   if (!el.eligible) throw new Conflict(`لا يمكن إصدار أمر الشراء: ${el.reasons.map((x) => x.ar).join('، ')}`);
   const pr = requestRow(q.request_id);
@@ -638,8 +636,9 @@ export function saveAnalysis(user, id, { narrative, mode, model }) {
   logAccess(user, SYS, 'rfq', id, 'analysis');
   notify(rfqRow(id));
 }
-export function analysable(user, id) {
-  const q = visibleRfq(user, id);
+export async function analysable(user, id) {
+  let q = visibleRfq(user, id);
+  if (await syncRecusals(q)) q = rfqRow(id);
   if (!OPENED.includes(q.status)) throw new Conflict('التحليل متاح بعد فتح العروض فقط');
   if (!isOfficer(user)) requireActiveMember(user, q);
   return q;

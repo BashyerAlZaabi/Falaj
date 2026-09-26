@@ -323,7 +323,7 @@ export function detail(user, id) {
     implement: (rel.judge || rel.sponsor) && idea.status === 'approved',
     complete: (rel.judge || rel.sponsor) && idea.status === 'in_implementation',
     assist: rel.judge && ['submitted', 'screening', 'evaluation', 'needs_info'].includes(idea.status),
-    moderate: rel.committee,
+    moderate: rel.judge,
   };
   return {
     ...base,
@@ -391,7 +391,7 @@ function commentsView(user, idea, rel, co) {
       body: !hidden || rel.committee || mine ? c.body : null,
       hidden_reason: hidden && (rel.committee || mine) ? c.hidden_reason : null,
       user: !byAuthor || rel.identity ? { id: c.user_id, name_ar: c.name_ar, name_en: c.name_en } : null,
-      can_delete: mine && !hidden, can_hide: rel.committee && !hidden && !mine,
+      can_delete: mine && !hidden, can_hide: rel.judge && !hidden && !mine,
       is_demo: !!c.is_demo,
     };
   });
@@ -489,7 +489,12 @@ export async function updateIdea(user, id, input) {
   tx(() => {
     const keys = Object.keys(f);
     run(`UPDATE ideas_ideas SET ${keys.map((k) => `${k}=?`).join(',')} WHERE id=?`, ...keys.map((k) => f[k]), idea.id);
-    if (co) { run('DELETE FROM ideas_coauthors WHERE idea_id=?', idea.id); for (const c of co) run('INSERT INTO ideas_coauthors (idea_id,user_id) VALUES (?,?)', idea.id, c); }
+    if (co) {
+      run('DELETE FROM ideas_coauthors WHERE idea_id=?', idea.id);
+      for (const c of co) run('INSERT INTO ideas_coauthors (idea_id,user_id) VALUES (?,?)', idea.id, c);
+      // No self-voting: a colleague who voted and is now a co-author loses that vote.
+      if (co.length) run(`DELETE FROM ideas_votes WHERE idea_id=? AND user_id IN (${K.inList(co)})`, idea.id, ...co);
+    }
   });
   K.audit(user, 'ideas.update', idea.id, { fields: Object.keys(f).filter((k) => k !== 'updated_at'), coauthors: co ? co.length : undefined });
   notifyIdea(one('SELECT * FROM ideas_ideas WHERE id=?', idea.id), user);
@@ -752,6 +757,7 @@ export function hideComment(user, id, cid, input = {}) {
   const v = K.check(K.S({ reason: K.str('Reason shown to the comment author and committee', { maxLength: 300 }), confirm: K.bool() }, ['reason']), input);
   const idea = load(user, id);
   if (!isCommittee(user)) throw new Forbidden('إخفاء التعليقات صلاحية لجنة الأفكار');
+  if (relOf(user, idea).owner) throw new Forbidden('تعارض مصالح: لا يمكنك إخفاء التعليقات على فكرة أنت من مقدّميها؛ يتولاها عضو آخر في اللجنة');
   const c = loadComment(idea, cid);
   if (c.hidden_at) throw new Conflict('التعليق مخفي مسبقاً');
   const reason = K.clean(v.reason, 300);

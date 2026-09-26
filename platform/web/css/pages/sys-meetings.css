@@ -56,19 +56,19 @@
 .mt-tl-track { position: relative; min-height: calc(var(--mt-lane) * 1.1); border-radius: var(--radius-lg); background: repeating-linear-gradient(90deg, var(--separator) 0 1px, transparent 1px calc(100% / 12)), var(--fill-3); padding-block: 6px; }
 .mt-timeline[data-lanes="2"] .mt-tl-track { min-height: calc(var(--mt-lane) * 2 + 12px); }
 .mt-timeline[data-lanes="3"] .mt-tl-track { min-height: calc(var(--mt-lane) * 3 + 12px); }
-.mt-tl-block { position: absolute; margin-top: 6px; height: calc(var(--mt-lane) - 8px); min-width: 64px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 4px 10px; border-radius: var(--radius-sm);
+.mt-tl-block { position: absolute; z-index: 2; margin-top: 6px; height: calc(var(--mt-lane) - 8px); min-width: 64px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 4px 10px; border-radius: var(--radius-sm);
   background: var(--glass-5-bg); color: var(--text-primary); text-decoration: none; overflow: hidden; box-shadow: var(--shadow-control), inset 3px 0 0 var(--mt-c); transition: transform var(--dur-normal) var(--ease-spring), box-shadow var(--transition-fast); }
 [dir="rtl"] .mt-tl-block { box-shadow: var(--shadow-control), inset -3px 0 0 var(--mt-c); }
-.mt-tl-block:hover { transform: translateY(-1px); box-shadow: var(--shadow-card-hover), inset 3px 0 0 var(--mt-c); text-decoration: none; z-index: 2; }
+.mt-tl-block:hover { transform: translateY(-1px); box-shadow: var(--shadow-card-hover), inset 3px 0 0 var(--mt-c); text-decoration: none; z-index: 3; }
 [dir="rtl"] .mt-tl-block:hover { box-shadow: var(--shadow-card-hover), inset -3px 0 0 var(--mt-c); }
-.mt-tl-block:focus-visible { outline: none; box-shadow: var(--focus-ring); z-index: 2; }
+.mt-tl-block:focus-visible { outline: none; box-shadow: var(--focus-ring); z-index: 3; }
 .mt-tl-block.live { background: color-mix(in srgb, var(--emph) 12%, var(--glass-5-bg)); }
 .mt-tl-block.past, .mt-tl-block.declined { opacity: 0.62; }
 .mt-tl-block.declined .mt-tl-title { text-decoration: line-through; }
 .mt-tl-time { font: 600 11px/1 var(--font-text); color: var(--text-tertiary); }
 .mt-tl-title { display: flex; align-items: center; gap: 4px; font: 600 12.5px/1.25 var(--font-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mt-tl-title .icon { width: 12px; height: 12px; flex: none; color: var(--emph-text); }
-.mt-tl-now { position: absolute; top: -6px; bottom: -4px; width: 2px; margin-inline-start: -1px; border-radius: var(--radius-pill); background: var(--emph); z-index: 3; pointer-events: none; box-shadow: 0 0 0 3px var(--emph-tint); }
+.mt-tl-now { position: absolute; top: -6px; bottom: -4px; width: 2px; margin-inline-start: -1px; border-radius: var(--radius-pill); background: var(--emph); z-index: 1; pointer-events: none; box-shadow: 0 0 0 3px var(--emph-tint); }
 .mt-tl-now b { position: absolute; bottom: -18px; transform: translateX(-50%); padding: 1px 6px; border-radius: var(--radius-pill); background: var(--emph); color: var(--text-on-accent); font: 600 10px/14px var(--font-text); white-space: nowrap; }
 [dir="rtl"] .mt-tl-now b { transform: translateX(50%); }
 .mt-timeline.empty { display: grid; place-items: center; min-height: 120px; border-radius: var(--radius-xl); background: var(--fill-3); }
@@ -243,6 +243,10 @@ a.mt-cal-cell:active { transform: scale(0.94); }
 .mt-sections a.on { background: var(--glass-5-bg); color: var(--text-primary); box-shadow: var(--shadow-control), var(--glass-highlight-soft); }
 .mt-sections a.on .icon { color: var(--emph); }
 .mt-sections a:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+@media (max-width: 640px) {
+  .mt-sections { flex-wrap: wrap; width: auto; overflow: visible; gap: 3px; }
+  .mt-sections a { flex: 1 1 auto; justify-content: center; padding: 0 12px; min-height: 38px; }
+}
 .mt-sections .count { min-width: 18px; padding: 1px 6px; border-radius: var(--radius-pill); background: var(--fill-2); color: var(--text-secondary); font: 600 11px/16px var(--font-text); text-align: center; }
 .mt-sec-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-quaternary); }
 .mt-sec-dot.ms-draft { background: var(--sand); } .mt-sec-dot.ms-circulated { background: var(--orange); } .mt-sec-dot.ms-approved { background: var(--green); }

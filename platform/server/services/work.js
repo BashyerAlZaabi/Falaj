@@ -228,9 +228,11 @@ export function updateProject(user, input) {
   // verify persisted
   const raw = one('SELECT * FROM projects WHERE id=?', p.id);
   for (const k of Object.keys(before)) if (k in fields && String(raw[k]) !== String(fields[k])) throw new Error('فشل التحقق من حفظ التحديث');
-  const after = getProject(user, p.id);
+  // e.g. the SPMO removing the strategic designation of another department's
+  // project: the change is saved, and the project simply leaves the SPMO's scope.
+  const after = P.canViewProject(user, p.id) ? getProject(user, p.id) : { id: p.id, name: p.name, is_strategic: !!raw.is_strategic, visible: false };
   if (fields.owner_id && fields.owner_id !== user.id) alertUser(fields.owner_id, 'info', `أصبحت مالكاً للمشروع «${p.name}»`, `بقرار من ${user.name_ar}`, 'project', p.id);
-  changed([...new Set([...beforeRecipients, ...P.recipientsForProject(after)])], 'project', p.id);
+  changed([...new Set([...beforeRecipients, ...P.recipientsForProject(after.visible === false ? raw : after)])], 'project', p.id);
   const undoInput = { id: p.id, ...before };
   if (undoInput.progress_mode === 'tasks' && 'progress' in undoInput) delete undoInput.progress;
   return { result: after, before, undo: { tool: 'update_project', input: undoInput } };
@@ -547,11 +549,17 @@ export function listAllocations(user, { project_id, user_id, scope, status } = {
   if (scope === 'decide') rows = rows.filter((a) => a.can_decide);
   return rows;
 }
-export function getAllocation(user, id) {
+// The raw allocation row when it is inside the user's scope (else 404, never 403:
+// an out-of-scope id must not reveal that it exists or what state it is in).
+function scopedAllocation(user, id) {
+  if (!P.isInternal(user)) throw new P.NotFound('التخصيص غير موجود أو غير متاح لك');
   const s = allocationScope(user);
-  const a = one(`SELECT a.* FROM project_allocations a JOIN projects p ON p.id=a.project_id AND p.deleted_at IS NULL JOIN users u ON u.id=a.user_id WHERE a.id=? AND ${s.sql}`, id, ...s.params);
+  const a = one(`SELECT a.* FROM project_allocations a JOIN projects p ON p.id=a.project_id AND p.deleted_at IS NULL JOIN users u ON u.id=a.user_id WHERE a.id=? AND ${s.sql}`, String(id || ''), ...s.params);
   if (!a) throw new P.NotFound('التخصيص غير موجود أو غير متاح لك');
-  return decorateAllocation(a, user);
+  return a;
+}
+export function getAllocation(user, id) {
+  return decorateAllocation(scopedAllocation(user, id), user);
 }
 
 function checkPercent(v) {
@@ -609,8 +617,7 @@ export function proposeAllocation(user, input) {
 // Manager decision: confirm, adjust (percent/dates, then confirm) or decline with
 // a reason; end an active allocation. Every decision is audited and announced.
 export function decideAllocation(user, input) {
-  const a = one('SELECT * FROM project_allocations WHERE id=?', input.id || '');
-  if (!a) throw new P.NotFound('التخصيص غير موجود');
+  const a = scopedAllocation(user, input.id);
   const project = one('SELECT * FROM projects WHERE id=? AND deleted_at IS NULL', a.project_id);
   if (!project) throw new P.NotFound('المشروع غير موجود');
   const decision = input.decision;
@@ -666,8 +673,8 @@ export function decideAllocation(user, input) {
 
 // Undo of a proposal: only its proposer, only while nobody else has decided on it.
 export function cancelAllocation(user, { id }) {
-  const a = one('SELECT * FROM project_allocations WHERE id=? AND allocated_by=?', id, user.id);
-  if (!a) throw new P.Forbidden('سحب طلب التخصيص من صلاحية من اقترحه');
+  const a = scopedAllocation(user, id);
+  if (a.allocated_by !== user.id) throw new P.Forbidden('سحب طلب التخصيص من صلاحية من اقترحه');
   if (a.status === 'pending_manager' || (a.status === 'active' && a.decided_by === user.id)) {
     const rec = P.recipientsForAllocation(a);
     run('DELETE FROM project_allocations WHERE id=?', id);
@@ -736,7 +743,8 @@ export function teamCapacity(user, { department_id, days = 90 } = {}) {
       department_id: u.department_id, dept_ar: u.dept_ar, dept_en: u.dept_en,
       load_now: now0, peak, peak_with_pending: peakP, pending: allocs.filter((a) => a.status === 'pending_manager').reduce((s, a) => s + a.percent, 0),
       over: peak > 100, over_with_pending: peakP > 100, free: Math.max(0, 100 - peak),
-      allocations: allocs.map((a) => ({ id: a.id, project_id: a.project_id, project_name: visibleAlloc.has(a.id) ? a.project_name : null, percent: a.percent, start_date: a.start_date, end_date: a.end_date, status: a.status, role_ar: a.role_ar, current: a.status === 'active' && a.start_date <= t })),
+      // allocations outside the viewer's scope count toward the load but stay anonymous
+      allocations: allocs.map((a) => { const v = visibleAlloc.has(a.id); return { id: v ? a.id : null, project_id: v ? a.project_id : null, project_name: v ? a.project_name : null, percent: a.percent, start_date: a.start_date, end_date: a.end_date, status: a.status, role_ar: v ? a.role_ar : null, current: a.status === 'active' && a.start_date <= t }; }),
     };
   }).sort((a, b) => b.peak_with_pending - a.peak_with_pending || a.name_ar.localeCompare(b.name_ar, 'ar'));
   const pending = listAllocations(user, { scope: 'decide' });

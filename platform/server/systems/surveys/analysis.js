@@ -144,6 +144,23 @@ export function segmentByDepartment({ questions, responses, answers, departments
   const rest = hiddenTotal();
   const other = shown.size && rest >= MIN_GROUP ? { n: rest, metrics: metrics(groupAnswers((x) => !shown.has(x))) } : null;
   const overall = metrics(groupAnswers(() => true));
+  // Per-question secondary suppression: an optional question can leave a shown
+  // group with fewer than MIN_GROUP answers (its metric is hidden), yet its answers
+  // would still be derivable as overall − the other published groups. When the
+  // answers not covered by a published metric number 1…MIN_GROUP−1, the question's
+  // group metrics are all withheld (the overall figure stays).
+  const answeredIn = (qid, pred) => answers.filter((a) => a.question_id === qid && pred(respDept.get(a.response_id))).length;
+  for (const q of numeric) {
+    const total = answeredIn(q.id, () => true);
+    let covered = 0;
+    for (const r of rows) if (!r.hidden && r.metrics[q.id] != null) covered += answeredIn(q.id, (x) => x === r.id);
+    if (other && other.metrics[q.id] != null) covered += answeredIn(q.id, (x) => !shown.has(x));
+    const left = total - covered;
+    if (left > 0 && left < MIN_GROUP) {
+      for (const r of rows) if (!r.hidden) r.metrics[q.id] = null;
+      if (other) other.metrics[q.id] = null;
+    }
+  }
   return {
     questions: numeric.map((q) => ({ id: q.id, type: q.type, text: q.text })),
     rows, other, overall, shown_groups: shown.size,

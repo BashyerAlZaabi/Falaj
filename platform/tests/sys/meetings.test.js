@@ -415,3 +415,17 @@ test('action items: decline needs a reason; cancelling (confirmed) removes the u
   assert.ok(!(await ahmed.get('/api/tasks?mine=1')).data.some((t) => t.id === open.task.id), 'linked task removed');
   assert.ok((await ahmed.get('/api/alerts')).data.some((a) => a.entity === 'sys:meetings' && a.title.includes('أُلغي تكليف')));
 });
+
+test('a linked project is named only to invitees who may see that project', async () => {
+  const mariam = await as('mariam'); const omar = await as('omar');
+  const projects = (await mariam.get('/api/projects')).data;
+  let hidden = null;
+  for (const p of projects) if ((await omar.get(`/api/projects/${p.id}`)).status !== 200) { hidden = p; break; }
+  assert.ok(hidden, 'an IT project Omar cannot see');
+  const r = await mariam.post(M('/meetings'), { title: 'مراجعة مشروع داخلي', starts_at: iso(30), project_id: hidden.id, attendee_ids: ['u_omar', 'u_ahmed'] });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.project?.id, hidden.id, 'the organizer sees it');
+  const seen = (await omar.get(M(`/meetings/${r.data.id}`))).data;
+  assert.equal(seen.project, null, 'no project name for an invitee outside the project scope');
+  assert.ok(!JSON.stringify(seen).includes(hidden.name));
+});

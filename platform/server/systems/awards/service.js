@@ -684,7 +684,20 @@ export function ranking(user, programId) {
   if (!['evaluation', 'announced'].includes(p.status)) throw new Conflict('الترتيب متاح بعد بدء التقييم');
   K.logAccess(user, SYS, 'ranking', p.id, 'view');
   const conflicted = !!one(`SELECT 1 FROM awards_nominations n WHERE n.program_id=? AND n.status IN (${K.inList([...ACTIVE])}) AND (n.nominator_id=? OR n.nominee_id=? OR n.id IN (SELECT nomination_id FROM awards_team WHERE user_id=?))`, p.id, ...ACTIVE, user.id, user.id, user.id);
-  return { program: decorateProgram(user, p), ...rankingData(p), min_reviews: MIN_REVIEWS, members: committeeMembers().map((m) => ({ id: m.id, name_ar: m.name_ar, name_en: m.name_en })), conflicted, decision_note: p.decision_note };
+  const data = rankingData(p);
+  // An admin who nominated or was nominated in this programme never sees scores,
+  // ranks or committee notes (their own or anyone else's — the relative order
+  // would reveal their own standing): coverage only.
+  if (conflicted) {
+    for (const c of data.categories) {
+      c.suggested = [];
+      for (const x of c.nominations) {
+        Object.assign(x, { average: null, percent: null, rank: null, final_score: null, final_rank: null, comments: [], redacted: true });
+        x.per_criterion = x.per_criterion.map((pc) => ({ ...pc, average: null }));
+      }
+    }
+  }
+  return { program: decorateProgram(user, p), ...data, min_reviews: MIN_REVIEWS, members: committeeMembers().map((m) => ({ id: m.id, name_ar: m.name_ar, name_en: m.name_en })), conflicted, redacted: conflicted, decision_note: p.decision_note };
 }
 
 export const finalizeSchema = S({

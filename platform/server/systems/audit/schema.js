@@ -1,5 +1,5 @@
 // Internal Audit — tables (all prefixed audit_). Idempotent.
-import { db } from '../kit.js';
+import { db, all } from '../kit.js';
 
 export function schema() {
   db.exec(`
@@ -96,4 +96,8 @@ CREATE TABLE IF NOT EXISTS audit_links (
 );
 CREATE INDEX IF NOT EXISTS ix_audit_links ON audit_links(kind, ref_id);
 `);
+  // Snapshot of a document as released to the external auditor (added later; idempotent).
+  const cols = new Set(all('PRAGMA table_info(audit_links)').map((c) => c.name));
+  if (!cols.has('released_html')) db.exec('ALTER TABLE audit_links ADD COLUMN released_html TEXT');
+  if (!cols.has('released_title')) db.exec('ALTER TABLE audit_links ADD COLUMN released_title TEXT');
 }

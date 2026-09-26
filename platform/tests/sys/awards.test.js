@@ -253,6 +253,15 @@ test('segregation of duties: the admin cannot finalise a programme she nominated
   ok(await (await as('latifa')).put(`${B}/nominations/${n.id}/review`, { scores: scores(p, [5, 4]) }));
   assert.equal((await hessa.put(`${B}/nominations/${n.id}/review`, { scores: scores(p, [5, 5]) })).status, 403, 'the nominator never scores');
   assert.equal((await hessa.post(`${B}/programs/${p.id}/finalize`, { winners: [{ nomination_id: n.id }], confirm: true })).status, 403);
+  // …nor read the scores of the colleague she nominated through the ranking view
+  const rk = (await hessa.get(`${B}/programs/${p.id}/ranking`)).data;
+  assert.equal(rk.conflicted, true);
+  const row = rk.categories.flatMap((c) => c.nominations).find((x) => x.id === n.id);
+  assert.equal(row.reviews, 2, 'coverage stays visible');
+  assert.equal(row.average, null, 'no average for a conflicted admin');
+  assert.equal(row.percent, null); assert.equal(row.rank, null);
+  assert.ok(row.per_criterion.every((pc) => pc.average == null), 'no per-criterion averages');
+  assert.deepEqual(row.comments, []);
 });
 
 test('lists, counts and workspace cards never leak other people’s nominations', async () => {

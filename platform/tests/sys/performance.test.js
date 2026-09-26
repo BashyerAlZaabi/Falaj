@@ -364,3 +364,19 @@ test('history stays with its cycle: closed-cycle results are released to the emp
   assert.equal(fw.competencies.length, 5);
   assert.ok(fw.competencies.every((c) => c.behaviours.length >= 3));
 });
+
+test('a fellow manager of the same department is a peer: never sees or assesses the other manager’s review', async () => {
+  const mariam = await as('mariam'); // platform admin: promotes sara to a second manager of Digital Transformation
+  assert.equal((await mariam.put('/api/admin/users/u_sara', { role: 'manager', confirm: true })).status, 200);
+  try {
+    const sara = await as('sara');
+    assert.equal((await sara.get(`${P}/reviews/${RID('mariam')}`)).status, 404, 'peer manager → 404');
+    assert.equal((await sara.put(`${P}/reviews/${RID('mariam')}/assessment`, { comment: 'x' })).status, 404);
+    const team = (await sara.get(`${P}/team`)).data;
+    assert.ok(!team.reviews.some((r) => r.employee.id === 'u_mariam'), 'not in the peer’s team list');
+    assert.ok(team.reviews.some((r) => r.employee.id === 'u_ahmed'), 'the department’s employees still are');
+    assert.equal((await mariam.get(`${P}/reviews/${RID('sara')}`)).status, 200, 'sara’s own review stays with her line manager');
+  } finally {
+    assert.equal((await mariam.put('/api/admin/users/u_sara', { role: 'employee', confirm: true })).status, 200);
+  }
+});
