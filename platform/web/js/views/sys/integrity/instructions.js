@@ -7,7 +7,7 @@ export async function instructionsTab() {
   const rows = await call('/instructions');
   const pending = rows.filter((r) => !r.acknowledged_at);
   const cardFor = (r) => h(`article.card.integ-instr${r.acknowledged_at ? '.done' : ''}`,
-    h('header.integ-instr-head', avatar(r.person.name_ar), h('div.grow', h('strong', L(r.person.name_ar, r.person.name_en)), h('span', [L(r.person.title_ar, r.person.title_en), L(r.person.dept_ar, r.person.dept_en)].filter(Boolean).join(' · '))),
+    h('header.integ-instr-head', avatar(L(r.person.name_ar, r.person.name_en)), h('div.grow', h('strong', L(r.person.name_ar, r.person.name_en)), h('span', [L(r.person.title_ar, r.person.title_en), L(r.person.dept_ar, r.person.dept_en)].filter(Boolean).join(' · '))),
       h('span.chip.tiny.purple', icon(MITIGATION[r.kind]?.[2] || 'circleDot'), lbl(MITIGATION, r.kind))),
     h('blockquote.integ-instr-text', r.instruction),
     h('footer.integ-instr-foot',

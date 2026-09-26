@@ -131,7 +131,7 @@ president · mariam (مدير المنصة) · ahmed · sara · omar · fatima �
 ## التحقق
 
 ```bash
-npm test        # 224 اختبار API (المنصة + Vault + الأنظمة المؤسسية + المحفظة الاستراتيجية) عبر عمليات حقيقية وقواعد مؤقتة
+npm test        # 237 اختبار API (المنصة + Vault + الأنظمة المؤسسية + المحفظة الاستراتيجية) عبر عمليات حقيقية وقواعد مؤقتة
 npm run e2e     # رحلة متصفح Chromium كاملة (22 خطوة) + لقطات في tests/e2e/output
 node tests/e2e/screens.mjs <dir> --shot=name@user:#/sys/<key>   # لقطات أي شاشة لأي شخصية
 ```

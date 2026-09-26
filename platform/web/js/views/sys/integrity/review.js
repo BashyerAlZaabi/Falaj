@@ -28,7 +28,7 @@ export async function reviewTab(env) {
   ];
   const cardFor = (it) => h('button.board-card.integ-case', { type: 'button', onclick: () => openRecord(env, it.type, it.id, { tab: 'review' }), 'aria-label': `${L(TYPE[it.type][0], TYPE[it.type][1])} — ${nameOf(it.person)}` },
     h('div.integ-case-top', h('span.integ-case-ic', icon(TYPE[it.type][2])), h('span.integ-case-type', L(it.title_ar, it.title_en))),
-    h('div.integ-case-who', avatar(it.person.name_ar), h('span.grow', h('strong', nameOf(it.person)), h('span', deptOf(it.person)))),
+    h('div.integ-case-who', avatar(L(it.person.name_ar, it.person.name_en)), h('span.grow', h('strong', nameOf(it.person)), h('span', deptOf(it.person)))),
     h('div.bc-meta',
       it.value_aed != null ? h('span.num.tabular', money(it.value_aed)) : null,
       ...it.flags.map((f) => { if (f.startsWith('interests:')) { const n = Number(f.split(':')[1]); return h('span.chip.tiny.outline', icon('fileSign'), count(n, ['مصلحة واحدة', 'مصلحتان', 'مصالح', 'مصلحة'], ['interest', 'interests'])); } const m = FLAG[f]; return m ? h(`span.chip.tiny.${m[2]}`, icon(m[3]), L(m[0], m[1])) : null; }),

@@ -80,7 +80,7 @@ export const daysWord = (n) => count(n, ['يوم واحد', 'يومان', 'أي�
 
 export function personLine(p, { sub = true } = {}) {
   if (!p) return h('span.faint', '—');
-  return h('span.integ-person', avatar(p.name_ar), h('span.grow', h('span.integ-person-name', nameOf(p)), sub ? h('span.integ-person-sub', [L(p.title_ar, p.title_en), deptOf(p)].filter(Boolean).join(' · ')) : null));
+  return h('span.integ-person', avatar(L(p.name_ar, p.name_en)), h('span.grow', h('span.integ-person-name', nameOf(p)), sub ? h('span.integ-person-sub', [L(p.title_ar, p.title_en), deptOf(p)].filter(Boolean).join(' · ')) : null));
 }
 export function chip(map, k, extra = '') {
   const [ar, en, tone = 'outline', ic] = map[k] || [k, k];
