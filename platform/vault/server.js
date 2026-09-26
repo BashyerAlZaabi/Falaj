@@ -7,6 +7,7 @@
 //  * AI processing happens inside Vault (local summariser / internal model only).
 //    The egress guard blocks every outbound connection except allow-listed internal hosts.
 import { installEgressGuard } from './egress-guard.js';
+import { setupLogging, requestLogger, rateLimit, validateConfig, scheduleBackups, log } from '../server/lib/ops.js';
 import express from 'express';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -32,6 +33,13 @@ const cfg = {
 };
 if (cfg.internalModelUrl) cfg.egressAllow.push(new URL(cfg.internalModelUrl).hostname);
 export const egress = installEgressGuard(cfg.egressAllow);
+setupLogging('vault');
+const PROD = process.env.NODE_ENV === 'production';
+validateConfig('vault', [
+  { ok: !PROD || cfg.publicUrl.startsWith('https://'), fatal: true, msg: 'VAULT_PUBLIC_URL must be https:// in production' },
+  { ok: !!(cfg.tokens.wajibFs && cfg.tokens.wajibMarsad && cfg.tokens.su), fatal: PROD, msg: 'WAJIB_FS_TOKEN, WAJIB_MARSAD_TOKEN and SU_SERVICE_TOKEN must all be set (inbound ingest is refused without them)' },
+  { ok: fs.existsSync(cfg.identityPublicKey), fatal: false, msg: `identity public key not found at ${cfg.identityPublicKey} yet (SSO sign-in fails until the portal has created it)` },
+]);
 
 fs.mkdirSync(cfg.dataDir, { recursive: true });
 export const vdb = new DatabaseSync(path.join(cfg.dataDir, 'vault.db'));
@@ -49,6 +57,9 @@ const audit = (actor, action, target) => vdb.prepare('INSERT INTO audit (id,acto
 
 export const app = express();
 app.disable('x-powered-by');
+if (process.env.TRUST_PROXY) app.set('trust proxy', /^\d+$/.test(process.env.TRUST_PROXY) ? Number(process.env.TRUST_PROXY) : process.env.TRUST_PROXY);
+app.use(requestLogger('vault', (req) => req.vuser?.sub));
+app.use(rateLimit({ name: 'vault', max: Number(process.env.RATE_LIMIT_PER_MIN ?? 1200) }));
 app.use((req, res, next) => {
   // No CORS headers are ever emitted: browsers on other origins (portal, ADAA I) cannot read responses.
   res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
@@ -62,6 +73,11 @@ app.use((req, res, next) => {
 });
 
 app.get('/health', (req, res) => res.json({ status: 'ok', local_ai: cfg.internalModelUrl ? 'internal-model' : 'extractive' }));
+app.get('/ready', (req, res) => {
+  let dbOk = false; try { vdb.prepare('SELECT 1').get(); dbOk = true; } catch {}
+  const keyOk = fs.existsSync(cfg.identityPublicKey);
+  res.status(dbOk ? 200 : 503).json({ ready: dbOk, service: 'vault', checks: { database: dbOk ? 'ok' : 'error', identity_key: keyOk ? 'ok' : 'missing', egress_allow: egress.allowed.length } });
+});
 
 // ---------------- inbound-only ingest ----------------
 const safeEq = (a, b) => a && b && a.length === b.length && crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b));
@@ -225,5 +241,16 @@ app.get(['/', '/fs', '/marsad'], requireVaultUser, (req, res) => res.type('html'
 app.use('/static', express.static(path.join(ROOT, 'vault/web')));
 
 if (process.argv[1] && process.argv[1].endsWith(path.join('vault', 'server.js'))) {
-  app.listen(cfg.port, () => console.log(`[vault] Vault (FS, Marsad) on ${cfg.publicUrl} — egress allow-list: [${egress.allowed.join(', ') || 'none'}]`));
+  const server = app.listen(cfg.port, () => console.log(`[vault] Vault (FS, Marsad) on ${cfg.publicUrl} — egress allow-list: [${egress.allowed.join(', ') || 'none'}]`));
+  // Vault backups stay inside Vault's own data directory (never shipped to the portal).
+  scheduleBackups('vault', vdb, path.join(cfg.dataDir, 'backups'), 'vault');
+  let stopping = false;
+  const stop = (sig) => {
+    if (stopping) return; stopping = true;
+    log('vault', 'info', `shutting down (${sig})`);
+    const finish = () => { try { vdb.exec('PRAGMA wal_checkpoint(TRUNCATE)'); vdb.close(); } catch {} process.exit(0); };
+    setTimeout(finish, Number(process.env.SHUTDOWN_GRACE_MS || 8000)).unref();
+    server.close(finish); server.closeIdleConnections?.();
+  };
+  process.on('SIGTERM', () => stop('SIGTERM')); process.on('SIGINT', () => stop('SIGINT'));
 }

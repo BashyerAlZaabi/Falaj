@@ -1,0 +1,20 @@
+# TLS termination + per-origin routing. Portal and Vault stay on separate origins.
+{$PORTAL_DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	# Streams (chat NDJSON, SSE) must not be buffered
+	reverse_proxy portal:4000 {
+		flush_interval -1
+	}
+}
+
+{$VAULT_DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	# Smart Uploader ingest is portal -> vault over vault_net only; never from the internet.
+	# Wajib ingest (/ingest/wajib/*) is token-authenticated; restrict it further to
+	# Wajib's source addresses with `remote_ip` if Wajib is not on the internal network.
+	@su path /ingest/su/*
+	respond @su 404
+	reverse_proxy vault:4100
+}

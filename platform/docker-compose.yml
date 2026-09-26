@@ -1,0 +1,87 @@
+# Production topology
+#
+#   internet ──► caddy (TLS) ──► portal ──► Anthropic API / model gateway
+#                   │              │
+#                   │              └─(ingest only)─► vault
+#                   └──────────────────────────────► vault UI (own origin)
+#
+# * vault sits ONLY on `vault_net`, which is `internal: true`: the container has no
+#   route to the internet at all (defence in depth on top of vault/egress-guard.js).
+# * vault and portal have separate volumes; vault receives only the identity
+#   PUBLIC key through `identity_pub` (read-only). The signing key stays in portal.
+# * Secrets come from .env (see .env.example); never bake them into the image.
+#
+#   cp .env.example .env   # fill PORTAL_DOMAIN, VAULT_DOMAIN, tokens, ADMIN_PASSWORD, ANTHROPIC_API_KEY
+#   docker compose up -d --build
+name: swp
+
+x-common: &common
+  build: .
+  image: swp:latest
+  restart: unless-stopped
+  env_file: .env
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+
+services:
+  portal:
+    <<: *common
+    environment:
+      NODE_ENV: production
+      SERVICE: portal
+      PUBLIC_URL: https://${PORTAL_DOMAIN}
+      VAULT_PUBLIC_URL: https://${VAULT_DOMAIN}
+      VAULT_INGEST_URL: http://vault:4100/ingest/su/marsad
+      COOKIE_SECURE: "1"
+      TRUST_PROXY: "1"
+      SEED_DEMO: ${SEED_DEMO:-0}
+      IDENTITY_PUBLIC_EXPORT_DIR: /keys-public
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+    volumes:
+      - portal_data:/data
+      - identity_pub:/keys-public
+    networks: [portal_net, vault_net]
+    depends_on:
+      vault: { condition: service_started }
+
+  vault:
+    <<: *common
+    command: ["node", "--no-warnings", "vault/server.js"]
+    environment:
+      NODE_ENV: production
+      SERVICE: vault
+      VAULT_PUBLIC_URL: https://${VAULT_DOMAIN}
+      IDENTITY_URL: https://${PORTAL_DOMAIN}
+      IDENTITY_PUBLIC_KEY_PATH: /keys-public/identity-ed25519.pub.pem
+      VAULT_DATA_DIR: /data/vault
+      TRUST_PROXY: "1"
+      BACKUP_INTERVAL_HOURS: ${BACKUP_INTERVAL_HOURS:-24}
+    volumes:
+      - vault_data:/data
+      - identity_pub:/keys-public:ro
+    networks: [vault_net]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      PORTAL_DOMAIN: ${PORTAL_DOMAIN}
+      VAULT_DOMAIN: ${VAULT_DOMAIN}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+    networks: [portal_net, vault_net]
+    depends_on: [portal, vault]
+
+networks:
+  portal_net: {}
+  vault_net: { internal: true }
+
+volumes:
+  portal_data: {}
+  vault_data: {}
+  identity_pub: {}
+  caddy_data: {}

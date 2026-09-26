@@ -31,6 +31,12 @@ if (!fs.existsSync(privPath)) {
 }
 const privateKey = crypto.createPrivateKey(fs.readFileSync(privPath));
 export const publicKeyPem = fs.readFileSync(pubPath, 'utf8');
+// Deployments where Vault runs in its own container share ONLY the public key:
+// it is published to a separate directory so the signing key never leaves the portal.
+if (process.env.IDENTITY_PUBLIC_EXPORT_DIR) {
+  fs.mkdirSync(process.env.IDENTITY_PUBLIC_EXPORT_DIR, { recursive: true });
+  fs.writeFileSync(path.join(process.env.IDENTITY_PUBLIC_EXPORT_DIR, 'identity-ed25519.pub.pem'), publicKeyPem);
+}
 
 const b64u = (b) => Buffer.from(b).toString('base64url');
 export function signAssertion(claims, ttlSec = 60) {

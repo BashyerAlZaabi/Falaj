@@ -11,7 +11,9 @@
     "seed": "node --no-warnings server/seed.js --reset",
     "wajib:sim": "node --no-warnings scripts/wajib-sim.js",
     "test": "node --no-warnings --test tests/*.test.js tests/sys/*.test.js",
-    "e2e": "node --no-warnings tests/e2e/journey.mjs"
+    "e2e": "node --no-warnings tests/e2e/journey.mjs",
+    "migrate": "node --no-warnings server/migrations.js",
+    "backup": "node --no-warnings scripts/backup.js"
   },
   "engines": {
     "node": ">=22.13"

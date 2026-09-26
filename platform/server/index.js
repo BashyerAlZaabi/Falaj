@@ -19,12 +19,30 @@ import { seedAll, seedConfig, seedPeople } from './seed.js';
 import { initSystems, systemsFor } from './systems/index.js';
 import * as O from './services/office.js';
 import * as G from './services/game.js';
+import { db } from './db.js';
+import { migrate, schemaVersion, MIGRATIONS } from './migrations.js';
+import { setupLogging, requestLogger, rateLimit, validateConfig, scheduleBackups, log } from './lib/ops.js';
+
+setupLogging('portal');
 
 if (!one('SELECT 1 FROM users LIMIT 1')) seedAll(); else { seedConfig(); seedPeople(); } // idempotent upserts
+migrate({ log: (m) => log('portal', 'info', m) });
+
+const PROD = process.env.NODE_ENV === 'production';
+validateConfig('portal', [
+  { ok: !PROD || config.cookieSecure, fatal: true, msg: 'COOKIE_SECURE=1 is required in production (serve over HTTPS)' },
+  { ok: !PROD || config.publicUrl.startsWith('https://'), fatal: true, msg: 'PUBLIC_URL must be https:// in production' },
+  { ok: !PROD || process.env.SEED_DEMO === '0', fatal: true, msg: 'SEED_DEMO=0 is required in production (demo accounts share a known password)' },
+  { ok: !!config.suServiceToken, fatal: PROD, msg: 'SU_SERVICE_TOKEN is not set: Smart Uploader cannot deliver files to Vault' },
+  { ok: !PROD || config.vaultPublicUrl.startsWith('https://'), fatal: true, msg: 'VAULT_PUBLIC_URL must be https:// in production' },
+  { ok: !!process.env.ANTHROPIC_API_KEY || !!process.env.LLM_GATEWAY_KEY, fatal: false, msg: 'no model key (ANTHROPIC_API_KEY / LLM_GATEWAY_KEY): the assistant runs on local rules only' },
+]);
 
 export const app = express();
 app.disable('x-powered-by');
-app.set('trust proxy', 'loopback');
+// Behind a reverse proxy set TRUST_PROXY (e.g. 1 or the proxy's subnet) so req.ip/protocol are right.
+app.set('trust proxy', process.env.TRUST_PROXY ? (/^\d+$/.test(process.env.TRUST_PROXY) ? Number(process.env.TRUST_PROXY) : process.env.TRUST_PROXY) : 'loopback');
+app.use(requestLogger('portal', (req) => req.user?.id));
 
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -54,7 +72,23 @@ const wrap = (fn) => (req, res) => Promise.resolve(fn(req, res)).catch((e) => {
 });
 
 // ---------------- health ----------------
+// /api/health = liveness (process is up); /api/ready = readiness (database usable,
+// migrations applied). Vault and model status are reported but never fail readiness.
 app.get('/api/health', (req, res) => res.json({ ok: true, service: 'portal', time: now() }));
+app.get('/api/ready', async (req, res) => {
+  const checks = {};
+  try { one('SELECT 1'); checks.database = 'ok'; } catch (e) { checks.database = 'error'; }
+  const v = schemaVersion(); const latest = Math.max(...MIGRATIONS.map((m) => m.version));
+  checks.migrations = v >= latest ? 'ok' : `pending (${v}/${latest})`;
+  const ready = checks.database === 'ok' && checks.migrations === 'ok';
+  checks.vault = (await vaultHealth()).reachable ? 'reachable' : 'unreachable';
+  checks.model = AI.resolve('chat').provider?.kind === 'local' ? 'local-rules' : 'connected';
+  res.status(ready ? 200 : 503).json({ ready, service: 'portal', schema_version: v, checks });
+});
+
+// ---------------- rate limits (per client IP; AI routes also per user below) ----------------
+app.use('/api', rateLimit({ name: 'api', max: Number(process.env.RATE_LIMIT_PER_MIN ?? 1200) }));
+app.use('/mcp', rateLimit({ name: 'mcp', max: Number(process.env.MCP_RATE_LIMIT_PER_MIN ?? 300) }));
 
 // ---------------- identity ----------------
 const attempts = new Map();
@@ -89,7 +123,7 @@ app.get('/api/identity/sso/authorize', (req, res) => {
   res.redirect(`${redirect}${redirect.includes('?') ? '&' : '?'}assertion=${encodeURIComponent(assertion)}`);
 });
 
-app.use('/api', (req, res, next) => (req.path.startsWith('/auth/') || req.path === '/health' || req.path.startsWith('/identity/')) ? next() : I.requireAuth(req, res, next));
+app.use('/api', (req, res, next) => (req.path.startsWith('/auth/') || req.path === '/health' || req.path === '/ready' || req.path.startsWith('/identity/')) ? next() : I.requireAuth(req, res, next));
 
 // External identities (external auditors, service providers) are confined to the
 // systems that expose an external portal: no workspace data, Ask AI, MCP, Vault.
@@ -243,7 +277,8 @@ app.get('/api/conversations/:id', wrap((req, res) => {
   if (!c) return res.status(404).json({ error: 'not_found' });
   res.json(c);
 }));
-app.post('/api/chat', async (req, res) => {
+const aiLimit = rateLimit({ name: 'ai', max: Number(process.env.AI_RATE_LIMIT_PER_MIN ?? 40), key: (req) => req.user?.id || req.ip });
+app.post('/api/chat', aiLimit, async (req, res) => {
   res.writeHead(200, { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-cache', 'x-accel-buffering': 'no' });
   const emit = (e) => { try { res.write(JSON.stringify(e) + '\n'); } catch {} };
   try { await handleMessage(req.user, req.body || {}, emit); } catch (e) { emit({ stage: 'final', status: 'failed', text: `تعذّر التنفيذ: ${e.message}` }); }
@@ -298,7 +333,7 @@ app.get('/api/voice/status', wrap((req, res) => {
   const stt = AI.resolve('stt'); const tts = AI.resolve('tts');
   res.json({ stt: { provider: stt.provider.name, kind: stt.provider.id === 'ap_browser_speech' ? 'browser' : stt.provider.kind, status: AI.providerStatus(stt.provider) }, tts: { provider: tts.provider.name, kind: tts.provider.id === 'ap_browser_speech' ? 'browser' : tts.provider.kind } });
 }));
-app.post('/api/voice/transcribe', express.raw({ type: 'audio/*', limit: '15mb' }), wrap(async (req, res) => {
+app.post('/api/voice/transcribe', aiLimit, express.raw({ type: 'audio/*', limit: '15mb' }), wrap(async (req, res) => {
   const stt = AI.resolve('stt');
   if (stt.provider.kind !== 'openai_compatible') return res.status(503).json({ error: 'stt_not_configured', message: 'لا توجد خدمة تحويل كلام إلى نص على الخادم؛ يُستخدم التعرّف في المتصفح.' });
   const fd = new FormData();
@@ -380,7 +415,8 @@ app.post('/api/admin/users', I.requireAdmin, wrap((req, res) => {
 
 async function vaultHealth() {
   try {
-    const r = await fetch(`${config.vaultPublicUrl}/health`, { signal: AbortSignal.timeout(1500) });
+    // Probe over the internal route (the ingest origin) — the public URL may not resolve inside the network.
+    const r = await fetch(`${new URL(config.vaultIngestUrl).origin}/health`, { signal: AbortSignal.timeout(1500) });
     const b = await r.json();
     return { reachable: r.ok, status: b.status, local_ai: b.local_ai };
   } catch { return { reachable: false }; }
@@ -409,6 +445,18 @@ app.use('/api', (req, res) => res.status(404).json({ error: 'not_found' }));
 if (process.argv[1] && process.argv[1].endsWith(path.join('server', 'index.js'))) {
   const server = app.listen(config.port, () => console.log(`[portal] Unified Portal on ${config.publicUrl}`));
   O.startScheduler(I.getUser, Number(process.env.OFFICE_TICK_MS || 30000));
-  const stop = async () => { await X.closeBrowser(); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 2000).unref(); };
-  process.on('SIGTERM', stop); process.on('SIGINT', stop);
+  scheduleBackups('portal', db, process.env.BACKUP_DIR || path.join(config.dataDir, 'backups'), 'portal');
+  // Graceful shutdown: stop accepting, let in-flight requests finish (SSE streams are
+  // cut after the grace period), checkpoint the WAL and close the database.
+  let stopping = false;
+  const stop = async (sig) => {
+    if (stopping) return; stopping = true;
+    log('portal', 'info', `shutting down (${sig})`);
+    const finish = () => { try { db.exec('PRAGMA wal_checkpoint(TRUNCATE)'); db.close(); } catch {} process.exit(0); };
+    setTimeout(finish, Number(process.env.SHUTDOWN_GRACE_MS || 8000)).unref();
+    server.close(finish); server.closeIdleConnections?.();
+    await X.closeBrowser().catch(() => {});
+  };
+  process.on('SIGTERM', () => stop('SIGTERM')); process.on('SIGINT', () => stop('SIGINT'));
+  process.on('unhandledRejection', (e) => log('portal', 'error', 'unhandled rejection', { error: e?.message || String(e) }));
 }
