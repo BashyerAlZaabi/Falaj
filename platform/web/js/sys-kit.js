@@ -109,7 +109,7 @@ export const money = (n, { currency = 'AED', digits = 0 } = {}) => (n == null ? 
 export const pct = (n) => (n == null ? '—' : `${fmtNum(Math.round(n))}%`);
 export const dateTime = (iso) => (iso ? `${fmtDate(iso)} · ${fmtTime(iso)}` : '—');
 export const plural = (n, [one, two, few, many]) => (getLang() !== 'ar' ? `${n} ${n === 1 ? one : many}` : n === 1 ? one : n === 2 ? two : n >= 3 && n <= 10 ? `${fmtNum(n)} ${few}` : `${fmtNum(n)} ${many}`);
-export function whoChip(u) { return u ? h('span.who-chip', avatar(u.name_ar), h('span', L(u.name_ar, u.name_en))) : h('span.faint', '—'); }
+export function whoChip(u) { return u ? h('span.who-chip', avatar(L(u.name_ar, u.name_en)), h('span', L(u.name_ar, u.name_en))) : h('span.faint', '—'); }
 
 // ---------------- forms ----------------
 // formDialog({ title, intro, fields, values, submitLabel, wide }) → values | null

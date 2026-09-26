@@ -128,7 +128,7 @@ function stepWho(ctx, me, p, dir) {
       peopleSelect(pool.filter((u) => u.id !== ctx.user.id && !p.my_nominees.includes(u.id)), { id: 'aw-nominee', value: draft.nominee_id, 'data-fk': 'nominee', onchange: (e) => { draft.nominee_id = e.target.value; redraw(); } }),
       h('div.helper', L(`تظهر فقط الفئة المؤهلة: ${ELIG[p.eligibility][0]}${p.my_nominees.length ? ' — ومن رشّحتهم سابقاً لا يظهرون' : ''}`, `Only eligible people are listed: ${ELIG[p.eligibility][1]}${p.my_nominees.length ? ' — people you already nominated are hidden' : ''}`))) : null;
     who = h('div.aw-who', seg, picker,
-      chosen || draft.mode === 'self' ? h('div.aw-nominee-card', avatar((chosen || ctx.user).name_ar), h('div.grow', h('strong', nm(chosen || ctx.user)), h('span.faint', [title(chosen || ctx.user), dept(chosen || ctx.user)].filter(Boolean).join(' · '))),
+      chosen || draft.mode === 'self' ? h('div.aw-nominee-card', avatar(L((chosen || ctx.user).name_ar, (chosen || ctx.user).name_en)), h('div.grow', h('strong', nm(chosen || ctx.user)), h('span.faint', [title(chosen || ctx.user), dept(chosen || ctx.user)].filter(Boolean).join(' · '))),
         h('span.chip.tiny.info', icon(draft.mode === 'self' ? 'user' : 'hourglass'), draft.mode === 'self' ? L('ترشيح ذاتي — يُرسل مباشرة', 'Self — submitted directly') : L('سيُطلب منه الموافقة', 'Will be asked to consent'))) : null);
   }
   return h('div.aw-step', cats, h('fieldset.aw-fieldset', h('legend', p.eligibility === 'team' ? L('الفريق', 'Team') : L('من ترشّح؟', 'Who are you nominating?')), who));
@@ -185,7 +185,7 @@ function stepReview(ctx, me, p, dir) {
     preview ? excellenceMini(preview) : null) : h('div.callout.aw-consent-note', icon('hourglass'), L('سيصل إشعار إلى المرشح لمراجعة الترشيح والموافقة عليه، ويمكنه إرفاق ملخص نقاط التميّز الخاص به. لا يصل الترشيح إلى اللجنة دون موافقته.', 'The nominee is notified to review and consent, and may attach their own excellence summary. Nothing reaches the committee without their consent.'));
   return h('div.aw-step',
     h('div.aw-review-top', medal(p.kind), h('div.grow', h('strong', nm(p)), h('span.faint', cat ? nm(cat) : '—')),
-      team.length ? h('div.aw-review-team', h('strong', draft.team_name), h('span.faint', team.map(nm).join('، '))) : nominee ? h('div.aw-review-who', avatar(nominee.name_ar), h('div', h('strong', nm(nominee)), h('span.faint', dept(nominee)))) : null),
+      team.length ? h('div.aw-review-team', h('strong', draft.team_name), h('span.faint', team.map(nm).join('، '))) : nominee ? h('div.aw-review-who', avatar(L(nominee.name_ar, nominee.name_en)), h('div', h('strong', nm(nominee)), h('span.faint', dept(nominee)))) : null),
     h('blockquote.aw-quote', draft.summary),
     h('ol.aw-review-just', p.criteria.map((c) => h('li', h('div.aw-review-crit', h('strong', nm(c)), h('span.chip.tiny.outline.num', `${fmtNum(c.weight)}%`)), h('p', draft.justifications[c.id] || '')))),
     draft.evidence.length ? h('div.aw-review-ev', h('h3.aw-sub', L('الأدلة', 'Evidence')), h('ul', draft.evidence.map((e) => h('li', icon(e.link ? 'link' : 'fileText'), e.title)))) : null,

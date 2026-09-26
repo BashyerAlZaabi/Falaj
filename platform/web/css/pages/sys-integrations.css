@@ -7,6 +7,7 @@
 .ic-tabs { margin-bottom: var(--space-6); }
 .ic-nav-slot { height: 40px; margin: 0 0 var(--space-6); }
 .ic-tab-sep { flex: none; width: 1px; align-self: stretch; margin: 6px 4px; background: var(--separator-strong); }
+@media (max-width: 640px) { .ic-tab-sep { display: none; } } /* tabs wrap into rows on phones — a vertical rule would dangle */
 .ic-body { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
 .ic-body > .stat-row { margin-bottom: 0; }
 .ic-skel { display: grid; gap: var(--space-4); }

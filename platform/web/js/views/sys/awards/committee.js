@@ -40,7 +40,7 @@ export async function view(ctx, me, rest) {
 
 const rankOf = (x) => (x.recusal ? 2 : x.my_review ? 1 : 0);
 function queueCard(x) {
-  const who = h('div.aw-cm-who', x.team_name ? h('span.aw-team-ic', icon('usersRound')) : avatar(x.nominee.name_ar), h('div.grow', h('strong', x.team_name || nm(x.nominee)), h('span.faint', x.team_name ? L(`${count(x.team_size, ['عضو واحد', 'عضوان', 'أعضاء', 'عضواً'], ['member', 'members'])} · بقيادة ${nm(x.nominee)}`, `${x.team_size} members · led by ${nm(x.nominee)}`) : dept(x.nominee))));
+  const who = h('div.aw-cm-who', x.team_name ? h('span.aw-team-ic', icon('usersRound')) : avatar(L(x.nominee.name_ar, x.nominee.name_en)), h('div.grow', h('strong', x.team_name || nm(x.nominee)), h('span.faint', x.team_name ? L(`${count(x.team_size, ['عضو واحد', 'عضوان', 'أعضاء', 'عضواً'], ['member', 'members'])} · بقيادة ${nm(x.nominee)}`, `${x.team_size} members · led by ${nm(x.nominee)}`) : dept(x.nominee))));
   if (x.recusal) {
     return h('article.aw-cm-card.recused', { 'aria-label': L('متنحٍّ', 'Recused') }, who, h('span.chip.tiny.outline.aw-cm-cat', nm(x.category)),
       h('div.aw-cm-recusal', icon('shieldBan'), h('span', L('متنحٍّ — ', 'Recused — '), L(...RECUSAL[x.recusal]))));
@@ -208,7 +208,7 @@ function rankRow(ctx, c, x, sel, announced) {
   };
   return h(`li.aw-rank-row${picked ? '.picked' : ''}${x.complete ? '' : '.short'}`,
     h('span.aw-rank-n', x.rank ? String(x.rank) : '—'),
-    h('div.aw-rank-who', x.team_name ? h('span.aw-team-ic', icon('usersRound')) : avatar(x.nominee.name_ar), h('div.grow', h('strong', x.team_name || nm(x.nominee)), h('span.faint', x.team_name ? x.team.map(nm).join('، ') : dept(x.nominee))), demoChip(x)),
+    h('div.aw-rank-who', x.team_name ? h('span.aw-team-ic', icon('usersRound')) : avatar(L(x.nominee.name_ar, x.nominee.name_en)), h('div.grow', h('strong', x.team_name || nm(x.nominee)), h('span.faint', x.team_name ? x.team.map(nm).join('، ') : dept(x.nominee))), demoChip(x)),
     h('div.aw-rank-score',
       h('div.aw-rank-bar', h('i', { style: { width: `${pctW}%` } })),
       h('span.num.tabular', x.average == null ? '—' : `${score(x.average)} / 5`),

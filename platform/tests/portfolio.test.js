@@ -84,6 +84,16 @@ test('employees cannot create strategic projects or allocate people; external us
   assert.equal((await ext.get('/api/allocations')).status, 403);
 });
 
+test('a task assignee on a strategic project cannot change its budget, dates or status', async () => {
+  const fat = await c('fatima');
+  const r = await fat.tool('update_project', { id: projectId, due_date: day(5) });
+  assert.notEqual(r.data.status, 'ok');
+  const b = await fat.tool('update_project', { id: projectId, status: 'on_hold' });
+  assert.notEqual(b.data.status, 'ok');
+  const own = await (await c('omar')).tool('update_project', { id: projectId, due_date: day(70) });
+  assert.equal(own.data.status, 'ok', JSON.stringify(own.data));
+});
+
 test('allocation ids outside the caller\'s scope are 404 — never a 403 that confirms they exist', async () => {
   for (const u of ['hessa', 'fatima']) {
     const cl = await c(u);

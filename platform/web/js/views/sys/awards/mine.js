@@ -75,7 +75,7 @@ async function detail(ctx, me, id) {
   const side = [];
   side.push(h('section.card', h('h2.card-title', L('الأطراف', 'People')),
     h('div.aw-people', h('div', h('span.aw-lbl', n.team_name ? L('الفريق', 'Team') : L('المرشح', 'Nominee')), n.team_name ? h('div.aw-team-line', h('strong', n.team_name), teamStack(n.team)) : person(n.nominee)),
-      n.team?.length ? h('ul.aw-team-list', n.team.map((u) => h('li', avatar(u.name_ar), h('span', nm(u)), h('span.faint', dept(u))))) : null,
+      n.team?.length ? h('ul.aw-team-list', n.team.map((u) => h('li', avatar(L(u.name_ar, u.name_en)), h('span', nm(u)), h('span.faint', dept(u))))) : null,
       h('div', h('span.aw-lbl', L('مقدّم الترشيح', 'Nominator')), person(n.nominator)))));
   if (isNominee && (n.excellence || n.can_attach_excellence)) {
     side.push(h('section.card', h('div.aw-card-head', h('h2.card-title', L('ملخص نقاط التميّز', 'Excellence summary')), h('span.chip.tiny.outline', icon('eye'), L('يراه أعضاء اللجنة', 'Committee sees it'))),

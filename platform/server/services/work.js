@@ -194,6 +194,12 @@ export function updateProject(user, input) {
     fields[f] = input[f];
   }
   if (input.budget !== undefined) fields.budget = checkBudget(input.budget);
+  // Strategic projects: scope, budget, timeline and status are governed by SPMO, the owner and
+  // the executing department's managers — not by every member who was given a task.
+  if (p.is_strategic && ['budget', 'due_date', 'start_date', 'status', 'initiative_ref', 'name'].some((f) => fields[f] !== undefined || input[f] !== undefined)) {
+    const governs = (user.caps || []).includes('strategy.admin') || p.owner_id === user.id || P.managedDepartments(user).includes(p.department_id);
+    if (!governs) throw new P.Forbidden('تعديل نطاق المشروع الاستراتيجي وميزانيته وجدوله للإدارة المالكة وإدارة المشاريع الاستراتيجية فقط');
+  }
   if (input.initiative_ref !== undefined) {
     const r = input.initiative_ref == null ? null : String(input.initiative_ref).trim().slice(0, 160) || null;
     fields.initiative_ref = r;

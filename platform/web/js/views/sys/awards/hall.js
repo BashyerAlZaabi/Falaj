@@ -42,8 +42,8 @@ function winnerCard(w) {
   return h(`article.aw-winner${w.mine ? '.mine' : ''}`,
     h('div.aw-winner-ribbon', icon('award'), h('span', nm(w.category))),
     h('div.aw-winner-face', team
-      ? h('div.aw-winner-team', team.slice(0, 4).map((u) => avatar(u.name_ar)))
-      : h('div.aw-winner-ring', avatar(w.nominee.name_ar))),
+      ? h('div.aw-winner-team', team.slice(0, 4).map((u) => avatar(L(u.name_ar, u.name_en))))
+      : h('div.aw-winner-ring', avatar(L(w.nominee.name_ar, w.nominee.name_en)))),
     h('h4.aw-winner-name', w.team_name || nm(w.nominee)),
     h('p.aw-winner-meta', team ? team.map(nm).join(' · ') : [title(w.nominee), dept(w.nominee)].filter(Boolean).join(' · ')),
     w.citation_ar ? h('blockquote.aw-winner-cite', L(w.citation_ar, w.citation_en || w.citation_ar)) : null,

@@ -534,16 +534,16 @@ export async function recommend(user, id, { bid_id, note }) {
   const ev = evaluation(q);
   const row = ev.rows.find((r) => r.bid_id === bid_id);
   if (!row) throw new NotFound('العرض غير موجود');
-  // An officer with a declared conflict with a bidder may not recommend that bidder,
-  // nor use discretion to depart from the committee's ranking.
-  await requireNoConflict(user, [bidProvider(bid_id)], 'التوصية بالترسية على هذا المورد');
-  if (bid_id !== ev.top && await userConflictWith(user.id, ev.rows.map((r) => providerFull(r.provider_id)))) throw new Forbidden('لديك تضارب مصالح مُفصح عنه مع أحد المتقدمين — لا يمكنك التوصية بغير العرض الأعلى تقييماً؛ يتولاه زميل آخر');
   if (!row.complete) throw new Conflict('لا يمكن التوصية بعرض غير مكتمل التسعير');
   if (!row.passed) throw new Conflict('العرض لم يجتز حد القبول الفني');
   const el = providerEligibility(row.provider_id);
   if (!el.eligible) throw new Conflict(`لا يمكن الترسية على هذا المورد حالياً: ${el.reasons.map((x) => x.ar).join('، ')}`);
   const why = clean(note, 1000);
   if (bid_id !== ev.top && why.length < 10) throw new BadRequest('التوصية بغير العرض الأعلى تقييماً تتطلب مبرراً مكتوباً');
+  // An officer with a declared conflict with a bidder may not recommend that bidder,
+  // nor use discretion to depart from the committee's ranking.
+  await requireNoConflict(user, [bidProvider(bid_id)], 'التوصية بالترسية على هذا المورد');
+  if (bid_id !== ev.top && await userConflictWith(user.id, ev.rows.map((r) => providerFull(r.provider_id)))) throw new Forbidden('لديك تضارب مصالح مُفصح عنه مع أحد المتقدمين — لا يمكنك التوصية بغير العرض الأعلى تقييماً؛ يتولاه زميل آخر');
   run("UPDATE procurement_rfqs SET status='recommended', recommended_bid=?, recommended_by=?, recommended_at=?, recommendation_note=?, updated_at=? WHERE id=?", bid_id, user.id, now(), why || null, now(), id);
   run('DELETE FROM procurement_votes WHERE rfq_id=?', id);
   event(q.request_id, id, 'recommended', user, why || null);

@@ -81,10 +81,10 @@ export function count(n, [one, two, few, many], en) {
 export const medal = (kind, size = 'md') => h(`span.aw-medal.${size}.k-${kind || 'excellence'}`, { 'aria-hidden': 'true' }, icon(KIND_ICON[kind] || 'award'));
 export function person(u, { sub = true, size } = {}) {
   if (!u) return h('span.faint', '—');
-  return h(`div.aw-person${size ? '.' + size : ''}`, avatar(u.name_ar), h('div.aw-person-text', h('strong', nm(u)), sub ? h('span', [title(u), dept(u)].filter(Boolean).join(' · ')) : null));
+  return h(`div.aw-person${size ? '.' + size : ''}`, avatar(L(u.name_ar, u.name_en)), h('div.aw-person-text', h('strong', nm(u)), sub ? h('span', [title(u), dept(u)].filter(Boolean).join(' · ')) : null));
 }
 export function teamStack(team = [], max = 4) {
-  return h('span.aw-stack', { 'aria-label': team.map(nm).join('، ') }, team.slice(0, max).map((u) => avatar(u.name_ar)), team.length > max ? h('span.aw-stack-more', `+${team.length - max}`) : null);
+  return h('span.aw-stack', { 'aria-label': team.map(nm).join('، ') }, team.slice(0, max).map((u) => avatar(L(u.name_ar, u.name_en))), team.length > max ? h('span.aw-stack-more', `+${team.length - max}`) : null);
 }
 export const back = (to, label) => h('a.aw-back', { href: to }, icon('chevron', 'aw-back-ic'), label);
 

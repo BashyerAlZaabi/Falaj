@@ -134,7 +134,7 @@ function buildNav() {
       keys.map((r) => h('a.item', { href: `#/${r}`, 'data-route': r, title: t(ROUTES[r].key) }, icon(ROUTES[r].icon), h('span.label', t(ROUTES[r].key)), h('span.nav-badge.hidden', { 'data-badge': r })))));
   }
   const u = state.me.user;
-  $('#user-card').replaceChildren(avatar(u.name_ar), h('span.who', h('div.name', L(u.name_ar, u.name_en)), h('div.role', L(u.title_ar, u.title_en) || `${t('role.' + u.role)} · ${L(u.dept_ar, u.dept_en)}`)), u.is_demo ? h('span.chip.demo.tiny', t('demo')) : null, icon('chevronDown', 'chev'));
+  $('#user-card').replaceChildren(avatar(L(u.name_ar, u.name_en)), h('span.who', h('div.name', L(u.name_ar, u.name_en)), h('div.role', L(u.title_ar, u.title_en) || `${t('role.' + u.role)} · ${L(u.dept_ar, u.dept_en)}`)), u.is_demo ? h('span.chip.demo.tiny', t('demo')) : null, icon('chevronDown', 'chev'));
   $('#btn-collapse').replaceChildren(icon('sidebar'));
   $('#btn-collapse').setAttribute('aria-label', L('طي/توسيع الشريط الجانبي', 'Collapse/expand sidebar'));
   $('#btn-menu').replaceChildren(icon('menu'));

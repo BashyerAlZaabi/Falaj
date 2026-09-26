@@ -366,3 +366,56 @@ test('no excellence points for procurement', async () => {
   const g = (await (await as('reem')).get('/api/game/me')).data;
   assert.ok(!g.rules.some((r) => r.system === 'procurement'));
 });
+
+// ---------------- adversarial review (regressions) ----------------
+// Runs last: it files disclosures (integrity) that would recuse people in other tests.
+test('declared conflicts bind the officer (direct purchase, recommendation, award), late recusals and the legal reviewer', async () => {
+  const [f, omar, majed, mariam, reem, hessa, yousef, horizon, oasis] = await Promise.all(['fatima', 'omar', 'majed', 'mariam', 'reem', 'hessa', 'yousef', 'horizon', 'oasis'].map(as));
+  // reem (the only officer) declared a family link with Oasis in her annual declaration
+  const small = await createPr(f, { line: await lineOf(f, '210'), items: [{ description: 'حوامل كتيبات للصالة', qty: 5, unit: 'قطعة', est_unit_price: 800 }] });
+  await decide(omar, small.id); await decide(majed, small.id);
+  const dp = await reem.post(`${P}/requests/${small.id}/source`, { method: 'direct', provider_id: 'pv_oasis', amount: 3900 });
+  assert.equal(dp.status, 403, 'no direct purchase from a supplier the officer declared a conflict with');
+  assert.equal((await reem.post(`${P}/requests/${small.id}/source`, { method: 'direct', provider_id: 'pv_madar', amount: 3900 })).status, 200);
+
+  const grant = (user_id, g) => mariam.put('/api/admin/caps', { user_id, cap: 'procurement.committee', grant: g, confirm: true });
+  assert.equal((await grant('u_hessa', true)).status, 200);
+  try {
+    const pr = await createPr(f, { line: await lineOf(f, '210'), title: 'منصات خدمة إضافية', items: [{ description: 'منصة خدمة متعاملين', qty: 10, unit: 'منصة', est_unit_price: 5500 }] });
+    await decide(omar, pr.id); await decide(majed, pr.id);
+    const id = (await reem.post(`${P}/requests/${pr.id}/source`, { method: 'rfq' })).data.rfq_id;
+    await reem.post(`${P}/rfqs/${id}/invites`, { provider_ids: ['pv_horizon', 'pv_oasis'] });
+    assert.equal((await reem.put(`${P}/rfqs/${id}`, { committee: ['u_majed', 'u_mariam', 'u_hessa'] })).status, 200);
+    await reem.post(`${P}/rfqs/${id}/spec`);
+    const closes = new Date(Date.now() + 3000).toISOString();
+    await reem.put(`${P}/rfqs/${id}`, { closes_at: closes });
+    assert.equal((await reem.post(`${P}/rfqs/${id}/publish`)).status, 200);
+    const items = (await horizon.get(`${P}/portal/rfqs/${id}`)).data.items;
+    assert.equal((await horizon.put(`${P}/portal/rfqs/${id}/bid`, { lines: [{ item_id: items[0].id, unit_price: 5000 }], delivery_days: 20, validity_days: 90 })).status, 200);
+    assert.equal((await oasis.put(`${P}/portal/rfqs/${id}/bid`, { lines: [{ item_id: items[0].id, unit_price: 5400 }], delivery_days: 25, validity_days: 90 })).status, 200);
+    await sleep(Math.max(0, Date.parse(closes) - Date.now()) + 300);
+    await majed.post(`${P}/rfqs/${id}/open`); await mariam.post(`${P}/rfqs/${id}/open`);
+    const bids = (await majed.get(`${P}/rfqs/${id}`)).data.bids;
+    const hBid = bids.find((b) => b.provider.id === 'pv_horizon'); const oBid = bids.find((b) => b.provider.id === 'pv_oasis');
+    for (const who of [majed, mariam, hessa]) {
+      assert.equal((await who.put(`${P}/rfqs/${id}/scores`, { bid_id: hBid.id, scores: { compliance: 9, experience: 8, delivery: 8 } })).status, 200);
+      assert.equal((await who.put(`${P}/rfqs/${id}/scores`, { bid_id: oBid.id, scores: { compliance: 8, experience: 7, delivery: 7 } })).status, 200);
+    }
+    assert.equal((await reem.post(`${P}/rfqs/${id}/finalize`)).status, 200);
+    const rec = await reem.post(`${P}/rfqs/${id}/recommend`, { bid_id: oBid.id, note: 'مدة تسليم مناسبة وخبرة سابقة جيدة مع الجهة' });
+    assert.equal(rec.status, 403, 'a conflicted officer cannot steer the award to the conflicted supplier');
+    assert.equal((await reem.post(`${P}/rfqs/${id}/recommend`, { bid_id: hBid.id })).status, 200, 'the top-ranked, unconflicted bid can still proceed');
+    // hessa discloses a link with the recommended supplier and votes straight away (no page load in between)
+    assert.equal((await hessa.post('/api/sys/integrity/disclosures', { matter: 'التصويت على ترسية منصات الخدمة', related_party: 'شركة الأفق للحلول التقنية', provider_id: 'ext_v_horizon', relationship: 'قريب من الدرجة الأولى شريك في الشركة' })).status, 200);
+    const v = await hessa.post(`${P}/rfqs/${id}/vote`, { decision: 'approve' });
+    assert.equal(v.status, 403, 'a member with a freshly declared conflict is recused before voting');
+    assert.equal((await majed.post(`${P}/rfqs/${id}/vote`, { decision: 'approve' })).status, 200);
+    assert.equal((await mariam.post(`${P}/rfqs/${id}/vote`, { decision: 'approve' })).data.status, 'committee_approved');
+    // the legal reviewer with a declared conflict with the winner cannot approve it
+    assert.equal((await yousef.post('/api/sys/integrity/disclosures', { matter: 'المراجعة القانونية لعقد منصات الخدمة', related_party: 'شركة الأفق للحلول التقنية', provider_id: 'ext_v_horizon', relationship: 'مستشار قانوني سابق للشركة' })).status, 200);
+    assert.equal((await yousef.post(`${P}/rfqs/${id}/legal`, { decision: 'approve' })).status, 403);
+    assert.equal((await reem.get(`${P}/rfqs/${id}`)).data.status, 'committee_approved');
+  } finally {
+    await grant('u_hessa', false);
+  }
+});
