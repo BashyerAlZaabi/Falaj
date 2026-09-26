@@ -83,4 +83,9 @@ test('Anthropic Messages API adapter: tool_use -> tool_result loop', async () =>
   const last = calls.at(-1).body;
   assert.equal(last.model, 'claude-sonnet-5');
   assert.ok(last.messages.some((m) => Array.isArray(m.content) && m.content[0]?.type === 'tool_result'));
+  // official SDK request shape: adaptive thinking, cached system prompt + tool definitions
+  assert.deepEqual(last.thinking, { type: 'adaptive' });
+  assert.equal(last.system[0].cache_control.type, 'ephemeral');
+  assert.equal(last.tools.at(-1).cache_control.type, 'ephemeral');
+  assert.ok(last.max_tokens >= 16000);
 });

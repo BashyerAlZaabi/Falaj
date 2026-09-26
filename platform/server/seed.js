@@ -14,7 +14,7 @@ export function seedConfig() {
   const prov = (id, name, kind, base_url, model, env) => run(`INSERT OR IGNORE INTO ai_providers (id,name,kind,base_url,model,api_key_env,enabled) VALUES (?,?,?,?,?,?,1)`, id, name, kind, base_url, model, env);
   prov('ap_local', 'الفهم المحلي (قواعد) — Local rules', 'local', null, null, null);
   prov('ap_browser_speech', 'صوت المتصفح — Web Speech API', 'local', null, null, null);
-  prov('ap_anthropic', 'Anthropic Claude', 'anthropic', 'https://api.anthropic.com', process.env.ANTHROPIC_MODEL || 'claude-sonnet-5', 'ANTHROPIC_API_KEY');
+  prov('ap_anthropic', 'Anthropic Claude', 'anthropic', 'https://api.anthropic.com', process.env.ANTHROPIC_MODEL || 'claude-opus-5', 'ANTHROPIC_API_KEY');
   prov('ap_gateway', 'بوابة نماذج مؤسسية (OpenAI-compatible)', 'openai_compatible', process.env.LLM_GATEWAY_URL || 'https://llm-gateway.example.internal/v1', process.env.LLM_GATEWAY_MODEL || 'enterprise-model', 'LLM_GATEWAY_KEY');
   for (const c of ['chat', 'generate', 'summarize', 'analyze']) run('INSERT OR IGNORE INTO ai_routing (capability,provider_id) VALUES (?,?)', c, 'ap_anthropic');
   for (const c of ['stt', 'tts']) run('INSERT OR IGNORE INTO ai_routing (capability,provider_id) VALUES (?,?)', c, 'ap_browser_speech');

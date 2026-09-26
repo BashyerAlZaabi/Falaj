@@ -3,6 +3,7 @@
 // No fixed number of models is assumed: admins add providers and route
 // capabilities (chat, generate, summarize, analyze, stt, tts) to them.
 // API keys are only referenced by env-var name and never leave the server.
+import Anthropic from '@anthropic-ai/sdk';
 import { all, one, run, uid, now } from '../db.js';
 
 export const CAPABILITIES = ['chat', 'generate', 'summarize', 'analyze', 'stt', 'tts'];
@@ -37,7 +38,7 @@ export function resolve(capability) {
 
 function logUsage(user, capability, p, ok, usage = {}, error) {
   run('INSERT INTO ai_usage (id,user_id,capability,provider_id,model,input_tokens,output_tokens,ok,error) VALUES (?,?,?,?,?,?,?,?,?)',
-    uid('u_'), user?.id ?? null, capability, p.id, p.model, usage.input_tokens || 0, usage.output_tokens || 0, ok ? 1 : 0, error ? String(error).slice(0, 300) : null);
+    uid('u_'), user?.id ?? null, capability, p.id, p.model, (usage.input_tokens || 0) + (usage.cache_read_input_tokens || 0) + (usage.cache_creation_input_tokens || 0), usage.output_tokens || 0, ok ? 1 : 0, error ? String(error).slice(0, 300) : null);
 }
 
 // Unified completion. messages: [{role:'user'|'assistant', content: string | blocks}]
@@ -61,17 +62,60 @@ export async function complete({ capability = 'chat', system, messages, tools, m
   }
 }
 
-async function anthropic(p, key, { system, messages, tools, maxTokens, signal }) {
-  const res = await fetch((p.base_url || 'https://api.anthropic.com') + '/v1/messages', {
-    method: 'POST', signal,
-    headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    body: JSON.stringify({ model: p.model, max_tokens: maxTokens, system, messages, ...(tools?.length ? { tools } : {}) }),
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(`Anthropic ${res.status}: ${body?.error?.message || res.statusText}`);
-  const text = body.content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
-  const tool_calls = body.content.filter((b) => b.type === 'tool_use').map((b) => ({ id: b.id, name: b.name, input: b.input }));
-  return { text, tool_calls, raw_content: body.content, stop_reason: body.stop_reason, usage: body.usage };
+// Claude via the official SDK. The SDK sends the API key from the server's
+// environment only; retries 429/5xx with backoff; honours the abort signal.
+const clients = new Map();
+function claudeClient(p, key) {
+  const id = `${p.base_url || ''}|${key}`;
+  if (!clients.has(id)) {
+    clients.set(id, new Anthropic({ apiKey: key, ...(p.base_url ? { baseURL: p.base_url } : {}), maxRetries: 2, timeout: Number(process.env.ANTHROPIC_TIMEOUT_MS || 120_000) }));
+    if (clients.size > 8) clients.delete(clients.keys().next().value);
+  }
+  return clients.get(id);
+}
+// Adaptive thinking on models that support it (Claude 4.6+ / 5 family) unless disabled.
+const thinks = (model) => process.env.ANTHROPIC_THINKING !== 'off' && /^claude-(opus|sonnet|fable)-(5|4-[6-9])/.test(model || '');
+
+function claudeError(e) {
+  const map = [
+    [Anthropic.AuthenticationError, 'مفتاح Claude غير صالح — راجع ANTHROPIC_API_KEY'],
+    [Anthropic.PermissionDeniedError, 'المفتاح لا يملك صلاحية هذا النموذج'],
+    [Anthropic.NotFoundError, 'النموذج غير موجود — راجع ANTHROPIC_MODEL'],
+    [Anthropic.RateLimitError, 'تجاوزنا حد الطلبات لدى Claude مؤقتاً، حاول بعد قليل'],
+    [Anthropic.BadRequestError, 'رفض Claude الطلب'],
+    [Anthropic.APIConnectionError, 'تعذّر الاتصال بخدمة Claude'],
+  ];
+  const hit = map.find(([cls]) => e instanceof cls);
+  const out = new Error(`Anthropic ${e.status || ''}: ${hit ? hit[1] : 'خطأ من خدمة Claude'} (${String(e.message || '').slice(0, 160)})`);
+  out.status = e.status; out.retryable = e instanceof Anthropic.RateLimitError || e instanceof Anthropic.APIConnectionError || e instanceof Anthropic.InternalServerError;
+  return out;
+}
+
+async function anthropic(p, key, { system, messages, tools, maxTokens, signal, ping }) {
+  const thinking = !ping && thinks(p.model);
+  // Stable prefix (tools + system) is cached; the conversation varies per turn.
+  const cachedTools = tools?.length ? tools.map((t, i) => (i === tools.length - 1 ? { ...t, cache_control: { type: 'ephemeral' } } : t)) : undefined;
+  const params = {
+    model: p.model,
+    max_tokens: thinking ? Math.max(maxTokens, 16000) : maxTokens,
+    ...(system ? { system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }] } : {}),
+    messages,
+    ...(cachedTools ? { tools: cachedTools } : {}),
+    ...(thinking ? { thinking: { type: 'adaptive' } } : {}),
+    ...(process.env.ANTHROPIC_EFFORT ? { output_config: { effort: process.env.ANTHROPIC_EFFORT } } : {}),
+  };
+  let msg;
+  try { msg = await claudeClient(p, key).messages.create(params, { signal }); }
+  catch (e) { if (e instanceof Anthropic.APIUserAbortError) throw e; throw claudeError(e); }
+  const content = msg.content || [];
+  if (msg.stop_reason === 'refusal') {
+    const text = 'لا يمكنني المساعدة في هذا الطلب. يمكنك إعادة صياغته أو التواصل مع المختص.';
+    return { text, tool_calls: [], raw_content: [{ type: 'text', text }], stop_reason: 'refusal', usage: msg.usage };
+  }
+  const text = content.filter((b) => b.type === 'text').map((b) => b.text).join('\n');
+  const tool_calls = content.filter((b) => b.type === 'tool_use').map((b) => ({ id: b.id, name: b.name, input: b.input }));
+  // raw_content keeps thinking blocks so the tool loop can pass them back unchanged.
+  return { text, tool_calls, raw_content: content, stop_reason: msg.stop_reason, usage: msg.usage };
 }
 
 // Converts our Anthropic-shaped messages to OpenAI chat format.
@@ -112,7 +156,7 @@ export async function testProvider(id) {
   }
   try {
     const out = p.kind === 'anthropic'
-      ? await anthropic(p, process.env[p.api_key_env], { system: 'ping', messages: [{ role: 'user', content: 'ping' }], maxTokens: 5 })
+      ? await anthropic(p, process.env[p.api_key_env], { system: 'ping', messages: [{ role: 'user', content: 'ping' }], maxTokens: 5, ping: true })
       : await openaiCompatible(p, process.env[p.api_key_env], { system: 'ping', messages: [{ role: 'user', content: 'ping' }], maxTokens: 5 });
     run('UPDATE ai_providers SET last_check_ok=1,last_check_at=?,last_check_message=NULL WHERE id=?', now(), id);
     return { ok: true, message: 'connected', sample: out.text };
